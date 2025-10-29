@@ -1,13 +1,11 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using NUnit.Framework;
 
-namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
+namespace SFA.DAS.Employer.Finance.Jobs.UnitTests;
+
+public class UnitTest1
 {
-    [TestClass]
-    public class UnitTest1
+    [Test]
+    public void TestMethod1()
     {
-        [TestMethod]
-        public void TestMethod1()
-        {
-        }
     }
 }
