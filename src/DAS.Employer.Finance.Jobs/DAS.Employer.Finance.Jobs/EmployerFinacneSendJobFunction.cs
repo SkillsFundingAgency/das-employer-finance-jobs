@@ -3,20 +3,13 @@ using Microsoft.Extensions.Logging;
 
 namespace SFA.DAS.Employer.Finance.Jobs;
 
-public class EmployerFinacneSendJobFunction
-{
-    private readonly ILogger _logger;
-        
-    public EmployerFinacneSendJobFunction(Microsoft.Extensions.Logging.ILoggerFactory loggerFactory)
-    {
-        _logger = loggerFactory.CreateLogger<EmployerFinacneSendJobFunction>();
-      
-    }
+public class EmployerFinacneSendJobFunction(ILogger<EmployerFinacneSendJobFunction> logger)
+{ 
 
     [Function("EmployerFinacneSendJobTimerTrigger")]
     public async Task<List<FinanceJobsQueueItem>> Run([TimerTrigger("0 8 * * *")] TimerInfo myTimer)
     {
-        _logger.LogInformation($"Finance Job timer function executed at: {DateTime.UtcNow}");
+        logger.LogInformation($"Finance Job timer function executed at: {DateTime.UtcNow}");
 
         var returnList = new List<FinanceJobsQueueItem>();
         try
@@ -30,9 +23,9 @@ public class EmployerFinacneSendJobFunction
                     QueuedAt = DateTime.UtcNow,
                     Source = "EmployerFinacneSendJobFunction"
                 }).ToList();
-            
-            
-            _logger.LogInformation("Enqueued {count} ProcessFinanceCommands. FirstJobId: {jobId}", returnList.Count, returnList.First().JobId);
+
+
+            logger.LogInformation("Enqueued {count} ProcessFinanceCommands. FirstJobId: {jobId}", returnList.Count, returnList.First().JobId);
 
             // Ensure the method actually awaits at least once
             await Task.CompletedTask;
@@ -43,7 +36,7 @@ public class EmployerFinacneSendJobFunction
         catch (Exception ex)
         {
             var firstJobId = returnList.FirstOrDefault()?.JobId ?? Guid.Empty;
-            _logger.LogError(ex, "Failed to enqueue {count} ProcessFinanceCommands. FirstJobId: {jobId}", returnList.Count, firstJobId);
+            logger.LogError(ex, "Failed to enqueue {count} ProcessFinanceCommands. FirstJobId: {jobId}", returnList.Count, firstJobId);
             throw;
         }
     }
