@@ -1,7 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
 
-namespace DAS.Employer.Finance.Jobs.UnitTests
+namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
 {
     [TestClass]
     public class UnitTest1

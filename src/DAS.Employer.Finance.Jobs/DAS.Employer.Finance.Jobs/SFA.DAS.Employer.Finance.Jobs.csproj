@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DAS.Employer.Finance.Jobs.Application\DAS.Employer.Finance.Jobs.Application.csproj" />
+    <ProjectReference Include="..\DAS.Employer.Finance.Jobs.Application\SFA.DAS.Employer.Finance.Jobs.Application.csproj" />
   </ItemGroup>
 
 </Project>

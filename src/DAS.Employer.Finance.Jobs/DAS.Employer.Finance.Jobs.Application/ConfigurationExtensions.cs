@@ -1,12 +1,11 @@
 ﻿using Microsoft.Extensions.Configuration;
 
-namespace DAS.Employer.Finance.Jobs;
+namespace SFA.DAS.Employer.Finance.Jobs;
 
 public static class ConfigurationExtensions
 {  
     public static IConfiguration BuildDasConfiguration(this IConfigurationBuilder configBuilder)
     {
-
         var config = configBuilder.Build();    
         return configBuilder.Build();
     }

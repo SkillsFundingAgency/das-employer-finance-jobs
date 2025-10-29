@@ -3,13 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36518.9
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DAS.Employer.Finance.Jobs", "DAS.Employer.Finance.Jobs\DAS.Employer.Finance.Jobs.csproj", "{946DBC67-FB58-4D30-BA34-87568DA597B0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs", "DAS.Employer.Finance.Jobs\SFA.DAS.Employer.Finance.Jobs.csproj", "{946DBC67-FB58-4D30-BA34-87568DA597B0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DAS.Employer.Finance.Jobs.Application", "DAS.Employer.Finance.Jobs.Application\DAS.Employer.Finance.Jobs.Application.csproj", "{E0AFF917-E1CA-4024-8645-47F90863EF3B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.Application", "DAS.Employer.Finance.Jobs.Application\SFA.DAS.Employer.Finance.Jobs.Application.csproj", "{E0AFF917-E1CA-4024-8645-47F90863EF3B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DAS.Employer.Finance.Jobs.UnitTests", "DAS.Employer.Finance.Jobs.UnitTests\DAS.Employer.Finance.Jobs.UnitTests.csproj", "{FF933723-672B-4102-BA1E-373FC29A5531}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.UnitTests", "DAS.Employer.Finance.Jobs.UnitTests\SFA.DAS.Employer.Finance.Jobs.UnitTests.csproj", "{FF933723-672B-4102-BA1E-373FC29A5531}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

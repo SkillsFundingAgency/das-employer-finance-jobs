@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace DAS.Employer.Finance.Jobs.Handler;
+namespace SFA.DAS.Employer.Finance.Jobs.Handler;
 
 public class ProcessFinanceCommandHandler : IHandleMessages<ProcessFinanceCommand>
 {

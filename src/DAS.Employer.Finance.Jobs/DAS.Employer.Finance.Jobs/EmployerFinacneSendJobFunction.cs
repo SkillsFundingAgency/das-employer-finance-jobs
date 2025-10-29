@@ -1,7 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
-namespace DAS.Employer.Finance.Jobs;
+namespace SFA.DAS.Employer.Finance.Jobs;
 
 public class EmployerFinacneSendJobFunction
 {

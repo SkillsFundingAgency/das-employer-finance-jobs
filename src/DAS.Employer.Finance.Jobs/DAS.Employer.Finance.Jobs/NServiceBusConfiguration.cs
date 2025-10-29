@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Hosting;
 using System.Net;
 
-namespace DAS.Employer.Finance.Jobs;
+namespace SFA.DAS.Employer.Finance.Jobs;
 
 public static class ConfigureNServiceBusExtension
 {

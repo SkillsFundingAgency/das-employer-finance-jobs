@@ -1,6 +1,6 @@
-﻿namespace DAS.Employer.Finance.Jobs;
+﻿namespace SFA.DAS.Employer.Finance.Jobs;
 
-public class ProcessFinanceCommand : ICommand
+public class ProcessFinanceCommand 
 {
     public Guid JobId { get; set; }
     public DateTime QueuedAt { get; set; }
