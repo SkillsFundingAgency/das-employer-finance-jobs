@@ -310,7 +310,8 @@
             },
             "dependsOn": [
                 "[variables('resourceGroupName')]",
-                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]"
+                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]",
+                "[concat(variables('functionAppName'), '-application-insights-', parameters('utcValue'))]"
             ]
         },
         {
@@ -356,7 +357,10 @@
                         "value": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', parameters('sharedApimResourceGroup'), '/providers/Microsoft.ApiManagement/service/', parameters('sharedApimName'), '/products/EmployerFinanceJobsOuterApi')]"
                     }
                 }
-            }
+            },
+            "dependsOn": [
+                "[concat(variables('functionAppName'), '-', parameters('utcValue'))]"
+            ]
         },
         {
             "apiVersion": "2021-04-01",
@@ -380,7 +384,10 @@
                         "value": "[parameters('sharedServiceBusName')]"
                     }
                 }
-            }
+            },
+            "dependsOn": [
+                "[concat(variables('functionAppName'), '-', parameters('utcValue'))]"
+            ]
         }
     ],
     "outputs": {
