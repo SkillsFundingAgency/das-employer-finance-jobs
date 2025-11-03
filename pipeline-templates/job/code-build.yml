@@ -19,7 +19,7 @@ jobs:
       ContinueOnVulnerablePackageScanError: true
 
   - task: DotNetCoreCLI@2
-    displayName: 'Publish - dotnet publish Function App'
+    displayName: 'Publish - dotnet publish Worker'
     inputs:
       command: publish
       publishWebProjects: false
@@ -35,7 +35,7 @@ jobs:
       OverWrite: true
 
   - task: ArchiveFiles@2
-    displayName: 'Archive Function App Package'
+    displayName: 'Archive Worker Package'
     inputs:
       rootFolderOrFile: '$(build.artifactstagingdirectory)/publish'
       includeRootFolder: false
