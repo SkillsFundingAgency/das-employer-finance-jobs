@@ -19,27 +19,11 @@ jobs:
       ContinueOnVulnerablePackageScanError: true
 
   - task: DotNetCoreCLI@2
-    displayName: 'Publish - dotnet publish Function App ProcessLearners'
+    displayName: 'Publish - dotnet publish Function App'
     inputs:
       command: publish
       publishWebProjects: false
-      projects: src/${{ parameters.SolutionBaseName }}.Functions.ProcessLearners/${{ parameters.SolutionBaseName }}.Functions.ProcessLearners.csproj
-      arguments: '--configuration $(buildConfiguration) --output $(build.artifactstagingdirectory)/publish --no-restore --no-build'
-
-  - task: DotNetCoreCLI@2
-    displayName: 'Publish - dotnet publish Function App Approvals'
-    inputs:
-      command: publish
-      publishWebProjects: false
-      projects: src/${{ parameters.SolutionBaseName }}.Functions.Approvals/${{ parameters.SolutionBaseName }}.Functions.Approvals.csproj
-      arguments: '--configuration $(buildConfiguration) --output $(build.artifactstagingdirectory)/publish --no-restore --no-build'
-
-  - task: DotNetCoreCLI@2
-    displayName: 'Publish - dotnet publish Function App RaiseEventsForExistingLearners'
-    inputs:
-      command: publish
-      publishWebProjects: false
-      projects: src/${{ parameters.SolutionBaseName }}.Functions.RaiseEventsForExistingLearners/${{ parameters.SolutionBaseName }}.Functions.RaiseEventsForExistingLearners.csproj
+      projects: src/DAS.Employer.Finance.Jobs/DAS.Employer.Finance.Jobs/${{ parameters.SolutionBaseName }}.csproj
       arguments: '--configuration $(buildConfiguration) --output $(build.artifactstagingdirectory)/publish --no-restore --no-build'
 
   - task: CopyFiles@2
@@ -50,8 +34,17 @@ jobs:
       TargetFolder: '$(build.artifactstagingdirectory)/publish'
       OverWrite: true
 
+  - task: ArchiveFiles@2
+    displayName: 'Archive Function App Package'
+    inputs:
+      rootFolderOrFile: '$(build.artifactstagingdirectory)/publish'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(build.artifactstagingdirectory)/${{ parameters.SolutionBaseName }}.zip'
+      replaceExistingArchive: true
+
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Artifact'
     inputs:
-      PathtoPublish: '$(build.artifactstagingdirectory)/publish'
+      PathtoPublish: '$(build.artifactstagingdirectory)'
       artifactName: ${{ parameters.SolutionBaseName }}
