@@ -19,11 +19,11 @@ jobs:
       ContinueOnVulnerablePackageScanError: true
 
   - task: DotNetCoreCLI@2
-    displayName: Publish - dotnet publish DAS.Employer.Finance.Jobs
+    displayName: Publish - dotnet publish ${{ parameters.SolutionBaseName }}
     inputs:
       command: publish
       publishWebProjects: false
-      projects: src/DAS.Employer.Finance.Jobs/DAS.Employer.Finance.Jobs/DAS.Employer.Finance.Jobs.csproj
+      projects: src/DAS.Employer.Finance.Jobs/DAS.Employer.Finance.Jobs/${{ parameters.SolutionBaseName }}.csproj
       arguments: -o $(build.artifactstagingdirectory)/publish -c ${{ parameters.BuildConfiguration }} --no-build
       modifyOutputPath: true
       zipAfterPublish: true
