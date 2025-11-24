@@ -17,9 +17,5 @@
 		<PackageReference Include="System.ComponentModel.TypeConverter" Version="4.3.0" />
 		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.1" />
 	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\DAS.Employer.Finance.Jobs.Application\SFA.DAS.Employer.Finance.Jobs.Application.csproj" />
-	</ItemGroup>
 </Project>
 

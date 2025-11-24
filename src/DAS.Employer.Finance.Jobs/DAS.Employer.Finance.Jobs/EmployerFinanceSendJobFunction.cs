@@ -12,6 +12,7 @@ public class EmployerFinanceSendJobFunction(IFunctionEndpoint functionEndpoint, 
         logger.LogInformation("Process Finance Jobs Function executed at: {time}", DateTime.UtcNow);
         try
         {
+
             // Create 5 messages
             var messages = Enumerable.Range(1, 5).Select(i => new FinanceJobsQueueItem
             {
