@@ -3,13 +3,13 @@
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "AzureWebJobsServiceBus": "Endpoint=sb://employer-jobs.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=jwYB98PerI1H28nDIkob2OKZFK9HxQCwJ+ASbGA8chc",
+    "AzureWebJobsServiceBus": "",
     "NServiceBus_License": "",
 
-    "FinanceApiConfiguration:Url": "https://test-finance-api.apprenticeships.education.gov.uk",
-    "FinanceApiConfiguration:Identifier": "https://citizenazuresfabisgov.onmicrosoft.com/das-test-finapi-as-ar",
-    "ProviderEventsApiConfiguration:Url": "https://test-payments-api.apprenticeships.education.gov.uk",
-    "ProviderEventsApiConfiguration:Identifier": "https://citizenazuresfabisgov.onmicrosoft.com/das-test-papi-as-ar",
+    "FinanceApiConfiguration:Url": "",
+    "FinanceApiConfiguration:Identifier": "",
+    "ProviderEventsApiConfiguration:Url": "",
+    "ProviderEventsApiConfiguration:Identifier": "",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": "",
     "ResourceEnvironmentName": "LOCAL"
   }
