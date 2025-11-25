@@ -25,8 +25,7 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
 
         try
         {
-            // Now go and get new period ends                     
-
+            // Now go and get new period ends  
             var newPeriodEnds = await context.CallActivityAsync<List<PeriodEnd>>("GetNewPeriodEndsActivity",correlationId);
 
             result.NewPeriodEndsCount = newPeriodEnds?.Count ?? 0;
@@ -35,17 +34,15 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
             if (newPeriodEnds != null && newPeriodEnds.Count > 0)
             {
                 logger.LogInformation("[CorrelationId: {CorrelationId}] Processing {Count} new period ends", correlationId, newPeriodEnds.Count);
-
-                // Process each period end (can be extended later)
+              
                 foreach (var periodEnd in newPeriodEnds)
                 {
-                    await context.CallActivityAsync(
-                        "ProcessPeriodEndActivity",
-                        new ProcessPeriodEndInput
-                        {
-                            CorrelationId = correlationId,
-                            PeriodEnd = periodEnd
-                        });
+                    await context.CallActivityAsync("ProcessPeriodEndActivity",
+                                                    new ProcessPeriodEndInput
+                                                    {
+                                                        CorrelationId = correlationId,
+                                                        PeriodEnd = periodEnd
+                                                    });
                 }
             }
             else
@@ -73,17 +70,15 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
     public async Task<List<PeriodEnd>> GetNewPeriodEndsActivity([ActivityTrigger] string correlationId)
     {
         logger.LogInformation("[CorrelationId: {CorrelationId}] GetNewPeriodEndsActivity started", correlationId);
-
         return await periodEndService.GetNewPeriodEndsAsync(correlationId);
     }
 
+    //This activity will be here to process period end login TODO: Implement actual processing logic
     [Function("ProcessPeriodEndActivity")]
-    public async Task ProcessPeriodEndActivity(
-        [ActivityTrigger] ProcessPeriodEndInput input)
+    public async Task ProcessPeriodEndActivity([ActivityTrigger] ProcessPeriodEndInput input)
     {
-        logger.LogInformation("[CorrelationId: {CorrelationId}] Processing period end: Year={Year}, Period={Period}", input.CorrelationId, input.PeriodEnd.CalendarPeriodYear, input.PeriodEnd.PaymentsForPeriod);
 
-        // TODO: here the implement period end processing logic
+        logger.LogInformation("[CorrelationId: {CorrelationId}] Processing period end: Year={Year}, Period={Period}", input.CorrelationId, input.PeriodEnd.CalendarPeriodYear, input.PeriodEnd.PaymentsForPeriod);              
         await Task.CompletedTask;
     }
 }

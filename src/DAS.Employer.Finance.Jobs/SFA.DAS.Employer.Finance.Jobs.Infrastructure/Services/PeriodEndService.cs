@@ -87,14 +87,14 @@ public class PeriodEndService(IFinanceApiClient financeApiClient, IProviderEvent
         }
     }
 
+    //period ends in the list from payments which don't exist in the list from finance
     private List<PeriodEnd> FilterNewPeriodEnds(List<PeriodEnd> paymentPeriodEnds, List<PeriodEnd> financePeriodEnds, string correlationId)
     {       
         var existingPeriodEndIds = new HashSet<string>(financePeriodEnds.Select(p => p.PeriodEndId ?? string.Empty), StringComparer.OrdinalIgnoreCase);
 
         var newPeriodEnds = paymentPeriodEnds.Where(p => !string.IsNullOrEmpty(p.PeriodEndId) && !existingPeriodEndIds.Contains(p.PeriodEndId)).ToList();
 
-        logger.LogInformation("[CorrelationId: {CorrelationId}] Filtered {NewCount} new period ends out of {TotalCount} provider period ends", correlationId, newPeriodEnds.Count,
-            paymentPeriodEnds.Count);
+        logger.LogInformation("[CorrelationId: {CorrelationId}] Filtered {NewCount} new period ends out of {TotalCount} provider period ends", correlationId, newPeriodEnds.Count, paymentPeriodEnds.Count);
 
         return newPeriodEnds;
     }
