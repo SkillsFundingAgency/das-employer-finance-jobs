@@ -6,15 +6,14 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 
-public class FinanceApiClient : BaseApiClient, IFinanceApiClient
+public class PaymentApiClient : BaseApiClient, IPaymentApiClient
 {
-    public FinanceApiClient(IHttpClientFactory httpClientFactory,
+    public PaymentApiClient(IHttpClientFactory httpClientFactory,
                             IAzureClientCredentialHelper credentialHelper,
-                            FinanceApiConfiguration configuration,
-                            ILogger<FinanceApiClient> logger)
+                            PaymentApiConfiguration configuration,
+                            ILogger<PaymentApiClient> logger)
 
         : base(httpClientFactory.CreateClient(), credentialHelper, logger, configuration)
     {
     }
 }
-

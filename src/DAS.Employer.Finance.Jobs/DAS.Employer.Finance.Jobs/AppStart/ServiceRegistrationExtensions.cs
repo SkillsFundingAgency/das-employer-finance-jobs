@@ -32,18 +32,18 @@ public static class ServiceRegistrationExtensions
 
         });       
 
-        services.AddScoped<IProviderEventsApiClient>(sp =>
+        services.AddScoped<IPaymentApiClient>(sp =>
         {
             
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
 
             var credentialHelper = sp.GetRequiredService<IAzureClientCredentialHelper>();
 
-            var config = configuration.GetSection("ProviderEventsApiConfiguration").Get<ProviderEventsApiConfiguration>();
+            var config = configuration.GetSection("ProviderEventsApiConfiguration").Get<PaymentApiConfiguration>();
 
-            var logger = sp.GetRequiredService<ILogger<ProviderEventsApiClient>>();
+            var logger = sp.GetRequiredService<ILogger<PaymentApiClient>>();
 
-            return new ProviderEventsApiClient(httpClientFactory, credentialHelper, config, logger);
+            return new PaymentApiClient(httpClientFactory, credentialHelper, config, logger);
 
         });    
 

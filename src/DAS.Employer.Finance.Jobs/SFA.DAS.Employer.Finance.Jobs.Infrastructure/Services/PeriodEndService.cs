@@ -5,7 +5,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 
-public class PeriodEndService(IFinanceApiClient financeApiClient, IProviderEventsApiClient providerEventsApiClient,ILogger<PeriodEndService> logger) : IPeriodEndService
+public class PeriodEndService(IFinanceApiClient financeApiClient, IPaymentApiClient providerEventsApiClient,ILogger<PeriodEndService> logger) : IPeriodEndService
 {  
 
     public async Task<List<PeriodEnd>> GetNewPeriodEndsAsync(string correlationId)
