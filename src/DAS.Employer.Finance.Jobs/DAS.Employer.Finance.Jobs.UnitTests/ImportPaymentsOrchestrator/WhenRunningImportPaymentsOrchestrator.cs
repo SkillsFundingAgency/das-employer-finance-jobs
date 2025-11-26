@@ -8,16 +8,16 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.ImportPaymentsOrchestrator;
 
 public class WhenRunningImportPaymentsOrchestrator
 {
-    private Mock<ILogger<Jobs.ImportPaymentsOrchestrator>> _mockLogger;
+    private Mock<ILogger<Orchestrators.ImportPaymentsOrchestrator>> _mockLogger;
     private Mock<IPeriodEndService> _mockPeriodEndService;
-    private Jobs.ImportPaymentsOrchestrator _orchestrator;
+    private Orchestrators.ImportPaymentsOrchestrator _orchestrator;
 
     [SetUp]
     public void SetUp()
     {
-        _mockLogger = new Mock<ILogger<Jobs.ImportPaymentsOrchestrator>>();
+        _mockLogger = new Mock<ILogger<Orchestrators.ImportPaymentsOrchestrator>>();
         _mockPeriodEndService = new Mock<IPeriodEndService>();
-        _orchestrator = new Jobs.ImportPaymentsOrchestrator(_mockLogger.Object, _mockPeriodEndService.Object);
+        _orchestrator = new Orchestrators.ImportPaymentsOrchestrator(_mockLogger.Object, _mockPeriodEndService.Object);
     }
 
     [Test]

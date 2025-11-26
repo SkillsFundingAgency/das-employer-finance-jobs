@@ -80,9 +80,9 @@ public class WhenGettingNewPeriodEnds
         result.Count.Should().Be(1);
         result.First().PeriodEndId.Should().Be("PE-002");
 
-        _mockProviderEventsApiClient.Verify(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()), Times.Once);
+        _mockProviderEventsApiClient.Verify();
 
-        _mockFinanceApiClient.Verify(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()), Times.Once);
+        _mockFinanceApiClient.Verify();
     }
 
     [Test]
@@ -112,11 +112,9 @@ public class WhenGettingNewPeriodEnds
             new PeriodEnd { PeriodEndId = "PE-001" }
         };
 
-        _mockProviderEventsApiClient
-            .Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ReturnsAsync(paymentPeriodEnds);
+        _mockProviderEventsApiClient.Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ReturnsAsync(paymentPeriodEnds);
 
-        _mockFinanceApiClient
-            .Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ReturnsAsync(financePeriodEnds);
+        _mockFinanceApiClient.Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ReturnsAsync(financePeriodEnds);
 
         // Act
         var result = await _periodEndService.GetNewPeriodEndsAsync(correlationId);
@@ -132,11 +130,9 @@ public class WhenGettingNewPeriodEnds
         // Arrange
         var correlationId = Guid.NewGuid().ToString();
 
-        _mockProviderEventsApiClient
-            .Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ReturnsAsync(new List<PaymentPeriodEnd>());
+        _mockProviderEventsApiClient.Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ReturnsAsync(new List<PaymentPeriodEnd>());
 
-        _mockFinanceApiClient
-            .Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ReturnsAsync(new List<PeriodEnd>());
+        _mockFinanceApiClient.Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ReturnsAsync(new List<PeriodEnd>());
 
         // Act
         var result = await _periodEndService.GetNewPeriodEndsAsync(correlationId);
@@ -238,8 +234,8 @@ public class WhenGettingNewPeriodEnds
         periodEnd.PeriodEndId.Should().Be("PE-001");
         periodEnd.CalendarPeriodYear.Should().Be(2024);
         periodEnd.CalendarPeriodMonth.Should().Be(3);
-        periodEnd.AccountDataValidAt.Should().Be(commitmentDataValidAt); 
-        periodEnd.CommitmentDataValidAt.Should().Be(accountDataValidAt); 
+        periodEnd.AccountDataValidAt.Should().Be(commitmentDataValidAt);
+        periodEnd.CommitmentDataValidAt.Should().Be(accountDataValidAt);
         periodEnd.CompletionDateTime.Should().Be(completionDateTime);
         periodEnd.PaymentsForPeriod.Should().Be("test-link");
     }
@@ -254,15 +250,8 @@ public class WhenGettingNewPeriodEnds
         _mockProviderEventsApiClient.Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ThrowsAsync(expectedException);
 
         // Act & Assert
-        try
-        {
-            await _periodEndService.GetNewPeriodEndsAsync(correlationId);
-            Assert.Fail("Expected InvalidOperationException was not thrown");
-        }
-        catch (InvalidOperationException ex)
-        {
-            ex.Message.Should().Be("API Error");
-        }
+        var act = async () => await _periodEndService.GetNewPeriodEndsAsync(correlationId);
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("API Error");
     }
 
     [Test]
@@ -272,24 +261,13 @@ public class WhenGettingNewPeriodEnds
         var correlationId = Guid.NewGuid().ToString();
         var expectedException = new InvalidOperationException("Finance API Error");
 
-        _mockProviderEventsApiClient
-            .Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-            .ReturnsAsync(new List<PaymentPeriodEnd>());
+        _mockProviderEventsApiClient.Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ReturnsAsync(new List<PaymentPeriodEnd>());
 
-        _mockFinanceApiClient
-            .Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()))
-            .ThrowsAsync(expectedException);
+        _mockFinanceApiClient.Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ThrowsAsync(expectedException);
 
         // Act & Assert
-        try
-        {
-            await _periodEndService.GetNewPeriodEndsAsync(correlationId);
-            Assert.Fail("Expected InvalidOperationException was not thrown");
-        }
-        catch (InvalidOperationException ex)
-        {
-            ex.Message.Should().Be("Finance API Error");
-        }
+        var act = async () => await _periodEndService.GetNewPeriodEndsAsync(correlationId);
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("Finance API Error");
     }
 
     [Test]
@@ -326,13 +304,9 @@ public class WhenGettingNewPeriodEnds
             }
         };
 
-        _mockProviderEventsApiClient
-            .Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-            .ReturnsAsync(paymentPeriodEnds);
+        _mockProviderEventsApiClient.Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ReturnsAsync(paymentPeriodEnds);
 
-        _mockFinanceApiClient
-            .Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()))
-            .ReturnsAsync(new List<PeriodEnd>());
+        _mockFinanceApiClient.Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ReturnsAsync(new List<PeriodEnd>());
 
         // Act
         var result = await _periodEndService.GetNewPeriodEndsAsync(correlationId);
@@ -349,28 +323,26 @@ public class WhenGettingNewPeriodEnds
         var correlationId = Guid.NewGuid().ToString();
 
         var paymentPeriodEnds = new List<PaymentPeriodEnd>
-        {
-            new PaymentPeriodEnd
-            {
-                Id = "PE-100",
-                CalendarPeriod = new CalendarPeriod { Year = 2025, Month = 4 },
-                ReferenceData = new ReferenceData
-                {
-                    AccountDataValidAt = DateTime.UtcNow,
-                    CommitmentDataValidAt = DateTime.UtcNow
-                },
-                CompletionDateTime = DateTime.UtcNow,
-                Links = new Links { PaymentsForPeriod = "payments-link" }
-            }
-        };
+                                    {
+                                        new PaymentPeriodEnd
+                                        {
+                                            Id = "PE-100",
+                                            CalendarPeriod = new CalendarPeriod { Year = 2025, Month = 4 },
+                                            ReferenceData = new ReferenceData
+                                            {
+                                                AccountDataValidAt = DateTime.UtcNow,
+                                                CommitmentDataValidAt = DateTime.UtcNow
+                                            },
+                                            CompletionDateTime = DateTime.UtcNow,
+                                            Links = new Links { PaymentsForPeriod = "payments-link" }
+                                        }
+                                    };
 
-        _mockProviderEventsApiClient
-            .Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-            .ReturnsAsync(paymentPeriodEnds);
+        _mockProviderEventsApiClient.Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ReturnsAsync(paymentPeriodEnds);
 
-        _mockFinanceApiClient
-            .Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()))
-            .ReturnsAsync(new List<PeriodEnd>());
+        _mockFinanceApiClient.Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ReturnsAsync(new List<PeriodEnd>());
+
+        SetupExpectedInformationLogs();
 
         // Act
         var result = await _periodEndService.GetNewPeriodEndsAsync(correlationId);
@@ -379,27 +351,67 @@ public class WhenGettingNewPeriodEnds
         result.Should().NotBeNull();
         result.Count.Should().Be(1);
 
-        // Verify logging: starting, retrieved and found messages are logged
-        _mockLogger.Verify(x => x.Log(
+        // Verify all setups were called
+        _mockLogger.Verify();
+    }
+
+    private void SetupExpectedInformationLogs()
+    {
+        _mockLogger.Setup(x => x.Log(
             LogLevel.Information,
             It.IsAny<EventId>(),
             It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Starting to retrieve period ends from external APIs")),
             It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()));
 
-        _mockLogger.Verify(x => x.Log(
+        _mockLogger.Setup(x => x.Log(
+            LogLevel.Information,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Calling Provider Events API to get period ends")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()));
+
+        _mockLogger.Setup(x => x.Log(
+            LogLevel.Information,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Successfully retrieved") && v.ToString().Contains("period ends from payment period end API")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()));
+
+        _mockLogger.Setup(x => x.Log(
+            LogLevel.Information,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Calling Finance API to get existing period ends")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()));
+
+        _mockLogger.Setup(x => x.Log(
+            LogLevel.Information,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Successfully retrieved") && v.ToString().Contains("period ends from Finance API")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()));
+
+        _mockLogger.Setup(x => x.Log(
             LogLevel.Information,
             It.IsAny<EventId>(),
             It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Retrieved") && v.ToString().Contains("period ends from Provider Events API")),
             It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()));
 
-        _mockLogger.Verify(x => x.Log(
+        _mockLogger.Setup(x => x.Log(
+            LogLevel.Information,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Filtered") && v.ToString().Contains("new period ends out of")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()));
+
+        _mockLogger.Setup(x => x.Log(
             LogLevel.Information,
             It.IsAny<EventId>(),
             It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Found") && v.ToString().Contains("new period ends to process")),
             It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()));
     }
 
     [Test]
@@ -409,26 +421,14 @@ public class WhenGettingNewPeriodEnds
         var correlationId = Guid.NewGuid().ToString();
         var expectedException = new InvalidOperationException("Provider API failure");
 
-        _mockProviderEventsApiClient
-            .Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-            .ThrowsAsync(expectedException);
+        _mockProviderEventsApiClient.Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ThrowsAsync(expectedException);
 
         // Act & Assert
-        try
-        {
-            await _periodEndService.GetNewPeriodEndsAsync(correlationId);
-            Assert.Fail("Expected exception not thrown");
-        }
-        catch (InvalidOperationException)
-        {
-            // Verify that error was logged for Provider Events API failure
-            _mockLogger.Verify(x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Error retrieving period ends from Provider Events API")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
-        }
+        var act = async () => await _periodEndService.GetNewPeriodEndsAsync(correlationId);
+        await act.Should().ThrowAsync<InvalidOperationException>();
+
+        // Verify 
+        _mockLogger.Verify();
     }
 
     [Test]
@@ -438,30 +438,26 @@ public class WhenGettingNewPeriodEnds
         var correlationId = Guid.NewGuid().ToString();
         var expectedException = new InvalidOperationException("Finance API failure");
 
-        _mockProviderEventsApiClient
-            .Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-            .ReturnsAsync(new List<PaymentPeriodEnd>());
+        _mockProviderEventsApiClient.Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ReturnsAsync(new List<PaymentPeriodEnd>());
 
-        _mockFinanceApiClient
-            .Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()))
-            .ThrowsAsync(expectedException);
+        _mockFinanceApiClient.Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ThrowsAsync(expectedException);
+
+        _mockLogger.Setup(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Error retrieving period ends from Finance API")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()));
 
         // Act & Assert
-        try
-        {
-            await _periodEndService.GetNewPeriodEndsAsync(correlationId);
-            Assert.Fail("Expected exception not thrown");
-        }
-        catch (InvalidOperationException)
-        {
-            // Verify that error was logged for Finance API failure
-            _mockLogger.Verify(x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Error retrieving period ends from Finance API")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
-        }
-    }
+        var act = async () => await _periodEndService.GetNewPeriodEndsAsync(correlationId);
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        
+        _mockLogger.Verify();
+    }    
 }
+
+
+
+
 

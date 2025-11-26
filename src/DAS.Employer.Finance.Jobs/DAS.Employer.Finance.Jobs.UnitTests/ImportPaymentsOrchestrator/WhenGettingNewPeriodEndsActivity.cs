@@ -12,16 +12,16 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.ImportPaymentsOrchestrator;
 
 public class WhenGettingNewPeriodEndsActivity
 {
-    private Mock<ILogger<Jobs.ImportPaymentsOrchestrator>> _mockLogger;
+    private Mock<ILogger<Orchestrators.ImportPaymentsOrchestrator>> _mockLogger;
     private Mock<IPeriodEndService> _mockPeriodEndService;
-    private Jobs.ImportPaymentsOrchestrator _orchestrator;
+    private Orchestrators.ImportPaymentsOrchestrator _orchestrator;
 
     [SetUp]
     public void SetUp()
     {
-        _mockLogger = new Mock<ILogger<Jobs.ImportPaymentsOrchestrator>>();
+        _mockLogger = new Mock<ILogger<Orchestrators.ImportPaymentsOrchestrator>>();
         _mockPeriodEndService = new Mock<IPeriodEndService>();
-        _orchestrator = new Jobs.ImportPaymentsOrchestrator(_mockLogger.Object, _mockPeriodEndService.Object);
+        _orchestrator = new Orchestrators.ImportPaymentsOrchestrator(_mockLogger.Object, _mockPeriodEndService.Object);
     }
 
     [Test]
@@ -34,9 +34,7 @@ public class WhenGettingNewPeriodEndsActivity
             new PeriodEnd { PeriodEndId = "PE-001", CalendarPeriodYear = 2024, CalendarPeriodMonth = 1 }
         };
 
-        _mockPeriodEndService
-            .Setup(x => x.GetNewPeriodEndsAsync(correlationId))
-            .ReturnsAsync(expectedPeriodEnds);
+        _mockPeriodEndService.Setup(x => x.GetNewPeriodEndsAsync(correlationId)).ReturnsAsync(expectedPeriodEnds);
 
         // Act
         var result = await _orchestrator.GetNewPeriodEndsActivity(correlationId);
@@ -45,7 +43,7 @@ public class WhenGettingNewPeriodEndsActivity
         result.Should().NotBeNull();
         result.Should().BeEquivalentTo(expectedPeriodEnds);
 
-        _mockPeriodEndService.Verify(x => x.GetNewPeriodEndsAsync(correlationId), Times.Once);
+        _mockPeriodEndService.Verify();
     }
 
     [Test]

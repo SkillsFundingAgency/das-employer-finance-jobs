@@ -1,4 +1,4 @@
-﻿namespace SFA.DAS.Employer.Finance.Jobs;
+﻿namespace SFA.DAS.Employer.Finance.Jobs.Handler;
 
 public class ProcessFinanceCommand 
 {

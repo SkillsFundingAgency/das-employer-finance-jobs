@@ -3,22 +3,21 @@ using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
 
-namespace SFA.DAS.Employer.Finance.Jobs;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions;
 public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
 {   
     [Function("ImportPaymentsTimer")]
-    public async Task Run(
-        [TimerTrigger("0 0/2 * * * *")] TimerInfo timerInfo, // Hourly trigger
-        [DurableClient] DurableTaskClient starter)
+    public async Task Run([TimerTrigger("0 0/2 * * * *")] TimerInfo timerInfo, [DurableClient] DurableTaskClient starter)
     {
         var correlationId = Guid.NewGuid().ToString();
+
         logger.LogInformation("[CorrelationId: {CorrelationId}] ImportPaymentsTimer triggered at {Time}",correlationId, DateTime.UtcNow);
 
         try
         {
-            // instance ID for idempotency check
+           
             var instanceId = "ImportPaymentsOrchestrator-Singleton";
-            // Here we are checking for existing running instance (idempotency)
+            
             var existingInstance = await starter.GetInstanceAsync(instanceId);
             if (existingInstance != null && (existingInstance.RuntimeStatus == OrchestrationRuntimeStatus.Running 
                                           || existingInstance.RuntimeStatus == OrchestrationRuntimeStatus.Pending))
@@ -27,7 +26,6 @@ public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
                 return;
             }
 
-            // Start new orchestrator instance with fixed instance ID for idempotency
             var newInstanceId = await starter.ScheduleNewOrchestrationInstanceAsync("ImportPaymentsOrchestrator",
                 new ImportPaymentsOrchestratorInput
                 {

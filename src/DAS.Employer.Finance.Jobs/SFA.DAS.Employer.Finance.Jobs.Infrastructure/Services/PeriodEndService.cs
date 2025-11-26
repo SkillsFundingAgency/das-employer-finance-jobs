@@ -61,7 +61,7 @@ public class PeriodEndService(IFinanceApiClient financeApiClient, IPaymentApiCli
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,"[CorrelationId: {CorrelationId}] Error retrieving period ends from Provider Events API: {ErrorMessage}", correlationId, ex.Message);
+            logger.LogError(ex,"[CorrelationId: {CorrelationId}] Error retrieving period ends from Payment API: {ErrorMessage}", correlationId, ex.Message);
             throw;
         }
     }

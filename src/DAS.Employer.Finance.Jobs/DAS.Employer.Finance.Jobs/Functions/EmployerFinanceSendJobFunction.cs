@@ -2,7 +2,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.NServiceBus;
 
-namespace SFA.DAS.Employer.Finance.Jobs;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions;
 
 public class EmployerFinanceSendJobFunction(IFunctionEndpoint functionEndpoint, ILogger<EmployerFinanceSendJobFunction> logger)
 {
