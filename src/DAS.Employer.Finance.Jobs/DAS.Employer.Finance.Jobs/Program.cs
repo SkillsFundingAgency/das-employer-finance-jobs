@@ -7,7 +7,7 @@ using SFA.DAS.Employer.Finance.Jobs;
 
 
 var host = new HostBuilder()
-    //.ConfigureFunctionsWorkerDefaults()
+    .ConfigureFunctionsWebApplication()
     .ConfigureAppConfiguration(builder => builder.BuildDasConfiguration())  
     .ConfigureServices((context, services) =>
     {
