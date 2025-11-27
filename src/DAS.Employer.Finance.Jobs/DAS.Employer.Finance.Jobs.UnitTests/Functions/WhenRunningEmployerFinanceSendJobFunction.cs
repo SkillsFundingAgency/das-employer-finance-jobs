@@ -97,7 +97,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Functions
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
 
-        // Verify that the logger logged an error (Log method with LogLevel.Error was called)
+        // Verify 
         _mockLogger.Verify();
     }
     }
