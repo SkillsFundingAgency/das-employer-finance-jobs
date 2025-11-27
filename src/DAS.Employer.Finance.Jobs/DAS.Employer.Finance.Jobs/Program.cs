@@ -1,6 +1,8 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.ApplicationInsights;
 using SFA.DAS.Employer.Finance.Jobs.AppStart;
 
 [assembly: NServiceBusTriggerFunction("SFA.DAS.Employer.Finance.Jobs.Functions")]
@@ -15,9 +17,8 @@ var host = new HostBuilder()
          services.AddApplicationInsightsTelemetryWorkerService();
          services.ConfigureFunctionsApplicationInsights();
      })
-    .UseNServiceBus()
-    .ConfigureFunctionsWebApplication()
-    .ConfigureAppConfiguration(builder => builder.BuildDasConfiguration())  
+    .UseNServiceBus()  
+    
     .ConfigureServices((context, services) =>
     {
         services
