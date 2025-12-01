@@ -1,3 +1,8 @@
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using AutoFixture.NUnit3;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -8,15 +13,8 @@ using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Abstractions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
-
 public class WhenCallingGetWithResponseCode
 {
     private class TestBaseApiClient : BaseApiClient
@@ -116,8 +114,6 @@ public class WhenCallingGetWithResponseCode
         actualResult.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
         actualResult.Body.Should().BeNull();
     }   
-
-
     private class GetTestRequest : IGetApiRequest
     {
         private readonly int _id;
@@ -128,7 +124,6 @@ public class WhenCallingGetWithResponseCode
         }
         public string GetUrl => $"test-url/get{_id}";
     }
-
     private class GetTestRequestNoVersion : IGetApiRequest
     {
         private readonly int _id;
@@ -138,8 +133,5 @@ public class WhenCallingGetWithResponseCode
             _id = id;
         }
         public string GetUrl => $"test-url/get{_id}";
-    }
-
-  
+    }  
 }
-

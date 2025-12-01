@@ -1,13 +1,12 @@
+using System;
+using System.Net.Http;
 using FluentAssertions;
-using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
-using System;
-using System.Net.Http;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Services;
 
@@ -102,4 +101,3 @@ public class WhenConstructingPaymentApiClient
         _httpClient.BaseAddress!.AbsoluteUri.Should().Be("https://payment-api.test.local/");
     }
 }
-

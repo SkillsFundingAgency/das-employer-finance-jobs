@@ -1,3 +1,5 @@
+using System;
+using System.Net.Http;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -5,11 +7,8 @@ using NUnit.Framework;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Abstractions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
-using System;
-using System.Net.Http;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
-
 public class WhenConstructingBaseApiClient
 {
     private class TestBaseApiClient : BaseApiClient
@@ -128,4 +127,3 @@ public class WhenConstructingBaseApiClient
         _validHttpClient.DefaultRequestHeaders.Accept.ToString().Should().Contain("application/json");
     }
 }
-

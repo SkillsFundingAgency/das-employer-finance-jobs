@@ -1,7 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
-
 public class PaymentPeriodEnd
 {
     [JsonPropertyName("Id")]
@@ -19,7 +18,6 @@ public class PaymentPeriodEnd
     [JsonPropertyName("_links")]
     public Links Links { get; set; } = new Links();
 }
-
 public class CalendarPeriod
 {
     [JsonPropertyName("Month")]

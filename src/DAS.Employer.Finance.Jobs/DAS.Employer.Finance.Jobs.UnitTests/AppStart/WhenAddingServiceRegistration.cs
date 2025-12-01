@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Net.Http;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,11 +9,8 @@ using SFA.DAS.Employer.Finance.Jobs.AppStart;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
-using System.Collections.Generic;
-using System.Net.Http;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.AppStart;
-
 public class WhenAddingServiceRegistration
 {
     private IServiceCollection _services;

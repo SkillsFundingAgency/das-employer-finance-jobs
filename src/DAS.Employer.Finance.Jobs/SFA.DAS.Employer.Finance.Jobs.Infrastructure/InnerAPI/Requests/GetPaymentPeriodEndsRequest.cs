@@ -6,5 +6,3 @@ public class GetPaymentPeriodEndsRequest : IGetApiRequest
 {
   public string GetUrl => "api/periodends";  
 }
-
-

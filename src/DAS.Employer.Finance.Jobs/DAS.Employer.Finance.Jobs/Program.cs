@@ -36,5 +36,4 @@ var host = new HostBuilder()
             .ConfigureFunctionsApplicationInsights();
     })
     .Build();
-
 await host.RunAsync();

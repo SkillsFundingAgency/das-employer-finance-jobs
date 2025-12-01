@@ -46,7 +46,6 @@ public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
         }
     }
 }
-
 public class ImportPaymentsOrchestratorInput
 {
     public string CorrelationId { get; set; }

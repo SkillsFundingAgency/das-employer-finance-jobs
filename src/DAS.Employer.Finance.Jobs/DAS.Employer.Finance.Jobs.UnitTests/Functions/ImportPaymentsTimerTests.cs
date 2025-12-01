@@ -1,4 +1,6 @@
-﻿using FluentAssertions;
+﻿using System;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
@@ -7,8 +9,6 @@ using Moq;
 using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Functions;
 using SFA.DAS.Employer.Finance.Jobs.UnitTests.Helpers;
-using System;
-using System.Threading.Tasks;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Functions
 {
@@ -22,8 +22,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Functions
         {
             _loggerMock = new Mock<ILogger<ImportPaymentsTimer>>();
             _fakeClient = new FakeDurableTaskClient();
-        }       
-       
+        }              
 
         [Test]
         public async Task Run_Should_Start_Orchestrator_When_No_Existing_Instance()
@@ -105,7 +104,6 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Functions
             _loggerMock.VerifyLogContains("Error starting ImportPaymentsOrchestrator");
         }
     }
-
     public static class LoggerExtensions
     {
         public static void VerifyLogContains<T>(this Mock<ILogger<T>> loggerMock, string contains)

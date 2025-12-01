@@ -5,4 +5,3 @@ public interface IApiConfiguration
     string Url { get; set; }
     string Identifier { get; set; }
 }
-
