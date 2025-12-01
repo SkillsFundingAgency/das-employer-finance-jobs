@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.ImportPaymentsOrchestrator;
+namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Orchestrators.ImportPaymentsOrchestrator;
 
 public class WhenGettingNewPeriodEndsActivity
 {
@@ -19,9 +19,9 @@ public class WhenGettingNewPeriodEndsActivity
     [SetUp]
     public void SetUp()
     {
-        _mockLogger = new Mock<ILogger<Orchestrators.ImportPaymentsOrchestrator>>();
+        _mockLogger = new Mock<ILogger<ImportPaymentsOrchestrator>>();
         _mockPeriodEndService = new Mock<IPeriodEndService>();
-        _orchestrator = new Orchestrators.ImportPaymentsOrchestrator(_mockLogger.Object, _mockPeriodEndService.Object);
+        _orchestrator = new ImportPaymentsOrchestrator(_mockLogger.Object, _mockPeriodEndService.Object);
     }
 
     [Test]

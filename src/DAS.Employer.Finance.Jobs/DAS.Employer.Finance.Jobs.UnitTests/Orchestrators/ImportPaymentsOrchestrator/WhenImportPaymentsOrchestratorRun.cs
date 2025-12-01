@@ -11,7 +11,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 
-namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.ImportPaymentsOrchestrator;
+namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Orchestrators.ImportPaymentsOrchestrator;
 
 [TestFixture]
 public class WhenImportPaymentsOrchestratorRun
@@ -24,10 +24,10 @@ public class WhenImportPaymentsOrchestratorRun
     [SetUp]
     public void SetUp()
     {
-        _loggerMock = new Mock<ILogger<Orchestrators.ImportPaymentsOrchestrator>>();
+        _loggerMock = new Mock<ILogger<ImportPaymentsOrchestrator>>();
         _periodEndServiceMock = new Mock<IPeriodEndService>();
         _contextMock = new Mock<TaskOrchestrationContext>();
-        _orchestrator = new Orchestrators.ImportPaymentsOrchestrator(_loggerMock.Object, _periodEndServiceMock.Object);
+        _orchestrator = new ImportPaymentsOrchestrator(_loggerMock.Object, _periodEndServiceMock.Object);
     }
 
     [Test]

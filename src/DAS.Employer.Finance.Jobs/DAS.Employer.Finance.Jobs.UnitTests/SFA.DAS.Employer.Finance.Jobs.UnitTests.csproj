@@ -30,5 +30,11 @@
 		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs.Infrastructure\SFA.DAS.Employer.Finance.Jobs.Infrastructure.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Orchestrators\ProcessPeriodEndOrchestrator\" />
+	  <Folder Include="Services\AccountService\" />
+	  <Folder Include="Services\PeriodEndService\" />
+	</ItemGroup>
+
 </Project>
 

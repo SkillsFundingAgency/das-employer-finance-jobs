@@ -4,7 +4,7 @@ using Moq;
 using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.Services;
 
-namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.ImportPaymentsOrchestrator;
+namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Orchestrators.ImportPaymentsOrchestrator;
 
 public class WhenRunningImportPaymentsOrchestrator
 {
@@ -15,9 +15,9 @@ public class WhenRunningImportPaymentsOrchestrator
     [SetUp]
     public void SetUp()
     {
-        _mockLogger = new Mock<ILogger<Orchestrators.ImportPaymentsOrchestrator>>();
+        _mockLogger = new Mock<ILogger<ImportPaymentsOrchestrator>>();
         _mockPeriodEndService = new Mock<IPeriodEndService>();
-        _orchestrator = new Orchestrators.ImportPaymentsOrchestrator(_mockLogger.Object, _mockPeriodEndService.Object);
+        _orchestrator = new ImportPaymentsOrchestrator(_mockLogger.Object, _mockPeriodEndService.Object);
     }
 
     [Test]
