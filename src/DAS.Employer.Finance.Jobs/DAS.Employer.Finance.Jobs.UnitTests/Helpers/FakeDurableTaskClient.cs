@@ -1,11 +1,10 @@
-using Microsoft.DurableTask;
-using Microsoft.DurableTask.Client;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DurableTask;
+using Microsoft.DurableTask.Client;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Helpers;
-
 public class FakeDurableTaskClient : DurableTaskClient
 {
     public FakeDurableTaskClient() : base("fake")

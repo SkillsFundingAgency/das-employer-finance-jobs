@@ -2,5 +2,5 @@
 
 public static class AzureFunctionQueueNames
 {
-    public const string ProcessFinanceJobQueue = "SFA.DAS.Employer.Function.Finance-Job-Queue";
+    public const string ProcessFinanceJobQueue = "SFA.DAS.EmployerFinance.Jobs";    
 }

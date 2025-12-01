@@ -6,7 +6,6 @@ using Moq;
 using Moq.Protected;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
-
 public static class MessageHandler
 {
     public static Mock<HttpMessageHandler> SetupMessageHandlerMock(HttpResponseMessage response, string baseUrl, string httpMethod = "get")
@@ -23,5 +22,3 @@ public static class MessageHandler
         return httpMessageHandler;
     }
 }
-
-

@@ -4,8 +4,5 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.InnerAPI.Requests;
 
 public class GetFinancePeriodEndsRequest : IGetApiRequest
 {
-  public string GetUrl => "api/period-ends";
- 
+  public string GetUrl => "api/period-ends"; 
 }
-
-

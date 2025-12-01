@@ -16,7 +16,6 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
-
 public class WhenCallingGet
 {
     private class TestBaseApiClient : BaseApiClient
@@ -112,8 +111,7 @@ public class WhenCallingGet
 
         //Act & Assert
         Assert.ThrowsAsync<HttpRequestException>(() => actual.Get<string>(getTestRequest));
-    }
-   
+    }  
 
     private class GetTestRequest : IGetApiRequest
     {
@@ -131,4 +129,3 @@ public class WhenCallingGet
         public string MyResponse { get; set; }
     }
 }
-

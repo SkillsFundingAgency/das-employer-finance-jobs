@@ -26,5 +26,4 @@ public class WhenRunningImportPaymentsOrchestrator
         // Act & Assert
         _orchestrator.Should().NotBeNull();
     }
-
 }

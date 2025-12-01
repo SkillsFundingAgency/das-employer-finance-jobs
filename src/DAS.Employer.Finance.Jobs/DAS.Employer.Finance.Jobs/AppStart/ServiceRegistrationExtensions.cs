@@ -46,8 +46,6 @@ public static class ServiceRegistrationExtensions
             return new PaymentApiClient(httpClientFactory, credentialHelper, config, logger);
 
         });    
-
         services.AddScoped<IPeriodEndService, PeriodEndService>();
-        
     }
 }

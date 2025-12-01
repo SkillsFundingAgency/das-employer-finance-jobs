@@ -1,11 +1,3 @@
-using FluentAssertions;
-using Microsoft.Extensions.Logging;
-using Moq;
-using NUnit.Framework;
-using SFA.DAS.Api.Common.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Abstractions;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -14,6 +6,14 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using NUnit.Framework;
+using SFA.DAS.Api.Common.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Abstractions;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
 
@@ -46,8 +46,7 @@ public class WhenUsingBaseApiClient
         }
 
         public HttpClient ExposedHttpClient => HttpClient;
-    }
-       
+    }       
     private class DelegatingHandlerStub : DelegatingHandler
     {
         private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
@@ -94,8 +93,7 @@ public class WhenUsingBaseApiClient
         client.ExposedHttpClient.DefaultRequestHeaders.Authorization.Should().NotBeNull();
         client.ExposedHttpClient.DefaultRequestHeaders.Authorization!.Scheme.Should().Be("Bearer");
         client.ExposedHttpClient.DefaultRequestHeaders.Authorization!.Parameter.Should().Be(token);
-    }
-      
+    }      
 
     [Test]
     public async Task GetResponseCode_Should_return_status_code()

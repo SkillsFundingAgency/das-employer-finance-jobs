@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -5,8 +7,6 @@ using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
-using System;
-using System.Threading.Tasks;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Orchestrators.ImportPaymentsOrchestrator;
 
@@ -75,8 +75,7 @@ public class WhenProcessingPeriodEndActivity
 
         // Assert
         _mockLogger.Verify();
-    }
-   
+    }   
 
     [Test]
     public async Task And_Different_Period_Values_Then_Logs_Correctly()
@@ -117,4 +116,3 @@ public class WhenProcessingPeriodEndActivity
             It.IsAny<Func<It.IsAnyType, Exception, string>>()));
     }
 }
-

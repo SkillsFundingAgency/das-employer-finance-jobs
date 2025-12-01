@@ -1,10 +1,9 @@
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoFixture.NUnit3;
 using FluentAssertions;
@@ -18,7 +17,6 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
-
 public class WhenCallingGetAll
 {
     private class TestBaseApiClient : BaseApiClient
@@ -68,8 +66,7 @@ public class WhenCallingGetAll
                     && c.Headers.Authorization.Parameter.Equals(authToken)),
                 ItExpr.IsAny<CancellationToken>()
             );
-    }
-  
+    } 
 
     [Test, AutoData]
     public void Then_An_Exception_Is_Thrown_When_Response_Is_Not_Success(string authToken, TestApiConfiguration config)
@@ -119,12 +116,9 @@ public class WhenCallingGetAll
         //Assert
         actualResult.Should().NotBeNull();
         actualResult.Should().BeEmpty();
-    }
-        
+    }        
     private class GetAllTestRequest : IGetAllApiRequest
     {
         public string GetUrl => "test-url/get-all";
     }
-
 }
-

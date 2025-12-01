@@ -1,3 +1,4 @@
+using FluentAssertions;
 using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.InnerAPI.Requests;
 
@@ -12,7 +13,7 @@ public class WhenBuildingGetApiRequestUrls
         var request = new GetPaymentPeriodEndsRequest();
 
         // Assert
-        Assert.That(request.GetUrl, Is.EqualTo("api/periodends"));
+        request.GetUrl.Should().Be("api/periodends");
     }
 
     [Test]
@@ -22,6 +23,6 @@ public class WhenBuildingGetApiRequestUrls
         var request = new GetFinancePeriodEndsRequest();
 
         // Assert
-        Assert.That(request.GetUrl, Is.EqualTo("api/period-ends"));
+        request.GetUrl.Should().Be("api/period-ends");
     }
 }

@@ -4,7 +4,6 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
-
 public class PeriodEndService(IFinanceApiClient financeApiClient, IPaymentApiClient providerEventsApiClient,ILogger<PeriodEndService> logger) : IPeriodEndService
 {  
 
@@ -78,8 +77,7 @@ public class PeriodEndService(IFinanceApiClient financeApiClient, IPaymentApiCli
         {
             logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Finance API to get existing period ends", correlationId);
 
-            var request = new GetFinancePeriodEndsRequest();
-            // API returns List<PeriodEnd> directly
+            var request = new GetFinancePeriodEndsRequest();      
             var financePeriodEnds = await financeApiClient.Get<List<PeriodEnd>>(request);
 
             logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from Finance API", correlationId, financePeriodEnds?.Count ?? 0);
@@ -92,7 +90,6 @@ public class PeriodEndService(IFinanceApiClient financeApiClient, IPaymentApiCli
             throw;
         }
     }
-
     //period ends in the list from payments which don't exist in the list from finance
     private List<PeriodEnd> FilterNewPeriodEnds(List<PeriodEnd> paymentPeriodEnds, List<PeriodEnd> financePeriodEnds, string correlationId)
     {       

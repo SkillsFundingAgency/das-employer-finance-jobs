@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -6,13 +10,8 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.InnerAPI.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Services;
-
 public class WhenGettingNewPeriodEnds
 {
     private Mock<IFinanceApiClient> _mockFinanceApiClient;
@@ -456,8 +455,3 @@ public class WhenGettingNewPeriodEnds
         _mockLogger.Verify();
     }    
 }
-
-
-
-
-

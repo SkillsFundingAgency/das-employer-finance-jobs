@@ -1,3 +1,8 @@
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using AutoFixture.NUnit3;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -8,14 +13,8 @@ using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Abstractions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
-
 public class WhenCallingGetResponseCode
 {
     private class TestBaseApiClient : BaseApiClient
@@ -60,9 +59,7 @@ public class WhenCallingGetResponseCode
                 ItExpr.IsAny<CancellationToken>()
             );
         actualResult.Should().Be(code);
-    }
-
-   
+    }  
 
     [Test, AutoData]
     public async Task Then_All_Status_Codes_Are_Returned_Correctly(string authToken, int id, TestApiConfiguration config)
@@ -101,7 +98,6 @@ public class WhenCallingGetResponseCode
             actualResult.Should().Be(statusCode);
         }
     }
-
     private class GetTestRequest : IGetApiRequest
     {
         private readonly int _id;
@@ -114,4 +110,3 @@ public class WhenCallingGetResponseCode
         public string GetUrl => $"test-url/get{_id}";
     }
 }
-
