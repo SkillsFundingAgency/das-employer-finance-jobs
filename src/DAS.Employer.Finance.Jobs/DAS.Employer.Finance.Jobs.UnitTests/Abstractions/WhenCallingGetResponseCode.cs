@@ -5,28 +5,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoFixture.NUnit3;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using NUnit.Framework;
 using SFA.DAS.Api.Common.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Abstractions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
+
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
 public class WhenCallingGetResponseCode
-{
-    private class TestBaseApiClient : BaseApiClient
-    {
-        public TestBaseApiClient(HttpClient httpClient, IAzureClientCredentialHelper credentialHelper, ILogger logger, IApiConfiguration configuration)
-            : base(httpClient, credentialHelper, logger, configuration)
-        {
-        }
-    }
+{  
 
     [Test, AutoData]
-    public async Task Then_The_Endpoint_Is_Called_And_StatusCode_Returned(string authToken, int id, HttpStatusCode code, TestApiConfiguration config)
+    public async Task Then_The_Endpoint_Is_Called_And_StatusCode_Returned(string authToken,
+            int id,
+            HttpStatusCode code,
+            TestInternalApiConfiguration config)
     {
         //Arrange
         var azureClientCredentialHelper = new Mock<IAzureClientCredentialHelper>();
@@ -41,8 +36,9 @@ public class WhenCallingGetResponseCode
         var expectedUrl = $"{config.Url}/{getTestRequest.GetUrl}";
         var httpMessageHandler = MessageHandler.SetupMessageHandlerMock(response, expectedUrl);
         var client = new HttpClient(httpMessageHandler.Object);
-        var mockLogger = new Mock<ILogger>();
-        var actual = new TestBaseApiClient(client, azureClientCredentialHelper.Object, mockLogger.Object, config);
+        var clientFactory = new Mock<IHttpClientFactory>();
+        clientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
+        var actual = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, config, azureClientCredentialHelper.Object);
 
         //Act
         var actualResult = await actual.GetResponseCode(getTestRequest);
@@ -59,10 +55,10 @@ public class WhenCallingGetResponseCode
                 ItExpr.IsAny<CancellationToken>()
             );
         actualResult.Should().Be(code);
-    }  
+    }
 
     [Test, AutoData]
-    public async Task Then_All_Status_Codes_Are_Returned_Correctly(string authToken, int id, TestApiConfiguration config)
+    public async Task Then_All_Status_Codes_Are_Returned_Correctly(string authToken, int id, HttpStatusCode code, TestInternalApiConfiguration config)
     {
         //Arrange
         var statusCodes = new[]
@@ -88,8 +84,9 @@ public class WhenCallingGetResponseCode
             var expectedUrl = $"{config.Url}/{getTestRequest.GetUrl}";
             var httpMessageHandler = MessageHandler.SetupMessageHandlerMock(response, expectedUrl);
             var client = new HttpClient(httpMessageHandler.Object);
-            var mockLogger = new Mock<ILogger>();
-            var actual = new TestBaseApiClient(client, azureClientCredentialHelper.Object, mockLogger.Object, config);
+            var clientFactory = new Mock<IHttpClientFactory>();
+            clientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
+            var actual = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, config, azureClientCredentialHelper.Object);
 
             //Act
             var actualResult = await actual.GetResponseCode(getTestRequest);

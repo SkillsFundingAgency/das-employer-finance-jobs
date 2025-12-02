@@ -5,28 +5,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoFixture.NUnit3;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using NUnit.Framework;
 using SFA.DAS.Api.Common.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Abstractions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
+
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
 public class WhenCallingGetWithResponseCode
-{
-    private class TestBaseApiClient : BaseApiClient
-    {
-        public TestBaseApiClient(HttpClient httpClient, IAzureClientCredentialHelper credentialHelper, ILogger logger, IApiConfiguration configuration)
-            : base(httpClient, credentialHelper, logger, configuration)
-        {
-        }
-    }
+{  
 
     [Test, AutoData]
-    public async Task Then_The_Endpoint_Is_Called(string authToken, int id, TestApiConfiguration config)
+    public async Task Then_The_Endpoint_Is_Called(string authToken, int id, TestInternalApiConfiguration config)
     {
         //Arrange
         var azureClientCredentialHelper = new Mock<IAzureClientCredentialHelper>();
@@ -41,8 +33,9 @@ public class WhenCallingGetWithResponseCode
         var expectedUrl = $"{config.Url}/{getTestRequest.GetUrl}";
         var httpMessageHandler = MessageHandler.SetupMessageHandlerMock(response, expectedUrl);
         var client = new HttpClient(httpMessageHandler.Object);
-        var mockLogger = new Mock<ILogger>();
-        var actualClient = new TestBaseApiClient(client, azureClientCredentialHelper.Object, mockLogger.Object, config);
+        var clientFactory = new Mock<IHttpClientFactory>();
+        clientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
+        var actualClient = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, config, azureClientCredentialHelper.Object);
 
         //Act
         var actual = await actualClient.GetWithResponseCode<string>(getTestRequest);
@@ -60,12 +53,14 @@ public class WhenCallingGetWithResponseCode
             );
         actual.StatusCode.Should().Be(HttpStatusCode.OK);
         actual.Body.Should().Be("test");
-    }   
+    }
 
     [Test, AutoData]
-    public async Task Then_If_Returns_Not_Found_Result_Returns_Default_Body(int id, TestApiConfiguration config)
+    public async Task Then_If_Returns_Not_Found_Result_Returns_Default_Body(int id, string authToken,TestInternalApiConfiguration config)
     {
         //Arrange
+        var azureClientCredentialHelper = new Mock<IAzureClientCredentialHelper>();
+        azureClientCredentialHelper.Setup(x => x.GetAccessTokenAsync(config.Identifier)).ReturnsAsync(authToken);
         config.Url = "https://test.local";
         var response = new HttpResponseMessage
         {
@@ -76,11 +71,12 @@ public class WhenCallingGetWithResponseCode
         var expectedUrl = $"{config.Url}/{getTestRequest.GetUrl}";
         var httpMessageHandler = MessageHandler.SetupMessageHandlerMock(response, expectedUrl);
         var client = new HttpClient(httpMessageHandler.Object);
-        var mockLogger = new Mock<ILogger>();
-        var actual = new TestBaseApiClient(client, Mock.Of<IAzureClientCredentialHelper>(), mockLogger.Object, config);
+        var clientFactory = new Mock<IHttpClientFactory>();
+        clientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
+        var actualClient = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, config, azureClientCredentialHelper.Object);
 
         //Act
-        var actualResult = await actual.GetWithResponseCode<string>(getTestRequest);
+        var actualResult = await actualClient.GetWithResponseCode<string>(getTestRequest);
 
         //Assert
         actualResult.Should().NotBeNull();
@@ -89,9 +85,11 @@ public class WhenCallingGetWithResponseCode
     }
 
     [Test, AutoData]
-    public async Task Then_If_Returns_Error_Result_Returns_ErrorCode_With_Null_Body(string responseContent, int id, TestApiConfiguration config)
+    public async Task Then_If_Returns_Error_Result_Returns_ErrorCode_With_Null_Body(string responseContent, string authToken, int id, TestInternalApiConfiguration config)
     {
         //Arrange
+        var azureClientCredentialHelper = new Mock<IAzureClientCredentialHelper>();
+        azureClientCredentialHelper.Setup(x => x.GetAccessTokenAsync(config.Identifier)).ReturnsAsync(authToken);
         config.Url = "https://test.local";
         config.Identifier = "";
         var response = new HttpResponseMessage
@@ -103,17 +101,18 @@ public class WhenCallingGetWithResponseCode
         var expectedUrl = $"{config.Url}/{getTestRequest.GetUrl}";
         var httpMessageHandler = MessageHandler.SetupMessageHandlerMock(response, expectedUrl);
         var client = new HttpClient(httpMessageHandler.Object);
-        var mockLogger = new Mock<ILogger>();
-        var actual = new TestBaseApiClient(client, Mock.Of<IAzureClientCredentialHelper>(), mockLogger.Object, config);
+        var clientFactory = new Mock<IHttpClientFactory>();
+        clientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
+        var actualClient = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, config, azureClientCredentialHelper.Object);
 
         //Act
-        var actualResult = await actual.GetWithResponseCode<string>(getTestRequest);
+        var actualResult = await actualClient.GetWithResponseCode<string>(getTestRequest);
 
         //Assert
         actualResult.Should().NotBeNull();
         actualResult.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
         actualResult.Body.Should().BeNull();
-    }   
+    }
     private class GetTestRequest : IGetApiRequest
     {
         private readonly int _id;
@@ -133,5 +132,5 @@ public class WhenCallingGetWithResponseCode
             _id = id;
         }
         public string GetUrl => $"test-url/get{_id}";
-    }  
+    }
 }

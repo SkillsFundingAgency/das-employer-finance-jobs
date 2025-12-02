@@ -22,7 +22,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Functions
         {
             _loggerMock = new Mock<ILogger<ImportPaymentsTimer>>();
             _fakeClient = new FakeDurableTaskClient();
-        }              
+        }
 
         [Test]
         public async Task Run_Should_Start_Orchestrator_When_No_Existing_Instance()
@@ -30,7 +30,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Functions
             // Arrange
             var timer = new ImportPaymentsTimer(_loggerMock.Object);
             var timerInfo = new TimerInfo();
-          
+
             var clientMock = new Mock<FakeDurableTaskClient>() { CallBase = true };
             clientMock
                 .Setup(c => c.GetInstanceAsync(It.IsAny<string>(), It.IsAny<bool>(), default))
@@ -39,7 +39,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Functions
             // Act
             await timer.Run(timerInfo, clientMock.Object);
 
-           
+
             clientMock.Verify(c =>
                 c.ScheduleNewOrchestrationInstanceAsync(
                     "ImportPaymentsOrchestrator",
@@ -70,7 +70,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Functions
             // Act
             await timer.Run(timerInfo, clientMock.Object);
 
-          
+
             clientMock.Verify(c =>
                 c.ScheduleNewOrchestrationInstanceAsync(
                     It.IsAny<TaskName>(),

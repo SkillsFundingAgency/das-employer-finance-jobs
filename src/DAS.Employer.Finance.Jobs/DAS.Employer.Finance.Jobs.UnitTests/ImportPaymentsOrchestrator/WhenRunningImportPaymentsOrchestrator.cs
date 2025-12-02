@@ -2,7 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.Services;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.ImportPaymentsOrchestrator;
 

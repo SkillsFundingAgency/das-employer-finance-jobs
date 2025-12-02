@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.InnerAPI.Requests;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.Services;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
-public class PeriodEndService(IFinanceApiClient financeApiClient, IPaymentApiClient providerEventsApiClient,ILogger<PeriodEndService> logger) : IPeriodEndService
+public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> financeApiClient, IProviderPaymentApiClient<ProviderPaymentApiConfiguration> providerPaymentApiClient, ILogger<PeriodEndService> logger) : IPeriodEndService
 {  
 
     public async Task<List<PeriodEnd>> GetNewPeriodEndsAsync(string correlationId)
@@ -40,7 +42,7 @@ public class PeriodEndService(IFinanceApiClient financeApiClient, IPaymentApiCli
 
             var request = new GetPaymentPeriodEndsRequest();
            
-            var paymentPeriodEnds = await providerEventsApiClient.Get<List<PaymentPeriodEnd>>(request);
+            var paymentPeriodEnds = await providerPaymentApiClient.Get<List<PaymentPeriodEnd>>(request);
 
             logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from payment period end API", correlationId, paymentPeriodEnds?.Count ?? 0);
 

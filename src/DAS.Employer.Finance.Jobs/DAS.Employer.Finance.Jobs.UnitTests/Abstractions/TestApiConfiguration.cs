@@ -1,4 +1,4 @@
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
 public class TestApiConfiguration : IApiConfiguration

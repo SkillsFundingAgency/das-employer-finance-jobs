@@ -1,8 +1,23 @@
 ﻿using System.Net;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
-public class ApiResponse<T>
-{
-    public T Body { get; set; }
-    public HttpStatusCode StatusCode { get; set; }
+public class ApiResponse<TResponse>
+{  
+    public TResponse Body { get; }
+    public HttpStatusCode StatusCode { get; }
+    public string ErrorContent { get; }
+    public Dictionary<string, IEnumerable<string>> Headers { get; }
+
+    public ApiResponse(TResponse body, HttpStatusCode statusCode, string errorContent) : this(body, statusCode, errorContent, new Dictionary<string, IEnumerable<string>>())
+    {
+
+    }
+
+    public ApiResponse(TResponse body, HttpStatusCode statusCode, string errorContent, Dictionary<string, IEnumerable<string>> headers)
+    {
+        Body = body;
+        StatusCode = statusCode;
+        ErrorContent = errorContent;
+        Headers = headers;
+    }
 }

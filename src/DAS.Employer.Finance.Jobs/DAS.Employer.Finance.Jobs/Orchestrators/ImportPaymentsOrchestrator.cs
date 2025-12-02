@@ -2,7 +2,7 @@
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Functions;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.Services;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Orchestrators;

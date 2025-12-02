@@ -1,11 +1,13 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using SFA.DAS.Api.Common.Infrastructure;
 using SFA.DAS.Api.Common.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.Services;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services;
 
 namespace SFA.DAS.Employer.Finance.Jobs.AppStart;
 
@@ -14,38 +16,16 @@ public static class ServiceRegistrationExtensions
     public static void AddServiceRegistration(this IServiceCollection services, IConfiguration configuration)
     {        
 
-        services.AddHttpClient();       
+        services.AddHttpClient();
+     
+        services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
 
-        services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();        
+        services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
 
-        services.AddScoped<IFinanceApiClient>(sp =>
-        {
-            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+        services.AddTransient<IProviderPaymentApiClient<ProviderPaymentApiConfiguration>, ProviderPaymentApiClient>();
 
-            var credentialHelper = sp.GetRequiredService<IAzureClientCredentialHelper>();
+        services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
 
-            var config = configuration.GetSection("FinanceApiConfiguration").Get<FinanceApiConfiguration>();
-
-            var logger = sp.GetRequiredService<ILogger<FinanceApiClient>>();
-
-            return new FinanceApiClient(httpClientFactory, credentialHelper, config, logger);
-
-        });       
-
-        services.AddScoped<IPaymentApiClient>(sp =>
-        {
-            
-            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-
-            var credentialHelper = sp.GetRequiredService<IAzureClientCredentialHelper>();
-
-            var config = configuration.GetSection("ProviderEventsApiConfiguration").Get<PaymentApiConfiguration>();
-
-            var logger = sp.GetRequiredService<ILogger<PaymentApiClient>>();
-
-            return new PaymentApiClient(httpClientFactory, credentialHelper, config, logger);
-
-        });    
         services.AddScoped<IPeriodEndService, PeriodEndService>();
     }
 }
