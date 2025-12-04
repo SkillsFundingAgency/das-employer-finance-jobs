@@ -1,8 +1,3 @@
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using AutoFixture.NUnit3;
 using FluentAssertions;
 using Moq;
@@ -11,6 +6,12 @@ using NUnit.Framework;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
@@ -53,6 +54,116 @@ public class WhenCallingGetWithResponseCode
             );
         actual.StatusCode.Should().Be(HttpStatusCode.OK);
         actual.Body.Should().Be("test");
+    }
+
+    [Test, AutoData]
+    public async Task Then_Multiple_Calls_Do_Not_Result_In_Multiple_Versions_Added(string authToken,
+        int id,
+        TestInternalApiConfiguration config)
+    {
+        //Arrange
+        var azureClientCredentialHelper = new Mock<IAzureClientCredentialHelper>();
+        azureClientCredentialHelper.Setup(x => x.GetAccessTokenAsync(config.Identifier)).ReturnsAsync(authToken);
+        config.Url = "https://test.local";
+
+        var response = new HttpResponseMessage
+        {
+            Content = new StringContent("\"test\""),
+            StatusCode = HttpStatusCode.Accepted
+        };
+        var getTestRequest = new GetTestRequest(id);
+        var expectedUrl = $"{config.Url}/{getTestRequest.GetUrl}";
+        var httpMessageHandler = MessageHandler.SetupMessageHandlerMock(response, expectedUrl);
+        var client = new HttpClient(httpMessageHandler.Object);
+        var clientFactory = new Mock<IHttpClientFactory>();
+        clientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
+        var actual = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, config, azureClientCredentialHelper.Object);
+
+        //Act
+        await actual.GetWithResponseCode<string>(getTestRequest);
+        await actual.GetWithResponseCode<string>(getTestRequest);
+
+        //Assert
+        httpMessageHandler.Protected()
+            .Verify<Task<HttpResponseMessage>>(
+                "SendAsync", Times.Exactly(2),
+                ItExpr.Is<HttpRequestMessage>(c =>
+                    c.Method.Equals(HttpMethod.Get)
+                    && c.RequestUri.AbsoluteUri.Equals(expectedUrl)
+                    && c.Headers.Authorization.Scheme.Equals("Bearer")
+                    && c.Headers.FirstOrDefault(h => h.Key.Equals("X-Version")).Value.Single() == "1.0"
+                    && c.Headers.Authorization.Parameter.Equals(authToken)),
+                ItExpr.IsAny<CancellationToken>()
+            );
+    }
+    [Test, AutoData]
+    public async Task Then_The_Bearer_Token_Is_Not_Added_If_Local_And_Default_Version_If_Not_Specified(
+           int id,
+           TestInternalApiConfiguration config)
+    {
+        //Arrange
+        config.Url = "https://test.local";
+        config.Identifier = "";
+        var configuration = config;
+        var response = new HttpResponseMessage
+        {
+            Content = new StringContent("\"test\""),
+            StatusCode = HttpStatusCode.Accepted
+        };
+        var getTestRequest = new GetTestRequestNoVersion(id);
+        var expectedUrl = $"{config.Url}/{getTestRequest.GetUrl}";
+        var httpMessageHandler = MessageHandler.SetupMessageHandlerMock(response, expectedUrl);
+        var client = new HttpClient(httpMessageHandler.Object);
+        var clientFactory = new Mock<IHttpClientFactory>();
+        clientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
+
+        var actual = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, configuration, Mock.Of<IAzureClientCredentialHelper>());
+
+        //Act
+        await actual.GetWithResponseCode<string>(getTestRequest);
+
+        //Assert
+        httpMessageHandler.Protected()
+            .Verify<Task<HttpResponseMessage>>(
+                "SendAsync", Times.Once(),
+                ItExpr.Is<HttpRequestMessage>(c =>
+                    c.Method.Equals(HttpMethod.Get)
+                    && c.Headers.FirstOrDefault(h => h.Key.Equals("X-Version")).Value.FirstOrDefault() == "1.0"
+                    && c.RequestUri.AbsoluteUri.Equals(expectedUrl)
+                    && c.Headers.Authorization == null),
+                ItExpr.IsAny<CancellationToken>()
+            );
+    }
+    [Test, AutoData]
+    public async Task Then_If_Returns_Error_Result_Returns_ErrorCode_With_Response(string responseContent, int id,
+           TestInternalApiConfiguration config)
+    {
+        //Arrange
+        config.Url = "https://test.local";
+        config.Identifier = "";
+        var configuration = config;
+        var response = new HttpResponseMessage
+        {
+            Content = new StringContent(responseContent),
+            StatusCode = HttpStatusCode.TooManyRequests
+        };
+        var getTestRequest = new GetTestRequestNoVersion(id);
+        var expectedUrl = $"{config.Url}/{getTestRequest.GetUrl}";
+        var httpMessageHandler = MessageHandler.SetupMessageHandlerMock(response, expectedUrl);
+        var client = new HttpClient(httpMessageHandler.Object);
+        var clientFactory = new Mock<IHttpClientFactory>();
+        clientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
+
+        var actual = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, configuration, Mock.Of<IAzureClientCredentialHelper>());
+
+        //Act
+        var actualResult = await actual.GetWithResponseCode<string>(getTestRequest);
+
+        //Assert
+        Assert.That(actualResult, Is.Not.Null);
+        actualResult.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        actualResult.Body.Should().BeNull();
+        actualResult.ErrorContent.Should().Be(responseContent);
     }
 
     [Test, AutoData]
