@@ -90,11 +90,10 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi
 
         private static Dictionary<string, IEnumerable<string>> GetHeaders(HttpResponseMessage httpResponseMessage)
         {
-            if (httpResponseMessage?.Headers == null && httpResponseMessage?.Headers!= null && !httpResponseMessage.Headers.Any())
+            if (httpResponseMessage == null || httpResponseMessage?.Headers == null || !httpResponseMessage.Headers.Any())
             {
                 return new Dictionary<string, IEnumerable<string>>();
             }
-
             return httpResponseMessage.Headers.ToDictionary(h => h.Key, h => h.Value);
         }
     }
