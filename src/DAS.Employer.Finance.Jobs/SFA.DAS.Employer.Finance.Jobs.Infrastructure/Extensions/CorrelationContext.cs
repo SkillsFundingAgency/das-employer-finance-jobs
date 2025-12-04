@@ -4,59 +4,58 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
+
+[ExcludeFromCodeCoverage]
+public static class CorrelationContext
 {
-    [ExcludeFromCodeCoverage]
-    public static class CorrelationContext
-    {
-        private static readonly AsyncLocal<string> _correlationId = new();
+    private static readonly AsyncLocal<string> _correlationId = new();
 
-        public static string CorrelationId
+    public static string CorrelationId
+    {
+        get => _correlationId.Value;
+        set => _correlationId.Value = value;
+    }
+}
+[ExcludeFromCodeCoverage]
+public class CorrelationTelemetryInitializer : ITelemetryInitializer
+{
+    public void Initialize(ITelemetry telemetry)
+    {
+        var correlationId = CorrelationContext.CorrelationId;
+
+        if (!string.IsNullOrEmpty(correlationId))
         {
-            get => _correlationId.Value;
-            set => _correlationId.Value = value;
+            telemetry.Context.GlobalProperties["x-correlation-id"] = correlationId;
         }
     }
-    [ExcludeFromCodeCoverage]
-    public class CorrelationTelemetryInitializer : ITelemetryInitializer
-    {
-        public void Initialize(ITelemetry telemetry)
-        {
-            var correlationId = CorrelationContext.CorrelationId;
+}
 
-            if (!string.IsNullOrEmpty(correlationId))
-            {
-                telemetry.Context.GlobalProperties["x-correlation-id"] = correlationId;
-            }
-        }
+[ExcludeFromCodeCoverage]
+public class CorrelationIdMiddleware
+{
+    private const string HeaderName = "x-correlation-id";
+    private readonly RequestDelegate _next;
+    private readonly ILogger<CorrelationIdMiddleware> _logger;
+
+    public CorrelationIdMiddleware(RequestDelegate next, ILogger<CorrelationIdMiddleware> logger)
+    {
+        _next = next;
+        _logger = logger;
     }
 
-    [ExcludeFromCodeCoverage]
-    public class CorrelationIdMiddleware
+    public async Task Invoke(HttpContext context)
     {
-        private const string HeaderName = "x-correlation-id";
-        private readonly RequestDelegate _next;
-        private readonly ILogger<CorrelationIdMiddleware> _logger;
 
-        public CorrelationIdMiddleware(RequestDelegate next, ILogger<CorrelationIdMiddleware> logger)
-        {
-            _next = next;
-            _logger = logger;
-        }
+        var correlationId = context.Request.Headers.TryGetValue(HeaderName, out var values) &&
+                            !string.IsNullOrWhiteSpace(values.FirstOrDefault())
+            ? values.First()
+            : Guid.NewGuid().ToString();
 
-        public async Task Invoke(HttpContext context)
-        {
+        CorrelationContext.CorrelationId = correlationId;
+        context.Response.Headers[HeaderName] = correlationId;
 
-            var correlationId = context.Request.Headers.TryGetValue(HeaderName, out var values) &&
-                                !string.IsNullOrWhiteSpace(values.FirstOrDefault())
-                ? values.First()
-                : Guid.NewGuid().ToString();
+        await _next(context);
 
-            CorrelationContext.CorrelationId = correlationId;
-            context.Response.Headers[HeaderName] = correlationId;
-
-            await _next(context);
-
-        }
     }
 }

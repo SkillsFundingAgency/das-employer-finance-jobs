@@ -13,8 +13,7 @@ public class ProcessFinanceCommandHandler(ILogger<ProcessFinanceCommandHandler> 
             message.JobId,
             message.QueuedAt,
             message.Source);
-
-        // TODO:  processing logic will go here.
+               
         return Task.CompletedTask;
     }
 }
