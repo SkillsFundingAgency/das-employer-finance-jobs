@@ -2,9 +2,11 @@
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions
 {
+    [ExcludeFromCodeCoverage]
     public static class CorrelationContext
     {
         private static readonly AsyncLocal<string> _correlationId = new();
@@ -15,7 +17,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions
             set => _correlationId.Value = value;
         }
     }
-
+    [ExcludeFromCodeCoverage]
     public class CorrelationTelemetryInitializer : ITelemetryInitializer
     {
         public void Initialize(ITelemetry telemetry)
@@ -29,7 +31,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions
         }
     }
 
-
+    [ExcludeFromCodeCoverage]
     public class CorrelationIdMiddleware
     {
         private const string HeaderName = "x-correlation-id";
