@@ -23,6 +23,7 @@
 	  
     <PackageReference Include="NServiceBus" Version="9.2.7" />
     <PackageReference Include="NServiceBus.AzureFunctions.Worker.ServiceBus" Version="6.0.1" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
   </ItemGroup>
 
   <ItemGroup>
