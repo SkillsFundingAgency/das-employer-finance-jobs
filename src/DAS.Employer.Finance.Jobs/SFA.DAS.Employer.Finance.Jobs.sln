@@ -13,8 +13,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.Core", "SFA.DAS.Employer.Finance.Jobs\SFA.DAS.Employer.Finance.Jobs.Core.csproj", "{3C4C6EB4-8A31-402D-B74F-7BEED635E272}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Messages", "SFA.DAS.Employer.Finance.Messages\SFA.DAS.Employer.Finance.Messages.csproj", "{D83D7FEC-9427-4051-B3EB-75DBA11A69EC}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,10 +35,6 @@ Global
 		{3C4C6EB4-8A31-402D-B74F-7BEED635E272}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3C4C6EB4-8A31-402D-B74F-7BEED635E272}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3C4C6EB4-8A31-402D-B74F-7BEED635E272}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D83D7FEC-9427-4051-B3EB-75DBA11A69EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D83D7FEC-9427-4051-B3EB-75DBA11A69EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D83D7FEC-9427-4051-B3EB-75DBA11A69EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D83D7FEC-9427-4051-B3EB-75DBA11A69EC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
