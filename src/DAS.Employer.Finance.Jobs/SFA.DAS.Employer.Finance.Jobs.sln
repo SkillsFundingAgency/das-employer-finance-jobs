@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.Infrastructure", "SFA.DAS.Employer.Finance.Jobs.Infrastructure\SFA.DAS.Employer.Finance.Jobs.Infrastructure.csproj", "{99131401-72AC-4A49-A65B-9382FEBF872E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs", "SFA.DAS.Employer.Finance.Jobs\SFA.DAS.Employer.Finance.Jobs.csproj", "{3C4C6EB4-8A31-402D-B74F-7BEED635E272}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.Core", "SFA.DAS.Employer.Finance.Jobs\SFA.DAS.Employer.Finance.Jobs.Core.csproj", "{3C4C6EB4-8A31-402D-B74F-7BEED635E272}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Messages", "SFA.DAS.Employer.Finance.Messages\SFA.DAS.Employer.Finance.Messages.csproj", "{D83D7FEC-9427-4051-B3EB-75DBA11A69EC}"
 EndProject
