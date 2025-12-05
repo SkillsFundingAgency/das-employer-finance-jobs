@@ -1,4 +1,4 @@
-﻿namespace SFA.DAS.Employer.Finance.Jobs.Handler;
+﻿namespace SFA.DAS.Employer.Finance.Jobs.Models;
 public class ProcessFinanceCommand 
 {
     public Guid JobId { get; set; }

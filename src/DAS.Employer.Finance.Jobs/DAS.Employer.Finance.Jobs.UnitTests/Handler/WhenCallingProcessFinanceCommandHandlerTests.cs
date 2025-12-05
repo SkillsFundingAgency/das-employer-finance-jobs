@@ -7,6 +7,7 @@ using Moq;
 using NServiceBus;
 using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Handler;
+using SFA.DAS.Employer.Finance.Jobs.Models;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Handler;
 public class WhenCallingProcessFinanceCommandHandlerTests

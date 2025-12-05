@@ -9,7 +9,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services;
 
-namespace SFA.DAS.Employer.Finance.Jobs.AppStart;
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 public static class ServiceRegistrationExtensions
 {

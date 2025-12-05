@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Models;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Handler;
 
