@@ -3,15 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36518.9
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.Functions", "DAS.Employer.Finance.Jobs\SFA.DAS.Employer.Finance.Jobs.Functions.csproj", "{946DBC67-FB58-4D30-BA34-87568DA597B0}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.UnitTests", "DAS.Employer.Finance.Jobs.UnitTests\SFA.DAS.Employer.Finance.Jobs.UnitTests.csproj", "{FF933723-672B-4102-BA1E-373FC29A5531}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.Infrastructure", "SFA.DAS.Employer.Finance.Jobs.Infrastructure\SFA.DAS.Employer.Finance.Jobs.Infrastructure.csproj", "{99131401-72AC-4A49-A65B-9382FEBF872E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.Core", "SFA.DAS.Employer.Finance.Jobs\SFA.DAS.Employer.Finance.Jobs.Core.csproj", "{3C4C6EB4-8A31-402D-B74F-7BEED635E272}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.UnitTests", "SFA.DAS.Employer.Finance.Jobs.UnitTests\SFA.DAS.Employer.Finance.Jobs.UnitTests.csproj", "{3618D977-9C7A-5EA0-5102-AC4B9A97CF76}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.Functions", "SFA.DAS.Employer.Finance.Jobs.Functions\SFA.DAS.Employer.Finance.Jobs.Functions.csproj", "{D022F143-67F5-EE76-CE49-E6FE98D14176}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,14 +19,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{946DBC67-FB58-4D30-BA34-87568DA597B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{946DBC67-FB58-4D30-BA34-87568DA597B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{946DBC67-FB58-4D30-BA34-87568DA597B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{946DBC67-FB58-4D30-BA34-87568DA597B0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FF933723-672B-4102-BA1E-373FC29A5531}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FF933723-672B-4102-BA1E-373FC29A5531}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FF933723-672B-4102-BA1E-373FC29A5531}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FF933723-672B-4102-BA1E-373FC29A5531}.Release|Any CPU.Build.0 = Release|Any CPU
 		{99131401-72AC-4A49-A65B-9382FEBF872E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{99131401-72AC-4A49-A65B-9382FEBF872E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{99131401-72AC-4A49-A65B-9382FEBF872E}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -35,12 +27,20 @@ Global
 		{3C4C6EB4-8A31-402D-B74F-7BEED635E272}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3C4C6EB4-8A31-402D-B74F-7BEED635E272}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3C4C6EB4-8A31-402D-B74F-7BEED635E272}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3618D977-9C7A-5EA0-5102-AC4B9A97CF76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3618D977-9C7A-5EA0-5102-AC4B9A97CF76}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3618D977-9C7A-5EA0-5102-AC4B9A97CF76}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3618D977-9C7A-5EA0-5102-AC4B9A97CF76}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D022F143-67F5-EE76-CE49-E6FE98D14176}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D022F143-67F5-EE76-CE49-E6FE98D14176}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D022F143-67F5-EE76-CE49-E6FE98D14176}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D022F143-67F5-EE76-CE49-E6FE98D14176}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{FF933723-672B-4102-BA1E-373FC29A5531} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{3618D977-9C7A-5EA0-5102-AC4B9A97CF76} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B1DA6888-47C8-4D82-B003-80C426D80ED4}
