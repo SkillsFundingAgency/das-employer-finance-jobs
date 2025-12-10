@@ -8,14 +8,12 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> financeApiClient, IProviderPaymentApiClient<ProviderPaymentApiConfiguration> providerPaymentApiClient, ILogger<PeriodEndService> logger) : IPeriodEndService
 {  
-
     public async Task<List<PeriodEnd>> GetNewPeriodEndsAsync(string correlationId)
     {
         logger.LogInformation("[CorrelationId: {CorrelationId}] Starting to retrieve period ends from external APIs", correlationId);
-
-        // Get period ends from Payment API
+          
         var paymentPeriodEndsTask = GetPaymentPeriodEndsAsync(correlationId);
-        // Get existing period ends from Finance API
+
         var financePeriodEndsTask = GetFinancePeriodEndsAsync(correlationId);
 
         await Task.WhenAll(paymentPeriodEndsTask, financePeriodEndsTask);
@@ -26,7 +24,7 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
         logger.LogInformation("[CorrelationId: {CorrelationId}] Retrieved {ProviderCount} period ends from Provider Events API and {FinanceCount} from Finance API",
                                                  correlationId, paymentPeriodEnds.Count, financePeriodEnds.Count);
 
-        // Filter to new period ends only
+      
         var newPeriodEnds = FilterNewPeriodEnds(paymentPeriodEnds, financePeriodEnds, correlationId);
 
         logger.LogInformation("[CorrelationId: {CorrelationId}] Found {NewCount} new period ends to process", correlationId, newPeriodEnds.Count);
@@ -46,7 +44,7 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
 
             logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from payment period end API", correlationId, paymentPeriodEnds?.Count ?? 0);
 
-            var periodEnds = paymentPeriodEnds?.Select(pe => new PeriodEnd
+            var periodEnds = paymentPeriodEnds?.ConvertAll(pe => new PeriodEnd
             {
                 Id = 0,
                 PeriodEndId = pe.Id,
@@ -56,7 +54,7 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
                 CommitmentDataValidAt = pe.ReferenceData.AccountDataValidAt,
                 CompletionDateTime = pe.CompletionDateTime,
                 PaymentsForPeriod  = pe.Links.PaymentsForPeriod
-            }).ToList();
+            });
 
             return periodEnds ?? new List<PeriodEnd>();
         }
@@ -66,7 +64,6 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
             throw;
         }
     }
-
     private async Task<List<PeriodEnd>> GetFinancePeriodEndsAsync(string correlationId)
     {
         try
@@ -85,8 +82,7 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
             logger.LogError(ex,"[CorrelationId: {CorrelationId}] Error retrieving period ends from Finance API: {ErrorMessage}", correlationId, ex.Message);
             throw;
         }
-    }
-    //period ends in the list from payments which don't exist in the list from finance
+    }    
     private List<PeriodEnd> FilterNewPeriodEnds(List<PeriodEnd> paymentPeriodEnds, List<PeriodEnd> financePeriodEnds, string correlationId)
     {       
         var existingPeriodEndIds = new HashSet<string>(financePeriodEnds.Select(p => p.PeriodEndId ?? string.Empty), StringComparer.OrdinalIgnoreCase);
