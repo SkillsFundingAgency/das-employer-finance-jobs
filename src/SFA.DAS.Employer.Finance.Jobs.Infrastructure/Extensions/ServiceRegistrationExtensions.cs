@@ -8,9 +8,10 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
-
+[ExcludeFromCodeCoverage]
 public static class ServiceRegistrationExtensions
 {
     public static void AddServiceRegistration(this IServiceCollection services, IConfiguration configuration)
