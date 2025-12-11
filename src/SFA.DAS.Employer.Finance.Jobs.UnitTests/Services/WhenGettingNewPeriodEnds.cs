@@ -143,23 +143,7 @@ public class WhenGettingNewPeriodEnds
         result.Should().BeEmpty();
     }
 
-    [Test]
-    public async Task And_Payment_Period_Ends_Is_Null_Then_Returns_Empty_List()
-    {
-        // Arrange
-        var correlationId = Guid.NewGuid().ToString();
-
-        _mockProviderPaymentApiClient.Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ReturnsAsync((List<PaymentPeriodEnd>)null);
-
-        _mockFinanceApiClient.Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ReturnsAsync(new List<PeriodEnd>());
-        // Act
-        var result = await _periodEndService.GetNewPeriodEndsAsync(correlationId);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Should().BeEmpty();
-    }
-
+   
     [Test]
     public async Task And_Finance_Period_Ends_Is_Null_Then_Returns_All_Payment_Period_Ends()
     {

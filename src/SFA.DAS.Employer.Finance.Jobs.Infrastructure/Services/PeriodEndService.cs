@@ -44,9 +44,8 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
 
             logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from payment period end API", correlationId, paymentPeriodEnds?.Count ?? 0);
 
-            var periodEnds = paymentPeriodEnds?.ConvertAll(pe => new PeriodEnd
-            {
-                Id = 0,
+            var periodEnds = paymentPeriodEnds.ConvertAll(pe => new PeriodEnd
+            {              
                 PeriodEndId = pe.Id,
                 CalendarPeriodMonth = pe.CalendarPeriod.Month,
                 CalendarPeriodYear = pe.CalendarPeriod.Year,
@@ -56,7 +55,7 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
                 PaymentsForPeriod  = pe.Links.PaymentsForPeriod
             });
 
-            return periodEnds ?? new List<PeriodEnd>();
+            return periodEnds;
         }
         catch (Exception ex)
         {
