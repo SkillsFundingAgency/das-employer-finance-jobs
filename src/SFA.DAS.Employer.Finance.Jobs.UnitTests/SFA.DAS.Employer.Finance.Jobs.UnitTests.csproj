@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AutoFixture.NUnit3" Version="4.18.1" />
+		<PackageReference Include="coverlet.collector" Version="6.0.4">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="coverlet.msbuild" Version="6.0.4">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="FluentAssertions" Version="7.2.0" />		
+		<PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.1.0" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
+		<PackageReference Include="Moq" Version="4.20.72" />
+		<PackageReference Include="NServiceBus" Version="9.2.8" />
+		<PackageReference Include="NUnit" Version="4.3.2" />
+		<PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+		<PackageReference Include="NServiceBus.AzureFunctions.Worker.ServiceBus" Version="6.0.1" />
+		<PackageReference Include="SFA.DAS.Testing.AutoFixture" Version="17.1.146" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs.Functions\SFA.DAS.Employer.Finance.Jobs.Functions.csproj" />
+		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs.Infrastructure\SFA.DAS.Employer.Finance.Jobs.Infrastructure.csproj" />
+		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs\SFA.DAS.Employer.Finance.Jobs.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Orchestrators\ProcessPeriodEndOrchestrator\" />
+	  <Folder Include="Services\AccountService\" />
+	  <Folder Include="Services\PeriodEndService\" />
+	</ItemGroup>
+
+</Project>
+
