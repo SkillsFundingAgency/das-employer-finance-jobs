@@ -1,4 +1,4 @@
-﻿namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+﻿ddingnamespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 public class ProcessAccountInput
 {
@@ -6,4 +6,5 @@ public class ProcessAccountInput
     public string PeriodEndRef { get; set; }
     public string CorrelationId { get; set; }
     public string IdempotencyKey { get; set; }
+    public DateTime TriggeredAt { get; set; }
 }

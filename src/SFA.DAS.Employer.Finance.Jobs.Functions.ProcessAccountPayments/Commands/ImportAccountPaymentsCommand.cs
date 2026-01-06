@@ -1,4 +1,4 @@
-﻿namespace SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments;
+﻿namespace SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments.Commands;
 
 public class ImportAccountPaymentsCommand
 {

@@ -14,8 +14,7 @@
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="FluentAssertions" Version="7.2.0" />		
-		<PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.1.0" />
+		<PackageReference Include="FluentAssertions" Version="7.2.0" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
 		<PackageReference Include="Moq" Version="4.20.72" />
 		<PackageReference Include="NServiceBus" Version="9.2.8" />
@@ -26,6 +25,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments\SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments.csproj" />
 		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs.Functions\SFA.DAS.Employer.Finance.Jobs.Functions.csproj" />
 		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs.Infrastructure\SFA.DAS.Employer.Finance.Jobs.Infrastructure.csproj" />
 		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs\SFA.DAS.Employer.Finance.Jobs.Core.csproj" />

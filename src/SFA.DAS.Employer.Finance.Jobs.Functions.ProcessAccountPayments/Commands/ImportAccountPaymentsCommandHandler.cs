@@ -1,11 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.DurableTask;
-using Microsoft.DurableTask.Client;
+﻿using Microsoft.DurableTask.Client;
+using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments.Orchestrators;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments.Commands;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments;
-
-public class ImportAccountPaymentsCommandHandler(ILogger<ImportAccountPaymentsCommandHandler> logger, DurableTaskClient durableClient) : IHandleMessages<ImportAccountPaymentsCommand>
+public class ImportAccountPaymentsCommandHandler(ILogger<ImportAccountPaymentsCommandHandler> logger, IProcessAccountOrchestrationStarter starter) : IHandleMessages<ImportAccountPaymentsCommand>
 {
     public async Task Handle(ImportAccountPaymentsCommand message, IMessageHandlerContext context)
     {
@@ -16,19 +16,23 @@ public class ImportAccountPaymentsCommandHandler(ILogger<ImportAccountPaymentsCo
         {
             var instanceId = "ProcessAccountOrchestrator-Singleton";
 
-            var existingInstance = await durableClient.GetInstanceAsync(instanceId, cancellation: context.CancellationToken);
-            
+            var existingInstance = await starter.GetInstanceAsyc(instanceId);
+
             if (existingInstance != null && existingInstance.RuntimeStatus is OrchestrationRuntimeStatus.Running or OrchestrationRuntimeStatus.Pending)
             {
                 logger.LogWarning("[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator is already running. InstanceId: {InstanceId}", correlationId, existingInstance.InstanceId);
                 return;
             }
-
-            var instance = await durableClient.ScheduleNewOrchestrationInstanceAsync("ProcessAccountOrchestrator", message, new StartOrchestrationOptions
-            {
-                InstanceId = instanceId,
-                StartAt = DateTime.UtcNow
-            }, context.CancellationToken);
+            await starter.StartAsyc("ProcessAccountOrchestrator", instanceId,
+             new ProcessAccountInput
+             {
+                 AccountId = message.AccountId,
+                 PeriodEndRef = message.PeriodEndRef,
+                 CorrelationId = correlationId,
+                 IdempotencyKey = instanceId,
+                 TriggeredAt = DateTime.UtcNow
+             },
+             context.CancellationToken);
         }
         catch (Exception ex)
         {
