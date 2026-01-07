@@ -7,7 +7,7 @@ public class GetAccountsRequest : IApiRequest
     public int Page { get; set; }
     public int PageSize { get; set; }
 
-    public string GetUrl => throw new NotImplementedException();
+    public string GetUrl => "api/accounts";
 
     public object Data => throw new NotImplementedException();
 

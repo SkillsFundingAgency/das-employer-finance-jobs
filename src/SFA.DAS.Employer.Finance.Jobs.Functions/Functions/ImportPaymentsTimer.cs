@@ -96,7 +96,7 @@ public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
                     "ProcessPeriodEndOrchestrator",
                     new PeriodEnd
                     {
-                        PeriodEndId = $"PE-{now:yyyyMM}",
+                        PeriodEndId = $"PEu-{now:yyyyMM}",
                         CalendarPeriodMonth = now.Month,
                         CalendarPeriodYear = now.Year,
                         AccountDataValidAt = now,

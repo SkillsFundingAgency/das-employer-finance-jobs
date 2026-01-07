@@ -20,7 +20,7 @@ public class ProcessPeriodEndOrchestrator(ILogger<ProcessPeriodEndOrchestrator> 
 
         var periodEnd = await periodEndService.CreatePeriodEndAsync(input, "");
 
-        var allAccounts = new List<string>();
+        var allAccounts = new List<Accounts>();
 
         int page = 1;
         while (true)
