@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
 using SFA.DAS.Configuration.AzureTableStorage;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
+[ExcludeFromCodeCoverage]
 public static class ConfigurationExtensions
 {
     const string EncodingConfigKey = "SFA.DAS.Encoding";
