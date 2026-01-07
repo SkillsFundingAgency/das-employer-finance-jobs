@@ -223,7 +223,7 @@ public class WhenCallingGetWithResponseCode
         actualResult.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
         actualResult.Body.Should().BeNull();
     }
-    private class GetTestRequest : IGetApiRequest
+    private class GetTestRequest : IApiRequest
     {
         private readonly int _id;
 
@@ -233,7 +233,7 @@ public class WhenCallingGetWithResponseCode
         }
         public string GetUrl => $"test-url/get{_id}";
     }
-    private class GetTestRequestNoVersion : IGetApiRequest
+    private class GetTestRequestNoVersion : IApiRequest
     {
         private readonly int _id;
 

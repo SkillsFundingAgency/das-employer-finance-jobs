@@ -16,7 +16,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services
         {
             _apiClient = apiClient;
         }
-        public Task<TResponse> Get<TResponse>(IGetApiRequest request)
+        public Task<TResponse> Get<TResponse>(IApiRequest request)
         {
             return _apiClient.Get<TResponse>(request);
         }
@@ -26,14 +26,24 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services
             throw new NotImplementedException();
         }
 
-        public Task<HttpStatusCode> GetResponseCode(IGetApiRequest request)
+        public Task<HttpStatusCode> GetResponseCode(IApiRequest request)
         {
             return _apiClient.GetResponseCode(request);
         }
 
-        public Task<ApiResponse<TResponse>> GetWithResponseCode<TResponse>(IGetApiRequest request)
+        public Task<ApiResponse<TResponse>> GetWithResponseCode<TResponse>(IApiRequest request)
         {
             return _apiClient.GetWithResponseCode<TResponse>(request);
+        }
+
+        public Task<TResponse> Post<TResponse>(IApiRequest request)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IApiRequest request)
+        {
+            throw new NotImplementedException();
         }
     }
 }

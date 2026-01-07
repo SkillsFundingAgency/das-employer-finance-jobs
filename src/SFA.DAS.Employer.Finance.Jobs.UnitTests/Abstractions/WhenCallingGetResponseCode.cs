@@ -95,7 +95,7 @@ public class WhenCallingGetResponseCode
             actualResult.Should().Be(statusCode);
         }
     }
-    private class GetTestRequest : IGetApiRequest
+    private class GetTestRequest : IApiRequest
     {
         private readonly int _id;
 

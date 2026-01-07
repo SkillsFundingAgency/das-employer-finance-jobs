@@ -28,5 +28,7 @@ public static class ServiceRegistrationExtensions
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
 
         services.AddScoped<IPeriodEndService, PeriodEndService>();
+
+        services.AddScoped<IAccountService, AccountService>();
     }
 }

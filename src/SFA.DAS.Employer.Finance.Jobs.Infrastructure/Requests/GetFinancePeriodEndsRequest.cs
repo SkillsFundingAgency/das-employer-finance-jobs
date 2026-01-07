@@ -2,7 +2,9 @@
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 
-public class GetFinancePeriodEndsRequest : IGetApiRequest
+public class GetFinancePeriodEndsRequest : IApiRequest
 {
-  public string GetUrl => "api/period-ends"; 
+  public string GetUrl => "api/period-ends";
+
+    public object Data => throw new NotImplementedException();
 }

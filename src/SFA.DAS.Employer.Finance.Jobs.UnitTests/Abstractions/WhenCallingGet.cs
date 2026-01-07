@@ -114,7 +114,7 @@ public class WhenCallingGet
         Assert.That(actualResult, Is.Null);
     }
 
-       private class GetTestRequestNoVersion : IGetApiRequest
+       private class GetTestRequestNoVersion : IApiRequest
         {
             private readonly int _id;
 
@@ -124,7 +124,7 @@ public class WhenCallingGet
             }
             public string GetUrl => $"test-url/get{_id}";
         }
-    private class GetTestRequest : IGetApiRequest
+    private class GetTestRequest : IApiRequest
     {
         private readonly int _id;
 

@@ -1,10 +1,11 @@
-﻿using System.Net;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
+﻿using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi
 {
@@ -22,7 +23,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi
             Configuration = apiConfiguration;
         }
 
-        public async Task<TResponse> Get<TResponse>(IGetApiRequest request)
+        public async Task<TResponse> Get<TResponse>(IApiRequest request)
         {
             var result = await GetWithResponseCode<TResponse>(request);
 
@@ -34,7 +35,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi
             return result.Body;
         }     
 
-        public async Task<HttpStatusCode> GetResponseCode(IGetApiRequest request)
+        public async Task<HttpStatusCode> GetResponseCode(IApiRequest request)
         {
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, request.GetUrl);
             httpRequestMessage.AddVersion(request.Version);
@@ -45,7 +46,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi
             return response.StatusCode;
         }
 
-        public async Task<ApiResponse<TResponse>> GetWithResponseCode<TResponse>(IGetApiRequest request)
+        public async Task<ApiResponse<TResponse>> GetWithResponseCode<TResponse>(IApiRequest request)
         {
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, request.GetUrl);
             httpRequestMessage.AddVersion(request.Version);
@@ -80,6 +81,70 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi
 
             return getWithResponseCode;
         }
+
+        public async Task<TResponse> Post<TResponse>(IApiRequest request)
+        {
+            var result = await PostWithResponseCode<TResponse>(request);
+
+            if (IsNot200RangeResponseCode(result.StatusCode))
+            {
+                return default;
+            }
+
+            return result.Body;
+        }
+
+        public async Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IApiRequest request)
+        {
+            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, request.GetUrl);
+
+            httpRequestMessage.AddVersion(request.Version);
+
+            var json = JsonSerializer.Serialize(request.Data, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+
+            httpRequestMessage.Content =
+                new StringContent(json, Encoding.UTF8, "application/json");
+
+            await AddAuthenticationHeader(httpRequestMessage);
+
+            // Send request
+            var response = await HttpClient.SendAsync(httpRequestMessage)
+                                           .ConfigureAwait(false);
+
+            var responseJson = await response.Content
+                                             .ReadAsStringAsync()
+                                             .ConfigureAwait(false);
+
+            var errorContent = string.Empty;
+            var responseBody = default(TResponse);
+
+            if (IsNot200RangeResponseCode(response.StatusCode))
+            {
+                errorContent = responseJson;
+            }
+            else if (!string.IsNullOrWhiteSpace(responseJson))
+            {
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                options.Converters.Add(new JsonStringEnumConverter());
+
+                responseBody = JsonSerializer.Deserialize<TResponse>(responseJson, options);
+            }
+
+            return new ApiResponse<TResponse>(
+                responseBody,
+                response.StatusCode,
+                errorContent,
+                GetHeaders(response));
+        }
+
+
 
         private static bool IsNot200RangeResponseCode(HttpStatusCode statusCode)
         {

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
@@ -32,9 +33,25 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
         return newPeriodEnds;
     }
 
-    public async Task<PeriodEnd> CreatePeriodEnd(PeriodEnd PeriodEnd, string correlationId)
+    public async Task<PeriodEnd> CreatePeriodEndAsync(PeriodEnd periodEnd, string correlationId)
     {
-        //implement period end
+        try
+        {
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Provider Events API to create period ends", correlationId);
+            var request = new CreatePeriodEndRequest();
+            request.Data = periodEnd;
+
+            var createdPeriodEnd = await providerPaymentApiClient.Post<PeriodEnd>(request);
+
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully created period end", correlationId);
+
+            return createdPeriodEnd;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[CorrelationId: {CorrelationId}] Error creating period end {ErrorMessage}", correlationId, ex.Message);
+            throw;
+        }
     }
 
 

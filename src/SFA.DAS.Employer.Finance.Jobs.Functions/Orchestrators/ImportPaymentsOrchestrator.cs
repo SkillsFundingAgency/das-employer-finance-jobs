@@ -26,7 +26,7 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
 
         try
         {
-            // Now go and get new period ends  
+
             var newPeriodEnds = await context.CallActivityAsync<List<PeriodEnd>>("GetNewPeriodEndsActivity",correlationId);
 
             result.NewPeriodEndsCount = newPeriodEnds?.Count ?? 0;
