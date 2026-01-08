@@ -8,6 +8,7 @@ public interface IApiRequest : IBaseApiRequest
     [JsonIgnore]
     string GetUrl { get; }
 
+    [JsonIgnore]
     object Data { get; }
 
 }
