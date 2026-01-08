@@ -33,7 +33,7 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
         return newPeriodEnds;
     }
 
-    public async Task<PeriodEnd> CreatePeriodEndAsync(PeriodEnd periodEnd, string correlationId)
+    public async Task<PeriodEnd> CreatePeriodEndAsync(PeriodEnd periodEnd, Guid correlationId)
     {
         try
         {

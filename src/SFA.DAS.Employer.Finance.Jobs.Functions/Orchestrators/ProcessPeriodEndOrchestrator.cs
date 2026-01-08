@@ -3,7 +3,6 @@ using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 
@@ -16,11 +15,16 @@ public class ProcessPeriodEndOrchestrator(ILogger<ProcessPeriodEndOrchestrator> 
     {
         var input = context.GetInput<PeriodEnd>();
 
-      //  ValidateOrThrow(input, context);
+        if (input == null)
+        {
+            throw new ArgumentNullException(nameof(input));
+        }
 
-        var periodEnd = await periodEndService.CreatePeriodEndAsync(input, "");
+        ValidateOrThrow(input, context);
 
-        var allAccounts = new List<Accounts>();
+        var periodEnd = await periodEndService.CreatePeriodEndAsync(input, context.NewGuid());
+
+        var allAccounts = new List<Accounts>(); 
 
         int page = 1;
         while (true)
@@ -47,28 +51,29 @@ public class ProcessPeriodEndOrchestrator(ILogger<ProcessPeriodEndOrchestrator> 
         return new PeriodEndResult
         {
             PeriodEndId = periodEnd.Id.ToString(),
-            TotalAccountsRetrieved = allAccounts.Count
+            TotalAccountsRetrieved = allAccounts.Count,
+            Accounts = allAccounts
         };
     }
 
 
-    private void ValidateOrThrow(ProcessPeriodEndInput input, TaskOrchestrationContext context)
+    private void ValidateOrThrow(PeriodEnd input, TaskOrchestrationContext context)
     {
-        //if (input == null)
-        //    throw new ArgumentNullException(nameof(input));
+        if (input == null)
+            throw new ArgumentNullException(nameof(input));
 
-        //if (input.AccountDataValidAt == default)
-        //    throw new InvalidOperationException("AccountDataValidAt must be provided.");
+        if (input.AccountDataValidAt == default)
+            throw new InvalidOperationException("AccountDataValidAt must be provided.");
 
-        //if (input.CommitmentDataValidAt == default)
-        //    throw new InvalidOperationException("CommitmentDataValidAt must be provided.");
+        if (input.CommitmentDataValidAt == default)
+            throw new InvalidOperationException("CommitmentDataValidAt must be provided.");
 
-        //var now = context.CurrentUtcDateTime;
+        var now = context.CurrentUtcDateTime;
 
-        //if (input.AccountDataValidAt > now)
-        //    throw new InvalidOperationException("AccountDataValidAt cannot be in the future.");
+        if (input.AccountDataValidAt > now)
+            throw new InvalidOperationException("AccountDataValidAt cannot be in the future.");
 
-        //if (input.CommitmentDataValidAt > now)
-        //    throw new InvalidOperationException("CommitmentDataValidAt cannot be in the future.");
+        if (input.CommitmentDataValidAt > now)
+            throw new InvalidOperationException("CommitmentDataValidAt cannot be in the future.");
     }
 }

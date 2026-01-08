@@ -32,7 +32,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Orchestrators\ProcessPeriodEndOrchestrator\" />
 	  <Folder Include="Services\AccountService\" />
 	  <Folder Include="Services\AccountService\" />
 	  <Folder Include="Services\PeriodEndService\" />

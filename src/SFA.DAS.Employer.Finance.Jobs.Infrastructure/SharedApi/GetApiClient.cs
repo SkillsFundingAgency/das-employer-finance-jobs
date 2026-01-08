@@ -111,7 +111,6 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi
 
             await AddAuthenticationHeader(httpRequestMessage);
 
-            // Send request
             var response = await HttpClient.SendAsync(httpRequestMessage)
                                            .ConfigureAwait(false);
 

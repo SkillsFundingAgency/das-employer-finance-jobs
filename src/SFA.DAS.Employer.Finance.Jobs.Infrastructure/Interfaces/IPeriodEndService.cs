@@ -6,5 +6,5 @@ public interface IPeriodEndService
 {
     Task<List<PeriodEnd>> GetNewPeriodEndsAsync(string correlationId);
 
-    Task<PeriodEnd> CreatePeriodEndAsync(PeriodEnd periodEnd, string correlationId);
+    Task<PeriodEnd> CreatePeriodEndAsync(PeriodEnd periodEnd, Guid correlationId);
 }
