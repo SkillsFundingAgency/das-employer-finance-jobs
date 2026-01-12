@@ -3,13 +3,11 @@
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    //"ConfigNames": "SFA.DAS.EmployerFinance.Jobs",
-    //"AzureWebJobsServiceBus": "Endpoint=sb://employer-jobs.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=jwYB98PerI1H28nDIkob2OKZFK9HxQCwJ+ASbG",
-    "FinanceApiConfiguration:Url": "https://test2-finance-api.apprenticeships.education.gov.uk",
+    "FinanceApiConfiguration:Url": "https://test-finance-api.apprenticeships.education.gov.uk",
     "FinanceApiConfiguration:Identifier": "https://citizenazuresfabisgov.onmicrosoft.com/das-test-finapi-as-ar",
-    "ProviderPaymentApiConfiguration:Url": "https://test-finance-api.apprenticeships.education.gov.uk",
-    "ProviderPaymentApiConfiguration:Identifier": "https://citizenazuresfabisgov.onmicrosoft.com/das-test-finapi-as-ar",
-    //"APPLICATIONINSIGHTS_CONNECTION_STRING": "",
+    "ProviderPaymentApiConfiguration:Url": "https://test-payments-api.apprenticeships.education.gov.uk",
+    "ProviderPaymentApiConfiguration:Identifier": "https://citizenazuresfabisgov.onmicrosoft.com/das-test-papi-as-ar",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "",
     "ResourceEnvironmentName": "LOCAL",
     "AzureWebJobsServiceBus": "Endpoint=sb://employer-jobs.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=jwYB98PerI1H28nDIkob2OKZFK9HxQCwJ+ASbG"
   }

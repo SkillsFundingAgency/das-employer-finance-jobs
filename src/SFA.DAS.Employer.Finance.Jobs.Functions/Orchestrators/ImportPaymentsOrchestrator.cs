@@ -38,12 +38,9 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
               
                 foreach (var periodEnd in newPeriodEnds)
                 {
-                    await context.CallActivityAsync("ProcessPeriodEndActivity",
-                                                    new ProcessPeriodEndInput
-                                                    {
-                                                        CorrelationId = correlationId,
-                                                        PeriodEnd = periodEnd
-                                                    });
+                    await context.CallSubOrchestratorAsync<PeriodEndResult>(
+                                  nameof(ProcessPeriodEndOrchestrator),
+                                  periodEnd);
                 }
             }
             else
@@ -78,9 +75,8 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
     [Function("ProcessPeriodEndActivity")]
     public async Task ProcessPeriodEndActivity([ActivityTrigger] ProcessPeriodEndInput input)
     {
-
         logger.LogInformation("[CorrelationId: {CorrelationId}] Processing period end: Year={Year}, Period={Period}", input.CorrelationId, input.PeriodEnd.CalendarPeriodYear, input.PeriodEnd.PaymentsForPeriod);              
-        await Task.CompletedTask;
+        
     }
 }
 
