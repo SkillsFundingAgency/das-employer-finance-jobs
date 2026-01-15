@@ -9,7 +9,7 @@ public class GetAccountsRequest : IApiRequest
 
     public string GetUrl => "api/accounts";
 
-    public object Data => throw new NotImplementedException();
+    public object? Data { get; set; }
 
     public Guid CorrelationId { get; set; }
 }
