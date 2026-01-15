@@ -13,17 +13,17 @@ public class AccountService(IFinanceApiClient<FinanceApiConfiguration> financeAp
     {
         try
         {
-            logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Provider Events API to create period ends", request.CorrelationId);
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Provider Events API to get accounts", request.CorrelationId);
 
             var accounts = await providerPaymentApiClient.Get<AccountsResponse>(request);
 
-            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully created period end", request.CorrelationId);
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved accounts", request.CorrelationId);
 
             return accounts.Accounts;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "[CorrelationId: {CorrelationId}] Error creating period end {ErrorMessage}", request.CorrelationId, ex.Message);
+            logger.LogError(ex, "[CorrelationId: {CorrelationId}] Error getting Accounts {ErrorMessage}", request.CorrelationId, ex.Message);
             throw;
         }
     }

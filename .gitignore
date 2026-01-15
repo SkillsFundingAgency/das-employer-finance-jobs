@@ -348,4 +348,3 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
-/src/DAS.Employer.Finance.Jobs/DAS.Employer.Finance.Jobs/Orchestrator/ImportPaymentsOrchestrator.cs
