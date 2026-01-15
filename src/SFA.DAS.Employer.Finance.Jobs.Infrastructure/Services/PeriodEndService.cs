@@ -6,7 +6,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
-public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> financeApiClient, IProviderPaymentApiClient<ProviderPaymentApiConfiguration> providerPaymentApiClient, ILogger<PeriodEndService> logger) : IPeriodEndService
+public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> financeApiClient, IProviderPaymentApiClient<ProviderEventsApiConfiguration> providerPaymentApiClient, ILogger<PeriodEndService> logger) : IPeriodEndService
 {  
     public async Task<List<PeriodEnd>> GetNewPeriodEndsAsync(string correlationId)
     {

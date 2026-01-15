@@ -8,11 +8,11 @@ using System.Net;
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services
 {
     [ExcludeFromCodeCoverage]
-    public class ProviderPaymentApiClient : IProviderPaymentApiClient<ProviderPaymentApiConfiguration>
+    public class ProviderPaymentApiClient : IProviderPaymentApiClient<ProviderEventsApiConfiguration>
     {
-        private readonly IInternalApiClient<ProviderPaymentApiConfiguration> _apiClient;
+        private readonly IInternalApiClient<ProviderEventsApiConfiguration> _apiClient;
 
-        public ProviderPaymentApiClient(IInternalApiClient<ProviderPaymentApiConfiguration> apiClient)
+        public ProviderPaymentApiClient(IInternalApiClient<ProviderEventsApiConfiguration> apiClient)
         {
             _apiClient = apiClient;
         }
