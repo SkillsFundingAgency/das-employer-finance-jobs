@@ -46,7 +46,7 @@ jobs:
           parameters:
             EnvironmentName: $(EnvironmentName)
             ServiceConnection: ${{ parameters.ServiceConnection }}
-            SourcePath: $(Pipeline.Workspace)/das-employer-config/Configuration/das-employer-jobs-config
+            SourcePath: $(Pipeline.Workspace)/das-employer-config/Configuration/das-employer-finance-jobs
             StorageAccountName: $(ConfigurationStorageAccountName)
             StorageAccountResourceGroup: $(SharedEnvResourceGroup)
             TargetFileName: '*.schema.json'
@@ -55,4 +55,4 @@ jobs:
           parameters:
             ServiceConnection: ${{ parameters.ServiceConnection }}
             FunctionAppName: $(FunctionAppName)
-            DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/DAS.Employer.Finance.Jobs.zip
+            DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/${{ parameters.SolutionBaseName }}.Functions.zip
