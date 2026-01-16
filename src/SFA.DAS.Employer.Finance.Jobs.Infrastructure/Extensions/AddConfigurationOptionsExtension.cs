@@ -11,8 +11,8 @@ public static class AddConfigurationOptionsExtension
     {
         services.AddOptions();
     
-        services.Configure<FinanceInnerApiConfiguration>(configuration.GetSection(nameof(FinanceInnerApiConfiguration)));
-        services.AddSingleton(cfg => cfg.GetService<IOptions<FinanceInnerApiConfiguration>>().Value);
+        services.Configure<FinanceApiConfiguration>(configuration.GetSection(nameof(FinanceApiConfiguration)));
+        services.AddSingleton(cfg => cfg.GetService<IOptions<FinanceApiConfiguration>>().Value);
        
         services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
         services.AddSingleton(cfg => cfg.GetService<IOptions<ProviderEventsApiConfiguration>>().Value);

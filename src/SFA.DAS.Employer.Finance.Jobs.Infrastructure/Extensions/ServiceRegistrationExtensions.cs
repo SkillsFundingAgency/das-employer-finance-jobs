@@ -25,7 +25,7 @@ public static class ServiceRegistrationExtensions
 
         services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
 
-        services.AddTransient<IFinanceApiClient<FinanceInnerApiConfiguration>, FinanceApiClient>();
+        services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
 
         services.AddScoped<IPeriodEndService, PeriodEndService>();
     }

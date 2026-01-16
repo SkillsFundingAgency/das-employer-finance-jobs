@@ -16,7 +16,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Services;
 public class WhenGettingNewPeriodEnds
 {
-    private Mock<IFinanceApiClient<FinanceInnerApiConfiguration>> _mockFinanceApiClient;
+    private Mock<IFinanceApiClient<FinanceApiConfiguration>> _mockFinanceApiClient;
     private Mock<IProviderPaymentApiClient<ProviderEventsApiConfiguration>> _mockProviderPaymentApiClient;
     private Mock<ILogger<PeriodEndService>> _mockLogger;
     private PeriodEndService _periodEndService;
@@ -24,7 +24,7 @@ public class WhenGettingNewPeriodEnds
     [SetUp]
     public void SetUp()
     {
-        _mockFinanceApiClient = new Mock<IFinanceApiClient<FinanceInnerApiConfiguration>>();
+        _mockFinanceApiClient = new Mock<IFinanceApiClient<FinanceApiConfiguration>>();
         _mockProviderPaymentApiClient = new Mock<IProviderPaymentApiClient<ProviderEventsApiConfiguration>>();
         _mockLogger = new Mock<ILogger<PeriodEndService>>();
         _periodEndService = new PeriodEndService(_mockFinanceApiClient.Object, _mockProviderPaymentApiClient.Object, _mockLogger.Object);
