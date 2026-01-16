@@ -30,10 +30,9 @@ var host = new HostBuilder()
 
        });
      })
-    //.UseNServiceBus((config, endpointConfiguration) =>
-    // {
-    //      endpointConfiguration.AdvancedConfiguration.EnableInstallers();
-    // })    
-    .UseNServiceBus()
+    .UseNServiceBus((config, endpointConfiguration) =>
+     {
+          endpointConfiguration.AdvancedConfiguration.EnableInstallers();
+     })    
     .Build();
      await host.RunAsync();
