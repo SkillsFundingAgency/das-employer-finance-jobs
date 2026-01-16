@@ -20,9 +20,9 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
     public class WhenAddingServicesToTheContainer
     {
         [TestCase(typeof(IAzureClientCredentialHelper))]
-        [TestCase(typeof(IInternalApiClient<FinanceApiConfiguration>))]
+        [TestCase(typeof(IInternalApiClient<FinanceInnerApiConfiguration>))]
         [TestCase(typeof(IProviderPaymentApiClient<ProviderEventsApiConfiguration>))]
-        [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
+        [TestCase(typeof(IFinanceApiClient<FinanceInnerApiConfiguration>))]
         [TestCase(typeof(IPeriodEndService))]     
         public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
         {
@@ -40,8 +40,8 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
             services.AddOptions();
 
             var configuration = GenerateConfiguration();
-            services.Configure<FinanceApiConfiguration>(configuration.GetSection(nameof(FinanceApiConfiguration)));
-            services.AddSingleton(cfg => cfg.GetService<IOptions<FinanceApiConfiguration>>().Value);
+            services.Configure<FinanceInnerApiConfiguration>(configuration.GetSection(nameof(FinanceInnerApiConfiguration)));
+            services.AddSingleton(cfg => cfg.GetService<IOptions<FinanceInnerApiConfiguration>>().Value);
 
             services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
             services.AddSingleton(cfg => cfg.GetService<IOptions<ProviderEventsApiConfiguration>>().Value);
@@ -50,7 +50,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
             services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
 
             services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
-            services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
+            services.AddTransient<IFinanceApiClient<FinanceInnerApiConfiguration>, FinanceApiClient>();
             services.AddScoped<IPeriodEndService, PeriodEndService>();         
         }
         private static IConfigurationRoot GenerateConfiguration()
@@ -62,8 +62,8 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
                     new("FUNCTIONS_WORKER_RUNTIME", "dotnet-isolated"),
                     new("AzureWebJobsServiceBus", "abc"),
                     new("NServiceBus_License", "test"),
-                    new("FinanceApiConfiguration:Url", "https://test.com/"),
-                    new("FinanceApiConfiguration:Identifier","https://test.com/"),
+                    new("FinanceInnerApiConfiguration:Url", "https://test.com/"),
+                    new("FinanceInnerApiConfiguration:Identifier","https://test.com/"),
                     new("ProviderEventsApiConfiguration:Url", "https://test.com/"),
                     new("ProviderEventsApiConfiguration:Identifier","https://test.com/")
                 }

@@ -7,7 +7,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions;
 public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
 {   
     [Function("ImportPaymentsTimer")]
-    public async Task Run([TimerTrigger("0 0 * * * *")] TimerInfo timerInfo, [DurableClient] DurableTaskClient starter)
+    public async Task Run([TimerTrigger("0 1/2 * * * *")] TimerInfo timerInfo, [DurableClient] DurableTaskClient starter)
     {
         var correlationId = Guid.NewGuid().ToString();
 
