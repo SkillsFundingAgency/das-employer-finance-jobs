@@ -77,6 +77,9 @@
         "serviceBusConnectionString": {
             "type": "string"
         },
+        "nServiceBusLicense": {
+            "type": "securestring"
+        },
         "utcValue": {
             "type": "string",
             "defaultValue": "[utcNow()]"
@@ -295,6 +298,10 @@
                                 {
                                     "name": "WEBSITE_RUN_FROM_PACKAGE",
                                     "value": "1"
+                                },
+                                {
+                                    "name": "NServiceBus_License",
+                                    "value": "[parameters('nServiceBusLicense')]"
                                 }
                             ]
                         }

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<IsPackable>false</IsPackable>
@@ -21,7 +21,7 @@
 		<PackageReference Include="NServiceBus" Version="9.2.8" />
 		<PackageReference Include="NUnit" Version="4.3.2" />
 		<PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
-		<PackageReference Include="NServiceBus.AzureFunctions.Worker.ServiceBus" Version="6.0.1" />
+		<PackageReference Include="NServiceBus.AzureFunctions.Worker.ServiceBus" Version="5.2.0" />
 		<PackageReference Include="SFA.DAS.Testing.AutoFixture" Version="17.1.146" />
 	</ItemGroup>
 

@@ -25,7 +25,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
 	  
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="8.0.0" />
-    <PackageReference Include="NServiceBus" Version="9.2.2" />
+    <PackageReference Include="NServiceBus" Version="9.2.8" />
     <PackageReference Include="NServiceBus.AzureFunctions.Worker.ServiceBus" Version="5.2.0" />
     <PackageReference Include="NServiceBus.Extensions.Hosting" Version="3.0.0" />
     <PackageReference Include="SFA.DAS.Configuration.AzureTableStorage" Version="17.1.113" />
