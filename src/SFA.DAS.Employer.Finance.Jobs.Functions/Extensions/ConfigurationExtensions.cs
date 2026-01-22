@@ -27,6 +27,7 @@ public static class ConfigurationExtensions
             options.EnvironmentName = config["EnvironmentName"];
 #endif
 
+            options.ConfigurationNameIncludesVersionNumber = true;
             options.PreFixConfigurationKeys = false;
         });
 
