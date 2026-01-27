@@ -74,9 +74,6 @@
         "sharedServiceBusName": {
             "type": "string"
         },
-        "serviceBusConnectionString": {
-            "type": "string"
-        },
         "utcValue": {
             "type": "string",
             "defaultValue": "[utcNow()]"
@@ -96,10 +93,6 @@
         },
         "deployPrivateLinkedScopedResource": {
             "type": "bool"
-        },
-        "vnetRouteAllEnabled": {
-            "type": "bool",
-            "defaultValue": false
         }
     },
     "variables": {
@@ -108,7 +101,7 @@
         "resourceGroupName": "[concat(variables('resourceNamePrefix'), '-rg')]",
         "functionAppName": "[concat(variables('resourceNamePrefix'), '-fa')]",
         "appServicePlanName": "[concat(variables('resourceNamePrefix'), '-asp')]",
-        "configNames": "SFA.DAS.Employer.Finance.Jobs",
+        "configNames": "SFA.DAS.EmployerFinance.Jobs_2.0",
         "routeTableId": {
             "id": "[resourceId(subscription().subscriptionId, parameters('sharedEnvResourceGroup'), 'Microsoft.Network/routeTables', parameters('SharedRouteTableName'))]"
         },
@@ -273,10 +266,6 @@
                                     "value": "[parameters('sharedServiceBusFqdn')]"
                                 },
                                 {
-                                    "name": "AzureWebJobsServiceBus",
-                                    "value": "[parameters('serviceBusConnectionString')]"
-                                },
-                                {
                                     "name": "LoggingRedisConnectionString",
                                     "value": "[parameters('loggingRedisConnectionString')]"
                                 },
@@ -301,9 +290,6 @@
                     },
                     "ipSecurityRestrictions": {
                         "value": "[parameters('workerAccessRestrictions')]"
-                    },
-                    "vnetRouteAllEnabled": {
-                        "value": "[parameters('vnetRouteAllEnabled')]"
                     }
                 }
             },
