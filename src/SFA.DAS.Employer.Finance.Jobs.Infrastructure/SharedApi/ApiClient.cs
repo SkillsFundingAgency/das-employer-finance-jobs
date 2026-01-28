@@ -11,9 +11,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi
         {
             PropertyNameCaseInsensitive = true
         };
-        public ApiClient(
-            IHttpClientFactory httpClientFactory,
-            T apiConfiguration) : base(httpClientFactory, apiConfiguration)
+        public ApiClient(IHttpClientFactory httpClientFactory, T apiConfiguration) : base(httpClientFactory, apiConfiguration)
         {
         }         
     }

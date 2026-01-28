@@ -56,6 +56,5 @@ public class CorrelationIdMiddleware
         context.Response.Headers[HeaderName] = correlationId;
 
         await _next(context);
-
     }
 }

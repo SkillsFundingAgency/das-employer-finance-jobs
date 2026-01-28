@@ -1,8 +1,5 @@
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.ApplicationInsights;
+using SFA.DAS.Employer.Finance.Jobs.Functions.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 
@@ -10,31 +7,16 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
-     .ConfigureServices((context, services) =>
-     {
-         var configuration = context.Configuration;
-         services.AddConfigurationOptions(configuration);
-         services.AddServiceRegistration(configuration);
-         services.AddApplicationInsightsTelemetryWorkerService();
-         services.ConfigureFunctionsApplicationInsights();
-     })
-    .UseNServiceBus()
-
+    .ConfigureAppConfiguration(builder => builder.BuildDasConfiguration())
+    .ConfigureNServiceBus()
     .ConfigureServices((context, services) =>
     {
-        services
-        .AddLogging(builder =>
-        {
-            builder.AddFilter<ApplicationInsightsLoggerProvider>(string.Empty, LogLevel.Information);
-            builder.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Information);
-
-            builder.AddFilter(typeof(Program).Namespace, LogLevel.Information);
-            builder.SetMinimumLevel(LogLevel.Trace);
-            builder.AddConsole();
-
-        })
-            .AddApplicationInsightsTelemetryWorkerService()
-            .ConfigureFunctionsApplicationInsights();
-    })
+        var configuration = context.Configuration;
+        
+        services.AddDasLogging();
+        services.AddDasDataProtection(configuration);
+        services.AddConfigurationOptions(configuration);
+        services.AddServiceRegistration(configuration);
+    })    
     .Build();
-await host.RunAsync();
+     await host.RunAsync();
