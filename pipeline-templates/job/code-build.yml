@@ -23,7 +23,7 @@ jobs:
     inputs:
       command: publish
       publishWebProjects: false
-      projects: src/DAS.Employer.Finance.Jobs/DAS.Employer.Finance.Jobs/${{ parameters.SolutionBaseName }}.csproj
+      projects: src/${{ parameters.SolutionBaseName }}.Functions/${{ parameters.SolutionBaseName }}.Functions.csproj
       arguments: -o $(build.artifactstagingdirectory)/publish -c ${{ parameters.BuildConfiguration }} --no-build
       modifyOutputPath: true
       zipAfterPublish: true
