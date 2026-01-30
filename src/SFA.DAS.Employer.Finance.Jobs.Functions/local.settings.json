@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AzureWebJobsServiceBus": "",
+    "NServiceBus_License": "",
+    "ConfigNames": "SFA.DAS.EmployerFinance.Jobs_2.0",
+    "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true",
+    "EnvironmentName": "LOCAL"
+  }
+}
