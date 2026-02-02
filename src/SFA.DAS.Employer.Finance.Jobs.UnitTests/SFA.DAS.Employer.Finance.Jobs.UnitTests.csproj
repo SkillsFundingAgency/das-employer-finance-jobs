@@ -21,7 +21,6 @@
 		<PackageReference Include="NServiceBus" Version="9.2.8" />
 		<PackageReference Include="NUnit" Version="4.3.2" />
 		<PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
-		<PackageReference Include="NServiceBus.AzureFunctions.Worker.ServiceBus" Version="5.2.0" />
 		<PackageReference Include="SFA.DAS.Testing.AutoFixture" Version="17.1.146" />
 	</ItemGroup>
 
