@@ -9,7 +9,7 @@ public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
     [Function("ImportPaymentsTimer")]
     public async Task Run([TimerTrigger("0 0 * * * *")] TimerInfo timerInfo, [DurableClient] DurableTaskClient starter)
     {
-        var correlationId = Guid.NewGuid().ToString() +  "-NEW-RELEASE";
+        var correlationId = Guid.NewGuid().ToString();
 
         logger.LogInformation("[CorrelationId: {CorrelationId}] ImportPaymentsTimer triggered at {Time}",correlationId, DateTime.UtcNow);
 

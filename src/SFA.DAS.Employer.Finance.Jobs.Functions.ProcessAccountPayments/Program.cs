@@ -1,9 +1,11 @@
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
+using SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction.Orchestrators;
 
 [assembly: NServiceBusTriggerFunction("SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments")]
 
@@ -11,7 +13,9 @@ var hostBuilder = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
      .ConfigureServices((context, services) =>
      {
-         var configuration = context.Configuration;
+         var configuration = context.Configuration;       
+         services.AddDurableTaskClient(builder => builder.UseGrpc());
+         services.AddSingleton<IProcessAccountOrchestrationStarter, ProcessAccountOrchestrationStarter>();
          services.AddConfigurationOptions(configuration);
          services.AddServiceRegistration(configuration);
          services.AddApplicationInsightsTelemetryWorkerService();
