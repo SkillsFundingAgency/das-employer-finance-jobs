@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs.Infrastructure\SFA.DAS.Employer.Finance.Jobs.Infrastructure.csproj" />
+    <ProjectReference Include="..\SFA.DAS.Employer.Finance.Messages\SFA.DAS.Employer.Finance.Messages.csproj" />
   </ItemGroup>
 
 </Project>

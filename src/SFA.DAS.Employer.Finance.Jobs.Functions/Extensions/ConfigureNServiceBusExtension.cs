@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Hosting;
+using SFA.DAS.Employer.Finance.Messages.Commands;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.Extensions;
 
@@ -8,6 +9,7 @@ public static class ConfigureNServiceBusExtension
 {
     private const string EndpointName = "SFA.DAS.Employer.Finance.Jobs.Functions";
     private const string ErrorEndpointName = $"{EndpointName}-error";
+    private const string ProcessAccountPaymentsEndpointName = "SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments";
 
     public static IHostBuilder ConfigureNServiceBus(this IHostBuilder hostBuilder)
     {
@@ -21,6 +23,8 @@ public static class ConfigureNServiceBusExtension
                 .DefiningCommandsAs(IsCommand)
                 .DefiningMessagesAs(IsMessage)
                 .DefiningEventsAs(IsEvent);
+
+            endpointConfiguration.Routing.RouteToEndpoint(typeof(ImportAccountPaymentsCommand), ProcessAccountPaymentsEndpointName);
 
             var license = config["NServiceBus_License"];
             if (!string.IsNullOrEmpty(license))
