@@ -26,7 +26,7 @@ public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
                 return;
             }
 
-            var newInstanceId = await starter.ScheduleNewOrchestrationInstanceAsync("ImportPaymentsOrchestrator",
+            var newInstanceId = await starter.ScheduleNewOrchestrationInstanceAsync(nameof(ImportPaymentsOrchestrator),
                 new ImportPaymentsOrchestratorInput
                 {
                     CorrelationId = correlationId,

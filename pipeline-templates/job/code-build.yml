@@ -19,25 +19,49 @@ jobs:
       ContinueOnVulnerablePackageScanError: true
 
   - task: DotNetCoreCLI@2
-    displayName: Publish - dotnet publish ${{ parameters.SolutionBaseName }}
+    displayName: 'Publish - dotnet publish Function App Functions'
     inputs:
       command: publish
       publishWebProjects: false
       projects: src/${{ parameters.SolutionBaseName }}.Functions/${{ parameters.SolutionBaseName }}.Functions.csproj
-      arguments: -o $(build.artifactstagingdirectory)/publish -c ${{ parameters.BuildConfiguration }} --no-build
-      modifyOutputPath: true
-      zipAfterPublish: true
+      arguments: '--configuration $(buildConfiguration) --output $(build.artifactstagingdirectory)/publish --no-restore --no-build'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Publish - dotnet publish Function App ProcessAccountPayments'
+    inputs:
+      command: publish
+      publishWebProjects: false
+      projects: src/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments.csproj
+      arguments: '--configuration $(buildConfiguration) --output $(build.artifactstagingdirectory)/publishProcessAccountPayments --no-restore --no-build'
+
+  - task: ArchiveFiles@2
+    displayName: 'Archive Functions publish to zip'
+    inputs:
+      rootFolderOrFile: '$(build.artifactstagingdirectory)/publish'
+      includeRootFolder: false
+      archiveType: zip
+      archiveFile: '$(build.artifactstagingdirectory)/publish/${{ parameters.SolutionBaseName }}.Functions.zip'
+      replaceExistingArchive: true
+
+  - task: ArchiveFiles@2
+    displayName: 'Archive ProcessAccountPayments publish to zip'
+    inputs:
+      rootFolderOrFile: '$(build.artifactstagingdirectory)/publishProcessAccountPayments'
+      includeRootFolder: false
+      archiveType: zip
+      archiveFile: '$(build.artifactstagingdirectory)/publish/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments.zip'
+      replaceExistingArchive: true
 
   - task: CopyFiles@2
-    displayName: Copy Files to $(build.artifactstagingdirectory)/publish
+    displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
     inputs:
       Contents: |
         azure/**
-      TargetFolder: $(build.artifactstagingdirectory)/publish
+      TargetFolder: '$(build.artifactstagingdirectory)/publish'
       OverWrite: true
 
-  - task: PublishPipelineArtifact@1
-    displayName: Publish Build Artifact
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact'
     inputs:
-      targetPath: $(build.artifactstagingdirectory)/publish
+      PathtoPublish: '$(build.artifactstagingdirectory)/publish'
       artifactName: ${{ parameters.SolutionBaseName }}

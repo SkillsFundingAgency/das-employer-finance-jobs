@@ -19,15 +19,6 @@ jobs:
             EnvironmentId: $(Environment.Id)
             PipelineName: $(Build.DefinitionName)
             RunId: $(Build.BuildId)
-        - template: azure-pipelines-templates/deploy/step/set-backendaccessrestrictions-variable.yml@das-platform-building-blocks
-          parameters:
-            ServiceConnection: ${{ parameters.ServiceConnection }}
-            SharedEnvResourceGroup: $(SharedEnvResourceGroup)
-            SharedEnvVirtualNetworkName : $(SharedEnvVirtualNetworkName)
-            BackEndAccessRestrictionsExcludedSubnets: $(BackEndAccessRestrictionsExcludedSubnets)
-            ResourceEnvironmentName: $(ResourceEnvironmentName)
-            UnrestrictedEnvironments: $(UnrestrictedEnvironments)
-            UptimeMonitoringAccessRestrictions: $(UptimeMonitoringAccessRestrictions)    
         - template: azure-pipelines-templates/deploy/step/arm-deploy.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.ServiceConnection }}
@@ -57,8 +48,19 @@ jobs:
             ResourceName: $(FunctionAppName)
             Tenant: $(Tenant)
             IsMultiRepoCheckout: true
+        - template: azure-pipelines-templates/deploy/step/app-role-assignments.yml@das-platform-building-blocks
+          parameters:
+            ServiceConnection: ${{ parameters.AppRoleAssignmentsServiceConnection }}
+            ResourceName: $(functionAppNameProcessAccountPayments)
+            Tenant: $(Tenant)
+            IsMultiRepoCheckout: true
         - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.ServiceConnection }}
             FunctionAppName: $(FunctionAppName)
             DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/${{ parameters.SolutionBaseName }}.Functions.zip
+        - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
+          parameters:
+            ServiceConnection: ${{ parameters.ServiceConnection }}
+            FunctionAppName: $(functionAppNameProcessAccountPayments)
+            DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments.zip
