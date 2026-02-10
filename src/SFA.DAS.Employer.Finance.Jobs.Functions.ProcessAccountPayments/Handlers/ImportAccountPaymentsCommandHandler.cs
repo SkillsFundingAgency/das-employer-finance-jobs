@@ -1,5 +1,6 @@
 ﻿using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Functions.Orchestrators;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Messages.Commands;
 using SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction.Orchestrators;
@@ -25,7 +26,7 @@ public class ImportAccountPaymentsCommandHandler(ILogger<ImportAccountPaymentsCo
                 logger.LogWarning("[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator is already running. InstanceId: {InstanceId}", correlationId, existingInstance.InstanceId);
                 return;
             }
-            await starter.StartAsyc("ProcessAccountOrchestrator", instanceId,
+            await starter.StartAsyc(nameof(ProcessAccountOrchestrator), instanceId,
              new ProcessAccountInput
              {
                  AccountId = message.AccountId,

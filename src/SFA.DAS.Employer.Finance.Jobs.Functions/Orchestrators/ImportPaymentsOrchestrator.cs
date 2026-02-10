@@ -37,7 +37,7 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
               
                 foreach (var periodEnd in newPeriodEnds)
                 {
-                    await context.CallActivityAsync("ProcessPeriodEndActivity",
+                    await context.CallActivityAsync(nameof(ProcessPeriodEndActivity),
                                                     new ProcessPeriodEndInput
                                                     {
                                                         CorrelationId = correlationId,
@@ -77,7 +77,7 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
     [Function("ProcessPeriodEndActivity")]
     public async Task ProcessPeriodEndActivity([ActivityTrigger] ProcessPeriodEndInput input)
     {
-
+        // TODO: GET levy accounts and send ImportAccounPaymentsCommand per account via NServicebus.
         logger.LogInformation("[CorrelationId: {CorrelationId}] Processing period end: Year={Year}, Period={Period}", input.CorrelationId, input.PeriodEnd.CalendarPeriodYear, input.PeriodEnd.PaymentsForPeriod);              
         await Task.CompletedTask;
     }
