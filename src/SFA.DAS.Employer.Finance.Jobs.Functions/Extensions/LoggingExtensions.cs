@@ -15,6 +15,8 @@ public static class LoggingExtensions
             builder.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Information);
             builder.AddFilter<ApplicationInsightsLoggerProvider>("NServiceBus", LogLevel.Debug);
             builder.AddFilter("NServiceBus", LogLevel.Debug);
+            builder.AddFilter<ApplicationInsightsLoggerProvider>("StartupDiagnostics", LogLevel.Information);
+            builder.AddFilter("StartupDiagnostics", LogLevel.Information);
 
             builder.AddFilter(typeof(Program).Namespace, LogLevel.Information);
             builder.SetMinimumLevel(LogLevel.Trace);

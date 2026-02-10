@@ -8,7 +8,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions;
 public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
 {   
     [Function("ImportPaymentsTimer")]
-    public async Task Run([TimerTrigger("0 0 * * * *")] TimerInfo timerInfo, [DurableClient] DurableTaskClient starter)
+    public async Task Run([TimerTrigger("0 0 * * * *", RunOnStartup = true)] TimerInfo timerInfo, [DurableClient] DurableTaskClient client)
     {
         var correlationId = Guid.NewGuid().ToString();
 
@@ -19,7 +19,7 @@ public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
            
             var instanceId = "ImportPaymentsOrchestrator-Singleton";
             
-            var existingInstance = await starter.GetInstanceAsync(instanceId);
+            var existingInstance = await client.GetInstanceAsync(instanceId);
             if (existingInstance != null && (existingInstance.RuntimeStatus == OrchestrationRuntimeStatus.Running 
                                           || existingInstance.RuntimeStatus == OrchestrationRuntimeStatus.Pending))
             {
@@ -27,7 +27,7 @@ public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
                 return;
             }
 
-            var newInstanceId = await starter.ScheduleNewOrchestrationInstanceAsync(nameof(ImportPaymentsOrchestrator),
+            var newInstanceId = await client.ScheduleNewOrchestrationInstanceAsync(nameof(ImportPaymentsOrchestrator),
                 new ImportPaymentsOrchestratorInput
                 {
                     CorrelationId = correlationId,
