@@ -57,12 +57,6 @@ jobs:
             ResourceName: $(FunctionAppName)
             Tenant: $(Tenant)
             IsMultiRepoCheckout: true
-        - template: azure-pipelines-templates/deploy/step/app-role-assignments.yml@das-platform-building-blocks
-          parameters:
-            ServiceConnection: ${{ parameters.AppRoleAssignmentsServiceConnection }}
-            ResourceName: $(functionAppNameProcessAccountPayments)
-            Tenant: $(Tenant)
-            IsMultiRepoCheckout: true
         - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.ServiceConnection }}
