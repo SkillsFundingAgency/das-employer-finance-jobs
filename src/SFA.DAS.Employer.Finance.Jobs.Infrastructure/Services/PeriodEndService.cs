@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
@@ -43,6 +43,11 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
             var paymentPeriodEnds = await providerPaymentApiClient.Get<List<PaymentPeriodEnd>>(request);
 
             logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from payment period end API", correlationId, paymentPeriodEnds?.Count ?? 0);
+            if (paymentPeriodEnds is { Count: > 0 })
+            {
+                var providerIds = string.Join(", ", paymentPeriodEnds.Select(pe => pe.Id));
+                logger.LogInformation("[CorrelationId: {CorrelationId}] Period ends from Provider Events API: [{PeriodEndIds}]", correlationId, providerIds);
+            }
 
             var periodEnds = paymentPeriodEnds.ConvertAll(pe => new PeriodEnd
             {              
@@ -73,6 +78,11 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
             var financePeriodEnds = await financeApiClient.Get<List<PeriodEnd>>(request);
 
             logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from Finance API", correlationId, financePeriodEnds?.Count ?? 0);
+            if (financePeriodEnds is { Count: > 0 })
+            {
+                var financeIds = string.Join(", ", financePeriodEnds.Select(pe => pe.PeriodEndId));
+                logger.LogInformation("[CorrelationId: {CorrelationId}] Period ends from Finance API: [{PeriodEndIds}]", correlationId, financeIds);
+            }
 
             return financePeriodEnds ?? new List<PeriodEnd>();
         }
