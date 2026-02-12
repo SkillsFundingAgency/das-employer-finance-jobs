@@ -25,6 +25,8 @@ jobs:
       publishWebProjects: false
       projects: src/${{ parameters.SolutionBaseName }}.Functions/${{ parameters.SolutionBaseName }}.Functions.csproj
       arguments: -o $(build.artifactstagingdirectory)/publish -c ${{ parameters.BuildConfiguration }} --no-build
+      modifyOutputPath: true
+      zipAfterPublish: true
 
   - task: DotNetCoreCLI@2
     displayName: Publish - dotnet publish ${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments
@@ -32,7 +34,9 @@ jobs:
       command: publish
       publishWebProjects: false
       projects: src/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments.csproj
-      arguments: -o $(build.artifactstagingdirectory)/publishProcessAccountPayments -c ${{ parameters.BuildConfiguration }} --no-build
+      arguments: -o $(build.artifactstagingdirectory)/publish -c ${{ parameters.BuildConfiguration }} --no-build
+      modifyOutputPath: true
+      zipAfterPublish: true
 
   - task: CopyFiles@2
     displayName: Copy Files to $(build.artifactstagingdirectory)/publish
