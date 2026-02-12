@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
@@ -39,27 +39,37 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
             logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Provider Events API to get period ends", correlationId);
 
             var request = new GetPaymentPeriodEndsRequest();
-           
-            var paymentPeriodEnds = await providerPaymentApiClient.Get<List<PaymentPeriodEnd>>(request);
 
-            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from payment period end API", correlationId, paymentPeriodEnds?.Count ?? 0);
+            var response = await providerPaymentApiClient.GetWithResponseCode<List<PaymentPeriodEnd>>(request);
+            if (response == null)
+            {
+                logger.LogWarning("[CorrelationId: {CorrelationId}] No response received from Provider Events API. Assuming no existing period ends.", correlationId);
+                return new List<PeriodEnd>();
+            }
+            if (response != null && response.StatusCode != System.Net.HttpStatusCode.OK)
+            {
+                logger.LogWarning("[CorrelationId: {CorrelationId}] Provider Events API returned {StatusCode} with error: {ErrorContent}. Assuming no existing period ends.", correlationId, response.StatusCode, response.ErrorContent);
+                return new List<PeriodEnd>();
+            }
+            var paymentPeriodEnds = response!.Body;
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from Provider Events API", correlationId, paymentPeriodEnds?.Count ?? 0);
 
-            var periodEnds = paymentPeriodEnds.ConvertAll(pe => new PeriodEnd
-            {              
+            var periodEnds = paymentPeriodEnds?.ConvertAll(pe => new PeriodEnd
+            {
                 PeriodEndId = pe.Id,
                 CalendarPeriodMonth = pe.CalendarPeriod.Month,
                 CalendarPeriodYear = pe.CalendarPeriod.Year,
                 AccountDataValidAt = pe.ReferenceData.CommitmentDataValidAt,
                 CommitmentDataValidAt = pe.ReferenceData.AccountDataValidAt,
                 CompletionDateTime = pe.CompletionDateTime,
-                PaymentsForPeriod  = pe.Links.PaymentsForPeriod
+                PaymentsForPeriod = pe.Links.PaymentsForPeriod
             });
 
-            return periodEnds;
+            return periodEnds ?? new List<PeriodEnd>();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,"[CorrelationId: {CorrelationId}] Error retrieving period ends from Payment API: {ErrorMessage}", correlationId, ex.Message);
+            logger.LogError(ex, "[CorrelationId: {CorrelationId}] Error retrieving period ends from Provider Events API: {ErrorMessage}", correlationId, ex.Message);
             throw;
         }
     }
@@ -69,19 +79,29 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
         {
             logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Finance API to get existing period ends", correlationId);
 
-            var request = new GetFinancePeriodEndsRequest();      
-            var financePeriodEnds = await financeApiClient.Get<List<PeriodEnd>>(request);
-
+            var request = new GetFinancePeriodEndsRequest();
+            var response = await financeApiClient.GetWithResponseCode<List<PeriodEnd>>(request);
+            if (response == null)
+            {
+                logger.LogWarning("[CorrelationId: {CorrelationId}] No response received from Finance API. Assuming no existing period ends.", correlationId);
+                return new List<PeriodEnd>();
+            }
+            if (response != null && response.StatusCode != System.Net.HttpStatusCode.OK)
+            {
+                logger.LogWarning("[CorrelationId: {CorrelationId}] Finance API returned {StatusCode} with error: {ErrorContent}. Assuming no existing period ends.", correlationId, response.StatusCode, response.ErrorContent);
+                return new List<PeriodEnd>();
+            }
+            var financePeriodEnds = response?.Body;
             logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from Finance API", correlationId, financePeriodEnds?.Count ?? 0);
 
             return financePeriodEnds ?? new List<PeriodEnd>();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,"[CorrelationId: {CorrelationId}] Error retrieving period ends from Finance API: {ErrorMessage}", correlationId, ex.Message);
+            logger.LogError(ex, "[CorrelationId: {CorrelationId}] Error retrieving period ends from Finance API: {ErrorMessage}", correlationId, ex.Message);
             throw;
         }
-    }    
+    }
     private List<PeriodEnd> FilterNewPeriodEnds(List<PeriodEnd> paymentPeriodEnds, List<PeriodEnd> financePeriodEnds, string correlationId)
     {       
         var existingPeriodEndIds = new HashSet<string>(financePeriodEnds.Select(p => p.PeriodEndId ?? string.Empty), StringComparer.OrdinalIgnoreCase);

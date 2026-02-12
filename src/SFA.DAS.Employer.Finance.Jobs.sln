@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Messages", "SFA.DAS.Employer.Finance.Messages\SFA.DAS.Employer.Finance.Messages.csproj", "{22C225E8-AEC5-052A-3D98-453741F2EF91}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments", "SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments\SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments.csproj", "{688A701F-4D72-4D5A-BC75-DA6F05EC4973}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,10 @@ Global
 		{22C225E8-AEC5-052A-3D98-453741F2EF91}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{22C225E8-AEC5-052A-3D98-453741F2EF91}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{22C225E8-AEC5-052A-3D98-453741F2EF91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{688A701F-4D72-4D5A-BC75-DA6F05EC4973}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{688A701F-4D72-4D5A-BC75-DA6F05EC4973}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{688A701F-4D72-4D5A-BC75-DA6F05EC4973}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{688A701F-4D72-4D5A-BC75-DA6F05EC4973}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
