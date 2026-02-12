@@ -100,7 +100,7 @@
         "resourceNamePrefix": "[toLower(concat('das-', parameters('resourceEnvironmentName'),'-', parameters('serviceName')))]",
         "resourceGroupName": "[concat(variables('resourceNamePrefix'), '-rg')]",
         "functionAppName": "[concat(variables('resourceNamePrefix'), '-fa')]",
-        "functionAppNameProcessAccountPayments": "[concat(variables('resourceNamePrefix'), '-fa-pap')]",
+        "functionAppNameProcessAccountPayments": "[concat(variables('resourceNamePrefix'), '-pap-fa')]",
         "appServicePlanName": "[concat(variables('resourceNamePrefix'), '-asp')]",
         "configNames": "SFA.DAS.EmployerFinance.Jobs_2.0",
         "routeTableId": {
@@ -567,7 +567,7 @@
             "type": "string",
             "value": "[variables('functionAppName')]"
         },
-        "functionAppNameProcessAccountPayments": {
+        "FunctionAppNameProcessAccountPayments": {
             "type": "string",
             "value": "[variables('functionAppNameProcessAccountPayments')]"
         }
