@@ -7,7 +7,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 
-public class AccountService(IFinanceApiClient<FinanceApiConfiguration> financeApiClient, IProviderPaymentApiClient<ProviderPaymentApiConfiguration> providerPaymentApiClient, ILogger<IAccountService> logger) : IAccountService
+public class AccountService(IFinanceApiClient<FinanceApiConfiguration> financeApiClient, IProviderPaymentApiClient<ProviderEventsApiConfiguration> providerPaymentApiClient, ILogger<IAccountService> logger) : IAccountService
 {
     public async Task<List<Accounts>> GetAccountsAsync(GetAccountsRequest request)
     {

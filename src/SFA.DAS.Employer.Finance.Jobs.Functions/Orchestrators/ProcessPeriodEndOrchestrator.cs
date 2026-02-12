@@ -26,7 +26,7 @@ public class ProcessPeriodEndOrchestrator(ILogger<ProcessPeriodEndOrchestrator> 
 
         var allAccounts = new List<Accounts>(); 
 
-        int page = 1;
+        var page = 1;
         while (true)
         {
             var pageInput = new GetAccountsRequest
