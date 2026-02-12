@@ -14,7 +14,7 @@ public static class AddConfigurationOptionsExtension
         services.Configure<FinanceApiConfiguration>(configuration.GetSection(nameof(FinanceApiConfiguration)));
         services.AddSingleton(cfg => cfg.GetService<IOptions<FinanceApiConfiguration>>().Value);
        
-        services.Configure<ProviderPaymentApiConfiguration>(configuration.GetSection(nameof(ProviderPaymentApiConfiguration)));
-        services.AddSingleton(cfg => cfg.GetService<IOptions<ProviderPaymentApiConfiguration>>().Value);
+        services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
+        services.AddSingleton(cfg => cfg.GetService<IOptions<ProviderEventsApiConfiguration>>().Value);
     }
 }

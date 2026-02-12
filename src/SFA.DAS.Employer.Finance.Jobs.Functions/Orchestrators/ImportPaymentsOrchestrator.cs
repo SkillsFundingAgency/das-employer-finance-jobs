@@ -1,4 +1,4 @@
-﻿using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Functions;
@@ -26,8 +26,7 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
 
         try
         {
-
-            var newPeriodEnds = await context.CallActivityAsync<List<PeriodEnd>>("GetNewPeriodEndsActivity",correlationId);
+            var newPeriodEnds = await context.CallActivityAsync<List<PeriodEnd>>(nameof(GetNewPeriodEndsActivity), correlationId);
 
             result.NewPeriodEndsCount = newPeriodEnds?.Count ?? 0;
             result.TotalPeriodEndsCount = newPeriodEnds?.Count ?? 0;
@@ -76,7 +75,7 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
     public async Task ProcessPeriodEndActivity([ActivityTrigger] ProcessPeriodEndInput input)
     {
         logger.LogInformation("[CorrelationId: {CorrelationId}] Processing period end: Year={Year}, Period={Period}", input.CorrelationId, input.PeriodEnd.CalendarPeriodYear, input.PeriodEnd.PaymentsForPeriod);              
-        
+        await Task.CompletedTask;
     }
 }
 

@@ -23,7 +23,7 @@ public static class ServiceRegistrationExtensions
 
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
 
-        services.AddTransient<IProviderPaymentApiClient<ProviderPaymentApiConfiguration>, ProviderPaymentApiClient>();
+        services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
 
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
 

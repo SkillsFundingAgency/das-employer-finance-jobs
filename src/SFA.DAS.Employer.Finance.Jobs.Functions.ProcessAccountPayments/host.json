@@ -8,13 +8,5 @@
             },
             "enableLiveMetricsFilters": true
         }
-    },
-    "extensions": {
-        "durableTask": {
-            "hubName": "ImportPaymentsHub",
-            "storageProvider": {
-                "connectionName": "AzureWebJobsStorage"
-            }
-        }
     }
 }

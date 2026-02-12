@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration
 {
     [ExcludeFromCodeCoverage]
-    public class ProviderPaymentApiConfiguration : IInternalApiConfiguration
+    public class ProviderEventsApiConfiguration : IInternalApiConfiguration
     {
         public string Url { get; set; } 
         public string Identifier { get; set; } 

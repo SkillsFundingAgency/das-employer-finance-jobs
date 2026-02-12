@@ -21,7 +21,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
     {
         [TestCase(typeof(IAzureClientCredentialHelper))]
         [TestCase(typeof(IInternalApiClient<FinanceApiConfiguration>))]
-        [TestCase(typeof(IProviderPaymentApiClient<ProviderPaymentApiConfiguration>))]
+        [TestCase(typeof(IProviderPaymentApiClient<ProviderEventsApiConfiguration>))]
         [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
         [TestCase(typeof(IPeriodEndService))]     
         public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
@@ -43,13 +43,13 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
             services.Configure<FinanceApiConfiguration>(configuration.GetSection(nameof(FinanceApiConfiguration)));
             services.AddSingleton(cfg => cfg.GetService<IOptions<FinanceApiConfiguration>>().Value);
 
-            services.Configure<ProviderPaymentApiConfiguration>(configuration.GetSection(nameof(ProviderPaymentApiConfiguration)));
-            services.AddSingleton(cfg => cfg.GetService<IOptions<ProviderPaymentApiConfiguration>>().Value);
+            services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
+            services.AddSingleton(cfg => cfg.GetService<IOptions<ProviderEventsApiConfiguration>>().Value);
 
             services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
             services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
 
-            services.AddTransient<IProviderPaymentApiClient<ProviderPaymentApiConfiguration>, ProviderPaymentApiClient>();
+            services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
             services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
             services.AddScoped<IPeriodEndService, PeriodEndService>();         
         }
@@ -64,8 +64,8 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
                     new("NServiceBus_License", "test"),
                     new("FinanceApiConfiguration:Url", "https://test.com/"),
                     new("FinanceApiConfiguration:Identifier","https://test.com/"),
-                    new("ProviderPaymentApiConfiguration:Url", "https://test.com/"),
-                    new("ProviderPaymentApiConfiguration:Identifier","https://test.com/")
+                    new("ProviderEventsApiConfiguration:Url", "https://test.com/"),
+                    new("ProviderEventsApiConfiguration:Identifier","https://test.com/")
                 }
             };
             var provider = new MemoryConfigurationProvider(configSource);

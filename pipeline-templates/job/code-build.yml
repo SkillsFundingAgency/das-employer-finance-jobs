@@ -19,7 +19,7 @@ jobs:
       ContinueOnVulnerablePackageScanError: true
 
   - task: DotNetCoreCLI@2
-    displayName: Publish - dotnet publish ${{ parameters.SolutionBaseName }}
+    displayName: Publish - dotnet publish ${{ parameters.SolutionBaseName }}.Functions
     inputs:
       command: publish
       publishWebProjects: false
@@ -27,6 +27,24 @@ jobs:
       arguments: -o $(build.artifactstagingdirectory)/publish -c ${{ parameters.BuildConfiguration }} --no-build
       modifyOutputPath: true
       zipAfterPublish: true
+
+  - task: DotNetCoreCLI@2
+    displayName: Publish - dotnet publish ${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments
+    inputs:
+      command: publish
+      publishWebProjects: false
+      projects: src/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments.csproj
+      arguments: -o $(build.artifactstagingdirectory)/publishProcessAccountPayments -c ${{ parameters.BuildConfiguration }} --no-build
+      modifyOutputPath: true
+      zipAfterPublish: true
+
+  - task: CopyFiles@2
+    displayName: Copy ProcessAccountPayments zip to publish
+    inputs:
+      SourceFolder: $(build.artifactstagingdirectory)/publishProcessAccountPayments
+      Contents: '*.zip'
+      TargetFolder: $(build.artifactstagingdirectory)/publish
+      OverWrite: true
 
   - task: CopyFiles@2
     displayName: Copy Files to $(build.artifactstagingdirectory)/publish

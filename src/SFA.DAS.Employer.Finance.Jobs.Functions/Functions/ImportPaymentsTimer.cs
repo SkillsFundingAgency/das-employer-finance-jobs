@@ -2,13 +2,14 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions;
 
 public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
-{
+{   
     [Function("ImportPaymentsTimer")]
-    public async Task Run([TimerTrigger("0 0 * * * *")] TimerInfo timerInfo, [DurableClient] DurableTaskClient starter)
+    public async Task Run([TimerTrigger("0 0 * * * *", RunOnStartup = true)] TimerInfo timerInfo, [DurableClient] DurableTaskClient client)
     {
         var correlationId = Guid.NewGuid().ToString();
 
@@ -16,10 +17,9 @@ public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
 
         try
         {
-
             var instanceId = "ImportPaymentsOrchestrator-Singleton";
 
-            var existingInstance = await starter.GetInstanceAsync(instanceId);
+            var existingInstance = await client.GetInstanceAsync(instanceId);
             if (existingInstance != null && (existingInstance.RuntimeStatus == OrchestrationRuntimeStatus.Running
                                           || existingInstance.RuntimeStatus == OrchestrationRuntimeStatus.Pending))
             {
@@ -27,7 +27,7 @@ public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
                 return;
             }
 
-            var newInstanceId = await starter.ScheduleNewOrchestrationInstanceAsync("ImportPaymentsOrchestrator",
+            var newInstanceId = await client.ScheduleNewOrchestrationInstanceAsync(nameof(ImportPaymentsOrchestrator),
                 new ImportPaymentsOrchestratorInput
                 {
                     CorrelationId = correlationId,
@@ -42,7 +42,7 @@ public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "[CorrelationId: {CorrelationId}] Error starting ImportPaymentsOrchestrator: {ErrorMessage}", correlationId, ex.Message);
+            logger.LogError(ex,"[CorrelationId: {CorrelationId}] Error starting ImportPaymentsOrchestrator: {ErrorMessage}", correlationId, ex.Message);
             throw;
         }
     }
