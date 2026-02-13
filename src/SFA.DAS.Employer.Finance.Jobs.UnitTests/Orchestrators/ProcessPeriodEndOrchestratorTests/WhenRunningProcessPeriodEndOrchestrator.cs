@@ -1,13 +1,13 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
+using NServiceBus;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Orchestrators.ProcessPeriodEndOrchestratorTests;
@@ -18,6 +18,7 @@ public class WhenRunningProcessPeriodEndOrchestrator
     private Mock<ILogger<ProcessPeriodEndOrchestrator>> _loggerMock;
     private Mock<IPeriodEndService> _periodEndServiceMock;
     private Mock<IAccountService> _accountServiceMock;
+    private Mock<IFunctionEndpoint> _functionEndpointMock;
     private Mock<TaskOrchestrationContext> _contextMock;
 
     private ProcessPeriodEndOrchestrator _orchestrator;
@@ -28,6 +29,7 @@ public class WhenRunningProcessPeriodEndOrchestrator
         _loggerMock = new Mock<ILogger<ProcessPeriodEndOrchestrator>>();
         _periodEndServiceMock = new Mock<IPeriodEndService>();
         _accountServiceMock = new Mock<IAccountService>();
+        _functionEndpointMock = new Mock<IFunctionEndpoint>();
         _contextMock = new Mock<TaskOrchestrationContext>();
 
         _contextMock
@@ -41,7 +43,8 @@ public class WhenRunningProcessPeriodEndOrchestrator
         _orchestrator = new ProcessPeriodEndOrchestrator(
             _loggerMock.Object,
             _periodEndServiceMock.Object,
-            _accountServiceMock.Object);
+            _accountServiceMock.Object,
+            _functionEndpointMock.Object);
     }
 
     [Test]
@@ -51,7 +54,7 @@ public class WhenRunningProcessPeriodEndOrchestrator
     }
 
     [Test]
-    public async Task Then_Returns_Result_When_Single_Page_Of_Accounts()
+    public async Task Then_Returns_Result_When_Activity_Publishes_Commands()
     {
         var input = CreateValidPeriodEnd("PE-202401");
 
@@ -60,25 +63,21 @@ public class WhenRunningProcessPeriodEndOrchestrator
 
         _periodEndServiceMock
             .Setup(s => s.CreatePeriodEndAsync(input, It.IsAny<Guid>()))
-            .ReturnsAsync(new PeriodEnd { Id = 123 });
+            .ReturnsAsync(new PeriodEnd { Id = 123, PeriodEndId = "PE-202401" });
 
-        _accountServiceMock
-            .Setup(s => s.GetAccountsAsync(It.Is<GetAccountsRequest>(r => r.Page == 1)))
-            .ReturnsAsync(new List<Accounts>
-            {
-                new Accounts { Id = 1, Name = "Account 1" },
-                new Accounts { Id = 2, Name = "Account 2" }
-            });
+        _contextMock
+            .Setup(c => c.CallActivityAsync<int>(It.IsAny<TaskName>(), It.IsAny<object>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(2);
 
         var result = await _orchestrator.Run(_contextMock.Object);
 
         result.Should().NotBeNull();
         result.PeriodEndId.Should().Be("123");
-        result.TotalAccountsRetrieved.Should().Be(2);
+        result.TotalCommandsPublished.Should().Be(2);
     }
 
     [Test]
-    public async Task Then_Pages_Until_No_More_Accounts()
+    public async Task Then_Returns_Total_Commands_Published_From_Activity()
     {
         var input = CreateValidPeriodEnd("PE-PAGED");
 
@@ -87,28 +86,20 @@ public class WhenRunningProcessPeriodEndOrchestrator
 
         _periodEndServiceMock
             .Setup(s => s.CreatePeriodEndAsync(input, It.IsAny<Guid>()))
-            .ReturnsAsync(new PeriodEnd { Id = 456 });
+            .ReturnsAsync(new PeriodEnd { Id = 456, PeriodEndId = "PE-PAGED" });
 
-        _accountServiceMock
-            .Setup(s => s.GetAccountsAsync(It.Is<GetAccountsRequest>(r => r.Page == 1)))
-            .ReturnsAsync(CreateAccounts(10000));
-
-        _accountServiceMock
-            .Setup(s => s.GetAccountsAsync(It.Is<GetAccountsRequest>(r => r.Page == 2)))
-            .ReturnsAsync(CreateAccounts(5));
+        _contextMock
+            .Setup(c => c.CallActivityAsync<int>(It.IsAny<TaskName>(), It.IsAny<object>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(10005);
 
         var result = await _orchestrator.Run(_contextMock.Object);
 
         result.PeriodEndId.Should().Be("456");
-        result.TotalAccountsRetrieved.Should().Be(10005);
-
-        _accountServiceMock.Verify(
-            s => s.GetAccountsAsync(It.IsAny<GetAccountsRequest>()),
-            Times.Exactly(2));
+        result.TotalCommandsPublished.Should().Be(10005);
     }
 
     [Test]
-    public async Task Then_Returns_Zero_When_No_Accounts_Returned()
+    public async Task Then_Returns_Zero_When_Activity_Publishes_No_Commands()
     {
         var input = CreateValidPeriodEnd("PE-EMPTY");
 
@@ -117,15 +108,15 @@ public class WhenRunningProcessPeriodEndOrchestrator
 
         _periodEndServiceMock
             .Setup(s => s.CreatePeriodEndAsync(input, It.IsAny<Guid>()))
-            .ReturnsAsync(new PeriodEnd { Id = 999 });
+            .ReturnsAsync(new PeriodEnd { Id = 999, PeriodEndId = "PE-EMPTY" });
 
-        _accountServiceMock
-            .Setup(s => s.GetAccountsAsync(It.IsAny<GetAccountsRequest>()))
-            .ReturnsAsync(new List<Accounts>());
+        _contextMock
+            .Setup(c => c.CallActivityAsync<int>(It.IsAny<TaskName>(), It.IsAny<object>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(0);
 
         var result = await _orchestrator.Run(_contextMock.Object);
 
-        result.TotalAccountsRetrieved.Should().Be(0);
+        result.TotalCommandsPublished.Should().Be(0);
     }
 
     [Test]
@@ -182,6 +173,44 @@ public class WhenRunningProcessPeriodEndOrchestrator
         act.Should().ThrowAsync<InvalidOperationException>();
     }
 
+    [Test]
+    public void Then_Throws_When_Input_Is_Null()
+    {
+        _contextMock.Setup(c => c.GetInput<PeriodEnd>())
+            .Returns((PeriodEnd)null);
+
+        Func<Task> act = () => _orchestrator.Run(_contextMock.Object);
+
+        act.Should().ThrowAsync<ArgumentNullException>()
+            .WithParameterName("input");
+    }
+
+    [Test]
+    public async Task And_PeriodEndId_Is_Null_Then_Uses_Id_For_PeriodEndRef()
+    {
+        var input = CreateValidPeriodEnd("PE-NULLREF");
+
+        _contextMock.Setup(c => c.GetInput<PeriodEnd>())
+            .Returns(input);
+
+        _periodEndServiceMock
+            .Setup(s => s.CreatePeriodEndAsync(input, It.IsAny<Guid>()))
+            .ReturnsAsync(new PeriodEnd { Id = 777, PeriodEndId = null });
+
+        var activityInput = (PublishAccountPaymentCommandsInput)null;
+        _contextMock
+            .Setup(c => c.CallActivityAsync<int>(It.IsAny<TaskName>(), It.IsAny<object>(), It.IsAny<TaskOptions>()))
+            .Callback<TaskName, object, TaskOptions>((_, o, _) => activityInput = o as PublishAccountPaymentCommandsInput)
+            .ReturnsAsync(0);
+
+        var result = await _orchestrator.Run(_contextMock.Object);
+
+        result.Should().NotBeNull();
+        result.PeriodEndId.Should().Be("777");
+        activityInput.Should().NotBeNull();
+        activityInput.PeriodEndRef.Should().Be("777");
+    }
+
     private static PeriodEnd CreateValidPeriodEnd(string periodEndId)
     {
         return new PeriodEnd
@@ -190,21 +219,5 @@ public class WhenRunningProcessPeriodEndOrchestrator
             AccountDataValidAt = DateTime.UtcNow.AddMinutes(-1),
             CommitmentDataValidAt = DateTime.UtcNow.AddMinutes(-1)
         };
-    }
-
-    private static List<Accounts> CreateAccounts(int count)
-    {
-        var list = new List<Accounts>();
-
-        for (var i = 0; i < count; i++)
-        {
-            list.Add(new Accounts
-            {
-                Id = i + 1,
-                Name = $"Account {i + 1}"
-            });
-        }
-
-        return list;
     }
 }

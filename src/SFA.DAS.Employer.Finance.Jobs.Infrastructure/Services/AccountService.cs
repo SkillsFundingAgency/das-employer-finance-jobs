@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
@@ -7,23 +7,24 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 
-public class AccountService(IFinanceApiClient<FinanceApiConfiguration> financeApiClient, IProviderPaymentApiClient<ProviderEventsApiConfiguration> providerPaymentApiClient, ILogger<IAccountService> logger) : IAccountService
+public class AccountService(IFinanceApiClient<FinanceApiConfiguration> financeApiClient, ILogger<IAccountService> logger) : IAccountService
 {
     public async Task<List<Accounts>> GetAccountsAsync(GetAccountsRequest request)
     {
         try
         {
-            logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Provider Events API to get accounts", request.CorrelationId);
+            logger.LogInformation("Calling Finance API to get accounts, page {Page}, pageSize {PageSize}", request.Page, request.PageSize);
 
-            var accounts = await providerPaymentApiClient.Get<AccountsResponse>(request);
+            var response = await financeApiClient.Get<FinanceApiGetAccountsResponse>(request);
 
-            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved accounts", request.CorrelationId);
+            var accounts = response?.Accounts ?? [];
+            logger.LogInformation("Finance API returned {Count} accounts for page {Page}", accounts.Count, request.Page);
 
-            return accounts.Accounts;
+            return accounts;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "[CorrelationId: {CorrelationId}] Error getting Accounts {ErrorMessage}", request.CorrelationId, ex.Message);
+            logger.LogError(ex, "Error getting accounts from Finance API for page {Page}: {ErrorMessage}", request.Page, ex.Message);
             throw;
         }
     }
