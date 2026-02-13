@@ -1,8 +1,5 @@
 using AutoFixture.NUnit3;
-using FluentAssertions;
-using Moq;
 using Moq.Protected;
-using NUnit.Framework;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
@@ -11,7 +8,6 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
 public class WhenCallingGetWithResponseCode

@@ -1,5 +1,3 @@
-using FluentAssertions;
-using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.InnerAPI.Requests;

@@ -37,11 +37,10 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
     {
         try
         {
-            logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Provider Events API to create period ends", correlationId);
-            var request = new CreatePeriodEndRequest();
-            request.Data = periodEnd;
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Finance API to create period end", correlationId);
+            var request = new CreatePeriodEndRequest { Data = periodEnd };
 
-            var createdPeriodEnd = await providerPaymentApiClient.Post<PeriodEnd>(request);
+            var createdPeriodEnd = await financeApiClient.Post<PeriodEnd>(request);
 
             logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully created period end", correlationId);
 

@@ -1,12 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using FluentAssertions;
+﻿using System.Threading;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
-using Moq;
-using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Functions;
 using SFA.DAS.Employer.Finance.Jobs.UnitTests.Helpers;
 
@@ -14,13 +10,11 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Functions;
 public class ImportPaymentsTimerTests
 {
     private Mock<ILogger<ImportPaymentsTimer>> _loggerMock;
-    private FakeDurableTaskClient _fakeClient;
 
     [SetUp]
     public void Setup()
     {
         _loggerMock = new Mock<ILogger<ImportPaymentsTimer>>();
-        _fakeClient = new FakeDurableTaskClient();
     }
 
     [Test]
@@ -44,7 +38,7 @@ public class ImportPaymentsTimerTests
                 "ImportPaymentsOrchestrator",
                 It.IsAny<ImportPaymentsOrchestratorInput>(),
                 It.Is<StartOrchestrationOptions>(o => o.InstanceId == "ImportPaymentsOrchestrator-Singleton"),
-                default),
+                CancellationToken.None),
             Times.Once);
 
         // Assert          
@@ -75,7 +69,7 @@ public class ImportPaymentsTimerTests
                 It.IsAny<TaskName>(),
                 It.IsAny<object>(),
                 It.IsAny<StartOrchestrationOptions>(),
-                default),
+                CancellationToken.None),
             Times.Never);
 
         // Assert 

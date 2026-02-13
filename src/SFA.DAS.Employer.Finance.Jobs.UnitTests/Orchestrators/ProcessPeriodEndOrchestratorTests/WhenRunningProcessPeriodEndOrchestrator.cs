@@ -1,14 +1,9 @@
-using FluentAssertions;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
-using Moq;
-using NUnit.Framework;
 using NServiceBus;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
-using System;
-using System.Threading.Tasks;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Orchestrators.ProcessPeriodEndOrchestratorTests;
 

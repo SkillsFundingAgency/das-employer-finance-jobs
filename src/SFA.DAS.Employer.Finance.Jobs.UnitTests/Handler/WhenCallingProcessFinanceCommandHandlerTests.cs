@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using FluentAssertions;
+﻿using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Moq;
 using NServiceBus;
-using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Handler;
 using SFA.DAS.Employer.Finance.Jobs.Models;
 

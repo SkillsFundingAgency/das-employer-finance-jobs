@@ -1,4 +1,4 @@
-﻿using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
@@ -38,12 +38,12 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services
 
         public Task<TResponse> Post<TResponse>(IApiRequest request)
         {
-            throw new NotImplementedException();
+            return _apiClient.Post<TResponse>(request);
         }
 
         public Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IApiRequest request)
         {
-            throw new NotImplementedException();
+            return _apiClient.PostWithResponseCode<TResponse>(request);
         }
     }
 }

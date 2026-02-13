@@ -1,13 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using Moq;
 using NServiceBus;
-using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Messages.Commands;
