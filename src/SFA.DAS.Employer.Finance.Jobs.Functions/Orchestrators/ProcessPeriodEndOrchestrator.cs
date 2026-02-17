@@ -28,7 +28,9 @@ public class ProcessPeriodEndOrchestrator(
 
         ValidateOrThrow(input, context);
 
-        var periodEnd = await periodEndService.CreatePeriodEndAsync(input, context.NewGuid());
+        var periodEnd = await context.CallActivityAsync<PeriodEnd>(
+            nameof(CreatePeriodEndActivity),
+            new CreatePeriodEndActivityInput { PeriodEnd = input, CorrelationId = context.NewGuid() });
 
         var periodEndRef = periodEnd.PeriodEndId ?? periodEnd.Id.ToString();
         var totalCommandsPublished = await context.CallActivityAsync<int>(
@@ -40,6 +42,12 @@ public class ProcessPeriodEndOrchestrator(
             PeriodEndId = periodEnd.Id.ToString(),
             TotalCommandsPublished = totalCommandsPublished
         };
+    }
+
+    [Function(nameof(CreatePeriodEndActivity))]
+    public async Task<PeriodEnd> CreatePeriodEndActivity([ActivityTrigger] CreatePeriodEndActivityInput input)
+    {
+        return await periodEndService.CreatePeriodEndAsync(input.PeriodEnd, input.CorrelationId);
     }
 
     [Function(nameof(PublishAccountPaymentCommandsActivity))]

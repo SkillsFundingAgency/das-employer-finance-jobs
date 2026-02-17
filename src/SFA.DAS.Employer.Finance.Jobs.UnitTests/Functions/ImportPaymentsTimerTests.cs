@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
@@ -23,25 +23,27 @@ public class ImportPaymentsTimerTests
         // Arrange
         var timer = new ImportPaymentsTimer(_loggerMock.Object);
         var timerInfo = new TimerInfo();
+        var instanceId = "ImportPaymentsOrchestrator-Singleton";
 
         var clientMock = new Mock<FakeDurableTaskClient>() { CallBase = true };
         clientMock
-            .Setup(c => c.GetInstanceAsync(It.IsAny<string>(), It.IsAny<bool>(), default))
+            .Setup(c => c.GetInstanceAsync(instanceId, false, default))
             .ReturnsAsync((OrchestrationMetadata)null);
+
+        clientMock
+            .Setup(c => c.ScheduleNewOrchestrationInstanceAsync(
+                "ImportPaymentsOrchestrator",
+                It.Is<ImportPaymentsOrchestratorInput>(i => !string.IsNullOrEmpty(i.CorrelationId)),
+                It.Is<StartOrchestrationOptions>(o => o.InstanceId == instanceId),
+                CancellationToken.None))
+            .ReturnsAsync(instanceId);
 
         // Act
         await timer.Run(timerInfo, clientMock.Object);
 
-
-        clientMock.Verify(c =>
-            c.ScheduleNewOrchestrationInstanceAsync(
-                "ImportPaymentsOrchestrator",
-                It.IsAny<ImportPaymentsOrchestratorInput>(),
-                It.Is<StartOrchestrationOptions>(o => o.InstanceId == "ImportPaymentsOrchestrator-Singleton"),
-                CancellationToken.None),
-            Times.Once);
-
-        // Assert          
+        // Assert
+        clientMock.VerifyAll();
+        clientMock.VerifyNoOtherCalls();
         _loggerMock.VerifyLogContains("Started ImportPaymentsOrchestrator");
     }
 
@@ -52,27 +54,20 @@ public class ImportPaymentsTimerTests
         // Arrange
         var timer = new ImportPaymentsTimer(_loggerMock.Object);
         var timerInfo = new TimerInfo();
-
-        var metadata = OrchestrationMetadataHelper.Create("ImportPaymentsOrchestrator-Singleton", status);
+        var instanceId = "ImportPaymentsOrchestrator-Singleton";
+        var metadata = OrchestrationMetadataHelper.Create(instanceId, status);
 
         var clientMock = new Mock<FakeDurableTaskClient>() { CallBase = true };
         clientMock
-            .Setup(c => c.GetInstanceAsync(It.IsAny<string>(), It.IsAny<bool>(), default))
+            .Setup(c => c.GetInstanceAsync(instanceId, false, default))
             .ReturnsAsync(metadata);
 
         // Act
         await timer.Run(timerInfo, clientMock.Object);
 
-
-        clientMock.Verify(c =>
-            c.ScheduleNewOrchestrationInstanceAsync(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<StartOrchestrationOptions>(),
-                CancellationToken.None),
-            Times.Never);
-
-        // Assert 
+        // Assert
+        clientMock.VerifyAll();
+        clientMock.VerifyNoOtherCalls();
         _loggerMock.VerifyLogContains("ImportPaymentsOrchestrator is already running");
     }
 
@@ -82,10 +77,11 @@ public class ImportPaymentsTimerTests
         // Arrange
         var timer = new ImportPaymentsTimer(_loggerMock.Object);
         var timerInfo = new TimerInfo();
+        var instanceId = "ImportPaymentsOrchestrator-Singleton";
 
         var clientMock = new Mock<FakeDurableTaskClient>() { CallBase = true };
         clientMock
-            .Setup(c => c.GetInstanceAsync(It.IsAny<string>(), It.IsAny<bool>(), default))
+            .Setup(c => c.GetInstanceAsync(instanceId, false, default))
             .ThrowsAsync(new Exception("Boom"));
 
         // Act
@@ -94,6 +90,8 @@ public class ImportPaymentsTimerTests
         // Assert
         await act.Should().ThrowAsync<Exception>().WithMessage("Boom");
 
+        clientMock.VerifyAll();
+        clientMock.VerifyNoOtherCalls();
         _loggerMock.VerifyLogContains("Error starting ImportPaymentsOrchestrator");
     }
 }
