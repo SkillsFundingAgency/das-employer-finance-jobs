@@ -8,7 +8,7 @@ public static class NServiceBusExtensions
 {
     public static IHostBuilder ConfigureNServiceBus(this IHostBuilder hostBuilder, string endpointName, Action<RoutingSettings>? configureRouting = null)
     {
-        hostBuilder.UseNServiceBus((config, endpointConfiguration) =>
+        hostBuilder.UseNServiceBus(endpointName, (config, endpointConfiguration) =>
         {
             endpointConfiguration.LogDiagnostics();
             endpointConfiguration.Transport.SubscriptionRuleNamingConvention = AzureRuleNameShortener.Shorten;
