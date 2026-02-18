@@ -24,8 +24,8 @@ jobs:
       command: publish
       publishWebProjects: false
       projects: src/${{ parameters.SolutionBaseName }}.Functions/${{ parameters.SolutionBaseName }}.Functions.csproj
-      arguments: -o $(build.artifactstagingdirectory)/publish -c ${{ parameters.BuildConfiguration }} --no-build
-      modifyOutputPath: true
+      arguments: -o $(build.artifactstagingdirectory)/publish/SFA.DAS.Employer.Finance.Jobs.Functions -c ${{ parameters.BuildConfiguration }} --no-build
+      modifyOutputPath: false
       zipAfterPublish: true
 
   - task: DotNetCoreCLI@2
@@ -34,8 +34,8 @@ jobs:
       command: publish
       publishWebProjects: false
       projects: src/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments.csproj
-      arguments: -o $(build.artifactstagingdirectory)/publish -c ${{ parameters.BuildConfiguration }} --no-build
-      modifyOutputPath: true
+      arguments: -o $(build.artifactstagingdirectory)/publish/SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments -c ${{ parameters.BuildConfiguration }} --no-build
+      modifyOutputPath: false
       zipAfterPublish: true
 
   - task: CopyFiles@2

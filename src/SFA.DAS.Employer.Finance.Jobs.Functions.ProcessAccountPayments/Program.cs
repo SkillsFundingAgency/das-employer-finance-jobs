@@ -1,7 +1,6 @@
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction.Orchestrators;

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.Extensions;
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 public static class DataProtectionExtensions
 {

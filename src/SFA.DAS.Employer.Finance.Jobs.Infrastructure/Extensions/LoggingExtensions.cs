@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.Extensions;
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 public static class LoggingExtensions
 {
@@ -18,7 +18,6 @@ public static class LoggingExtensions
             builder.AddFilter<ApplicationInsightsLoggerProvider>("StartupDiagnostics", LogLevel.Information);
             builder.AddFilter("StartupDiagnostics", LogLevel.Information);
 
-            builder.AddFilter(typeof(Program).Namespace, LogLevel.Information);
             builder.SetMinimumLevel(LogLevel.Trace);
             builder.AddConsole();
         });
