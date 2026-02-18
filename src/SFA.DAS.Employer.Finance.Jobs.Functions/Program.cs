@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
+using SFA.DAS.Employer.Finance.Messages.Commands;
 
 
 [assembly: NServiceBusTriggerFunction("SFA.DAS.Employer.Finance.Jobs.Functions")]
@@ -8,7 +8,10 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureAppConfiguration(builder => builder.BuildDasConfiguration())
-    .ConfigureNServiceBus()
+    .ConfigureNServiceBus("SFA.DAS.Employer.Finance.Jobs.Functions", routing =>
+    {
+        routing.RouteToEndpoint(typeof(ImportAccountPaymentsCommand), "SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments");
+    })
     .ConfigureServices((context, services) =>
     {
         var configuration = context.Configuration;

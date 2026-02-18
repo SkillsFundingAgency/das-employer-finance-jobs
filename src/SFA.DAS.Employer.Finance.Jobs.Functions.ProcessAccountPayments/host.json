@@ -8,5 +8,13 @@
             },
             "enableLiveMetricsFilters": true
         }
+    },
+    "extensions": {
+        "durableTask": {
+            "hubName": "ProcessAccountPaymentsHub",
+            "storageProvider": {
+                "connectionName": "AzureWebJobsStorage"
+            }
+        }
     }
 }

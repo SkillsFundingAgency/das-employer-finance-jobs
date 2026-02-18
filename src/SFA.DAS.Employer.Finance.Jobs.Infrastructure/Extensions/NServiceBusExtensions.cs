@@ -1,17 +1,12 @@
 using System.Net;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Hosting;
-using SFA.DAS.Employer.Finance.Messages.Commands;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.Extensions;
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
-public static class ConfigureNServiceBusExtension
+public static class NServiceBusExtensions
 {
-    private const string EndpointName = "SFA.DAS.Employer.Finance.Jobs.Functions";
-    private const string ErrorEndpointName = $"{EndpointName}-error";
-    private const string ProcessAccountPaymentsEndpointName = "SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments";
-
-    public static IHostBuilder ConfigureNServiceBus(this IHostBuilder hostBuilder)
+    public static IHostBuilder ConfigureNServiceBus(this IHostBuilder hostBuilder, string endpointName, Action<RoutingSettings>? configureRouting = null)
     {
         hostBuilder.UseNServiceBus((config, endpointConfiguration) =>
         {
@@ -19,13 +14,14 @@ public static class ConfigureNServiceBusExtension
             endpointConfiguration.Transport.SubscriptionRuleNamingConvention = AzureRuleNameShortener.Shorten;
 
             endpointConfiguration.AdvancedConfiguration.EnableInstallers();
-            endpointConfiguration.AdvancedConfiguration.SendFailedMessagesTo(ErrorEndpointName);
+            endpointConfiguration.AdvancedConfiguration.SendFailedMessagesTo($"{endpointName}-error");
             endpointConfiguration.AdvancedConfiguration.Conventions()
                 .DefiningCommandsAs(IsCommand)
                 .DefiningMessagesAs(IsMessage)
                 .DefiningEventsAs(IsEvent);
 
-            endpointConfiguration.Routing.RouteToEndpoint(typeof(ImportAccountPaymentsCommand), ProcessAccountPaymentsEndpointName);
+            // Configure routing if provided
+            configureRouting?.Invoke(endpointConfiguration.Routing);
 
             var license = config["NServiceBus_License"];
             if (!string.IsNullOrEmpty(license))
@@ -45,18 +41,15 @@ public static class ConfigureNServiceBusExtension
     }
 
     private static bool IsMessage(Type t) => t is IMessage || IsDasMessage(t, "Messages");
-
     private static bool IsEvent(Type t) => t is IEvent || IsDasMessage(t, "Messages.Events");
-
     private static bool IsCommand(Type t) => t is ICommand || IsDasMessage(t, "Messages.Commands");
-
     private static bool IsDasMessage(Type t, string namespaceSuffix)
         => t.Namespace != null &&
            t.Namespace.StartsWith("SFA.DAS") &&
            t.Namespace.EndsWith(namespaceSuffix);
 }
 
-internal static class AzureRuleNameShortener
+public static class AzureRuleNameShortener
 {
     private const int AzureServiceBusRuleNameMaxLength = 50;
 
