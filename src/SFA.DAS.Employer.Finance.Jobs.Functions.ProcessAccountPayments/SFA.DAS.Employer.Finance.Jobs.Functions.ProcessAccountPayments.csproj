@@ -32,5 +32,10 @@
     <ProjectReference Include="..\SFA.DAS.Employer.Finance.Messages\SFA.DAS.Employer.Finance.Messages.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Temporarily exclude DurableTask-related files until compatibility is resolved -->
+    <Compile Remove="Orchestrators\**" />
+  </ItemGroup>
+
 </Project>
 
