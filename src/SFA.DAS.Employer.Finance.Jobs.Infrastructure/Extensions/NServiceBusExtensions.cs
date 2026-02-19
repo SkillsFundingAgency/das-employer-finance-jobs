@@ -9,17 +9,17 @@ public static class NServiceBusExtensions
 {
     public static IHostBuilder ConfigureNServiceBus(this IHostBuilder hostBuilder, string endpointName, Action<RoutingSettings>? configureRouting = null)
     {
+        Console.WriteLine($"=== Configuring NServiceBus for endpoint: {endpointName} ===");
+        
         hostBuilder.UseNServiceBus(endpointName, (config, endpointConfiguration) =>
         {
+            Console.WriteLine($"=== NServiceBus Configuration Callback Started for: {endpointName} ===");
             endpointConfiguration.LogDiagnostics();
             endpointConfiguration.Transport.SubscriptionRuleNamingConvention = AzureRuleNameShortener.Shorten;
 
             endpointConfiguration.AdvancedConfiguration.EnableInstallers();
             endpointConfiguration.AdvancedConfiguration.SendFailedMessagesTo($"{endpointName}-error");
-            endpointConfiguration.AdvancedConfiguration.Conventions()
-                .DefiningCommandsAs(IsCommand)
-                .DefiningMessagesAs(IsMessage)
-                .DefiningEventsAs(IsEvent);
+            endpointConfiguration.AdvancedConfiguration.UseMessageConventions();
 
             // Configure routing if provided
             configureRouting?.Invoke(endpointConfiguration.Routing);
@@ -32,19 +32,38 @@ public static class NServiceBusExtensions
             }
 
 #if DEBUG
+            Console.WriteLine("=== Using LearningTransport for DEBUG ===");
             var transport = endpointConfiguration.AdvancedConfiguration.UseTransport<LearningTransport>();
             transport.StorageDirectory(Path.Combine(Directory.GetCurrentDirectory().Substring(0, Directory.GetCurrentDirectory().IndexOf("src")),
                 @"src\.learningtransport"));
 #endif
+            Console.WriteLine($"=== NServiceBus Configuration Completed for: {endpointName} ===");
         });
 
+        Console.WriteLine($"=== NServiceBus Configuration Method Completed for: {endpointName} ===");
         return hostBuilder;
     }
+}
 
-    private static bool IsMessage(Type t) => t is IMessage || IsDasMessage(t, "Messages");
-    private static bool IsEvent(Type t) => t is IEvent || IsDasMessage(t, "Messages.Events");
-    private static bool IsCommand(Type t) => t is ICommand || IsDasMessage(t, "Messages.Commands");
-    private static bool IsDasMessage(Type t, string namespaceSuffix)
+public static class EndpointConfigurationExtensions
+{
+    public static EndpointConfiguration UseMessageConventions(this EndpointConfiguration endpointConfiguration)
+    {
+        endpointConfiguration.Conventions()
+            .DefiningMessagesAs(IsMessage)
+            .DefiningEventsAs(IsEvent)
+            .DefiningCommandsAs(IsCommand);
+
+        return endpointConfiguration;
+    }
+
+    public static bool IsMessage(Type t) => IsDasMessage(t, "Messages");
+
+    public static bool IsEvent(Type t) => (t.FullName != null && t.FullName.EndsWith("Event")) || IsDasMessage(t, "Messages.Events");
+
+    public static bool IsCommand(Type t) => (t.FullName != null && t.FullName.EndsWith("Command")) || IsDasMessage(t, "Messages.Commands");
+
+    public static bool IsDasMessage(Type t, string namespaceSuffix)
         => t.Namespace != null &&
            t.Namespace.StartsWith("SFA.DAS") &&
            t.Namespace.EndsWith(namespaceSuffix);
