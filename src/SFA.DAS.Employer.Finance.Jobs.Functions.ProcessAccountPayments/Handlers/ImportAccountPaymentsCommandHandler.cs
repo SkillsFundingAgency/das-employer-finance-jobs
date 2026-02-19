@@ -1,31 +1,22 @@
-﻿using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Functions.Orchestrators;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
-using SFA.DAS.Employer.Finance.Messages.Commands;
 using SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction.Orchestrators;
+using SFA.DAS.Employer.Finance.Messages.Commands;
 
-
-namespace SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction.Handlers;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments.Handlers;
 
 public class ImportAccountPaymentsCommandHandler(ILogger<ImportAccountPaymentsCommandHandler> logger, IProcessAccountOrchestrationStarter starter) : IHandleMessages<ImportAccountPaymentsCommand>
 {
     public async Task Handle(ImportAccountPaymentsCommand message, IMessageHandlerContext context)
     {
-        logger.LogInformation("Received ImportAccountPaymentsCommandHandler for AccountId: {AccountId}, PeriodEnd: {PeriodEndRef}", message.AccountId, message.PeriodEndRef);
+        logger.LogInformation("Received ImportAccountPaymentsCommand for AccountId: {AccountId}, PeriodEnd: {PeriodEndRef}", message.AccountId, message.PeriodEndRef);
         var correlationId = Guid.NewGuid().ToString();
 
         try
         {
-            var instanceId = "ProcessAccountOrchestrator-Singleton";
+            var instanceId = $"ProcessAccountOrchestrator-{message.AccountId}-{message.PeriodEndRef}";
 
-            var existingInstance = await starter.GetInstanceAsyc(instanceId);
-
-            if (existingInstance != null && existingInstance.RuntimeStatus is OrchestrationRuntimeStatus.Running or OrchestrationRuntimeStatus.Pending)
-            {
-                logger.LogWarning("[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator is already running. InstanceId: {InstanceId}", correlationId, existingInstance.InstanceId);
-                return;
-            }
             await starter.StartAsyc(nameof(ProcessAccountOrchestrator), instanceId,
              new ProcessAccountInput
              {
@@ -36,6 +27,8 @@ public class ImportAccountPaymentsCommandHandler(ILogger<ImportAccountPaymentsCo
                  TriggeredAt = DateTime.UtcNow
              },
              context.CancellationToken);
+             
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Started ProcessAccountOrchestrator for AccountId: {AccountId}, PeriodEnd: {PeriodEndRef}", correlationId, message.AccountId, message.PeriodEndRef);
         }
         catch (Exception ex)
         {

@@ -2,8 +2,8 @@
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
 using NServiceBus;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments.Handlers;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
-using SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction.Handlers;
 using SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction.Orchestrators;
 using SFA.DAS.Employer.Finance.Messages.Commands;
 

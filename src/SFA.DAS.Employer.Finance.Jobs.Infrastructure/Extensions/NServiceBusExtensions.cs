@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Hosting;
+using NServiceBus;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
