@@ -4,12 +4,12 @@ using Microsoft.Extensions.Hosting;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction.Orchestrators;
 
-[assembly: NServiceBusTriggerFunction("SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments")]
+[assembly: NServiceBusTriggerFunction("SFA.DAS.Employer.Finance.Jobs.PAP")]
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureAppConfiguration(builder => builder.BuildDasConfiguration())
-    .ConfigureNServiceBus("SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments")
+    .ConfigureNServiceBus("SFA.DAS.Employer.Finance.Jobs.PAP")
     .ConfigureServices((context, services) =>
     {
         var configuration = context.Configuration;

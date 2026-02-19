@@ -3,14 +3,14 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 using SFA.DAS.Employer.Finance.Messages.Commands;
 
 
-[assembly: NServiceBusTriggerFunction("SFA.DAS.Employer.Finance.Jobs.Functions")]
+[assembly: NServiceBusTriggerFunction("SFA.DAS.Employer.Finance.Jobs")]
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureAppConfiguration(builder => builder.BuildDasConfiguration())
-    .ConfigureNServiceBus("SFA.DAS.Employer.Finance.Jobs.Functions", routing =>
+    .ConfigureNServiceBus("SFA.DAS.Employer.Finance.Jobs", routing =>
     {
-        routing.RouteToEndpoint(typeof(ImportAccountPaymentsCommand), "SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments");
+        routing.RouteToEndpoint(typeof(ImportAccountPaymentsCommand), "SFA.DAS.Employer.Finance.Jobs.PAP");
     })
     .ConfigureServices((context, services) =>
     {
