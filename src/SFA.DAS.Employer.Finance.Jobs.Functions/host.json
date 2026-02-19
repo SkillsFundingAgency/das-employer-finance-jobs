@@ -1,6 +1,13 @@
 {
     "version": "2.0",
     "logging": {
+        "logLevel": {
+            "default": "Information",
+            "Microsoft": "Information",
+            "Microsoft.Hosting.Lifetime": "Information",
+            "NServiceBus": "Debug",
+            "SFA.DAS": "Debug"
+        },
         "applicationInsights": {
             "samplingSettings": {
                 "isEnabled": true,
