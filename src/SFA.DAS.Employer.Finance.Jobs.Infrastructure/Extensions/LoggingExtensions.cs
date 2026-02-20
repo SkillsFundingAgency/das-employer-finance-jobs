@@ -11,6 +11,7 @@ public static class LoggingExtensions
     {
         services.AddLogging(builder =>
         {
+            builder.AddApplicationInsights();
             builder.AddFilter<ApplicationInsightsLoggerProvider>(string.Empty, LogLevel.Information);
             builder.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Information);
             builder.AddFilter<ApplicationInsightsLoggerProvider>("NServiceBus", LogLevel.Debug);
