@@ -15,7 +15,7 @@ public static class NServiceBusExtensions
         {
             Console.WriteLine($"=== NServiceBus Configuration Callback Started for: {endpointName} ===");
             endpointConfiguration.LogDiagnostics();
-            endpointConfiguration.Transport.SubscriptionRuleNamingConvention = AzureRuleNameShortener.Shorten;
+            // Note: SubscriptionRuleNamingConvention is obsolete in newer versions of NServiceBus.Transport.AzureServiceBus
 
             endpointConfiguration.AdvancedConfiguration.EnableInstallers();
             endpointConfiguration.AdvancedConfiguration.SendFailedMessagesTo($"{endpointName}-error");

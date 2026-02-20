@@ -14,7 +14,7 @@ Console.WriteLine($"AzureWebJobsServiceBus: {Environment.GetEnvironmentVariable(
 try
 {
     var host = new HostBuilder()
-        .ConfigureFunctionsWebApplication()
+        .ConfigureFunctionsWorkerDefaults()
         .ConfigureAppConfiguration(builder => 
         {
             Console.WriteLine("=== Configuring App Configuration ===");
