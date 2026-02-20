@@ -322,7 +322,8 @@
                 }
             },
             "dependsOn": [
-                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]"
+                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]",
+                "[concat(variables('functionAppName'), '-app-insights-', parameters('utcValue'))]"
             ]
         },
         {
@@ -412,7 +413,8 @@
                 }
             },
             "dependsOn": [
-                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]"
+                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]",
+                "[concat(variables('functionAppNameProcessAccountPayments'), '-app-insights-', parameters('utcValue'))]"
             ]
         },
         {
