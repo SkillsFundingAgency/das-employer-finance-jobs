@@ -1,7 +1,5 @@
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.ApplicationInsights;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
@@ -11,21 +9,15 @@ public static class LoggingExtensions
     {
         services.AddLogging(builder =>
         {
-            builder.AddApplicationInsights();
-            builder.AddFilter<ApplicationInsightsLoggerProvider>(string.Empty, LogLevel.Information);
-            builder.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Information);
-            builder.AddFilter<ApplicationInsightsLoggerProvider>("NServiceBus", LogLevel.Debug);
+            builder.AddFilter("Microsoft", LogLevel.Warning);
+            builder.AddFilter("System", LogLevel.Warning);
             builder.AddFilter("NServiceBus", LogLevel.Debug);
-            builder.AddFilter<ApplicationInsightsLoggerProvider>("StartupDiagnostics", LogLevel.Information);
             builder.AddFilter("StartupDiagnostics", LogLevel.Information);
+            builder.AddFilter("SFA.DAS", LogLevel.Information);
 
             builder.SetMinimumLevel(LogLevel.Trace);
             builder.AddConsole();
         });
-
-        services
-            .AddApplicationInsightsTelemetryWorkerService()
-            .ConfigureFunctionsApplicationInsights();
 
         return services;
     }

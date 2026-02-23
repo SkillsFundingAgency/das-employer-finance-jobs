@@ -3,18 +3,11 @@
     "logging": {
         "logLevel": {
             "default": "Information",
-            "Microsoft": "Information",
+            "Microsoft": "Warning",
             "Microsoft.Hosting.Lifetime": "Information",
             "NServiceBus": "Debug",
-            "SFA.DAS": "Debug"
+            "SFA.DAS": "Information"
         },
-        "applicationInsights": {
-            "samplingSettings": {
-                "isEnabled": true,
-                "excludedTypes": "Request"
-            },
-            "enableLiveMetricsFilters": true
-        }
     },
     "extensions": {
         "durableTask": {

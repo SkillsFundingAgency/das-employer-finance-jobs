@@ -1,5 +1,3 @@
-﻿using Microsoft.ApplicationInsights.Channel;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
@@ -15,19 +13,6 @@ public static class CorrelationContext
     {
         get => _correlationId.Value;
         set => _correlationId.Value = value;
-    }
-}
-[ExcludeFromCodeCoverage]
-public class CorrelationTelemetryInitializer : ITelemetryInitializer
-{
-    public void Initialize(ITelemetry telemetry)
-    {
-        var correlationId = CorrelationContext.CorrelationId;
-
-        if (!string.IsNullOrEmpty(correlationId))
-        {
-            telemetry.Context.GlobalProperties["x-correlation-id"] = correlationId;
-        }
     }
 }
 

@@ -16,6 +16,8 @@ var host = new HostBuilder()
     {
         var configuration = context.Configuration;
         
+        services.AddOpenTelemetryRegistration(configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]!);
+        
         services.AddDasLogging();
         services.AddDasDataProtection(configuration);
         services.AddConfigurationOptions(configuration);
