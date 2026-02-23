@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.Functions.Worker;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments.Handlers;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
@@ -14,48 +15,55 @@ Console.WriteLine($"APPLICATIONINSIGHTS_CONNECTION_STRING: {Environment.GetEnvir
 
 try
 {
-    var host = new HostBuilder()
-        .ConfigureFunctionsWorkerDefaults()
-        .ConfigureAppConfiguration(builder => 
+var host = new HostBuilder()
+    .ConfigureFunctionsWebApplication()
+    .ConfigureAppConfiguration(builder => 
+    {
+        Console.WriteLine("=== Configuring App Configuration ===");
+        builder.BuildDasConfiguration();
+    })
+    .ConfigureNServiceBus("SFA.DAS.Employer.Finance.Jobs.PAP")
+    .ConfigureServices((context, services) =>
+    {
+        Console.WriteLine("=== Configuring Services ===");
+        var configuration = context.Configuration;
+        
+        // Setup Application Insights (following das-recruit-jobs pattern)
+        Console.WriteLine("=== Configuring Application Insights ===");
+        services.AddApplicationInsightsTelemetryWorkerService(options =>
         {
-            Console.WriteLine("=== Configuring App Configuration ===");
-            builder.BuildDasConfiguration();
-        })
-        .ConfigureNServiceBus("SFA.DAS.Employer.Finance.Jobs.PAP")
-        .ConfigureServices((context, services) =>
-        {
-            Console.WriteLine("=== Configuring Services ===");
-            var configuration = context.Configuration;
-            
-            Console.WriteLine("=== Configuring OpenTelemetry ===");
-            services.AddOpenTelemetryRegistration(configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]!);
-            
-            // DurableTask services removed temporarily to focus on NServiceBus
-            // services.AddDurableTaskClient(builder => builder.UseGrpc());
-            // services.AddSingleton<IProcessAccountOrchestrationStarter, ProcessAccountOrchestrationStarter>();
-            
-            // Explicitly register the message handler
-            Console.WriteLine("=== Registering Message Handlers ===");
-            services.AddTransient<ImportAccountPaymentsCommandHandler>();
-            Console.WriteLine("=== ImportAccountPaymentsCommandHandler registered ===");
-            
-            services.AddDasLogging();
-            services.AddDasDataProtection(configuration);
-            services.AddConfigurationOptions(configuration);
-            services.AddServiceRegistration(configuration);
-            Console.WriteLine("=== Services Configured ===");
-        })    
-        .Build();
+#if DEBUG
+            options.DeveloperMode = true;
+#endif
+        });
+        services.ConfigureFunctionsApplicationInsights();
+        
+        // DurableTask services removed temporarily to focus on NServiceBus
+        // services.AddDurableTaskClient(builder => builder.UseGrpc());
+        // services.AddSingleton<IProcessAccountOrchestrationStarter, ProcessAccountOrchestrationStarter>();
+        
+        // Explicitly register the message handler
+        Console.WriteLine("=== Registering Message Handlers ===");
+        services.AddTransient<ImportAccountPaymentsCommandHandler>();
+        Console.WriteLine("=== ImportAccountPaymentsCommandHandler registered ===");
+        
+        services.AddDasLogging();
+        services.AddDasDataProtection(configuration);
+        services.AddConfigurationOptions(configuration);
+        services.AddServiceRegistration(configuration);
+        Console.WriteLine("=== Services Configured ===");
+    })    
+    .Build();
 
     Console.WriteLine("=== ProcessAccountPayments Function App Built Successfully ===");
     
-    var logger = host.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("ProcessAccountPayments Function App starting up with OpenTelemetry...");
-    logger.LogInformation("Endpoint Name: SFA.DAS.Employer.Finance.Jobs.PAP");
-    logger.LogInformation("Expected Queue: SFA.DAS.Employer.Finance.Jobs.PAP");
-    
-    // Test OpenTelemetry logging
-    logger.LogWarning("=== TEST OPENTELEMETRY LOG MESSAGE ===");
+var logger = host.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("ProcessAccountPayments Function App starting up with Application Insights (das-recruit-jobs pattern)...");
+logger.LogInformation("Endpoint Name: SFA.DAS.Employer.Finance.Jobs.PAP");
+logger.LogInformation("Expected Queue: SFA.DAS.Employer.Finance.Jobs.PAP");
+
+// Test Application Insights logging
+logger.LogWarning("=== TEST APPLICATION INSIGHTS LOG MESSAGE (das-recruit-jobs pattern) ===");
     
     Console.WriteLine("=== Starting Host ===");
     await host.RunAsync();
