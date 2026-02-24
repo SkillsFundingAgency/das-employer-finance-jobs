@@ -6,10 +6,6 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments.Handler
 
 public class ImportAccountPaymentsCommandHandler(ILogger<ImportAccountPaymentsCommandHandler> logger) : IHandleMessages<ImportAccountPaymentsCommand>
 {
-    static ImportAccountPaymentsCommandHandler()
-    {
-        Console.WriteLine("=== ImportAccountPaymentsCommandHandler Static Constructor Called ===");
-    }
     
     public async Task Handle(ImportAccountPaymentsCommand message, IMessageHandlerContext context)
     {

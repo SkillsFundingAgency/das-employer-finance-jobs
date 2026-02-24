@@ -9,22 +9,19 @@ public static class NServiceBusExtensions
 {
     public static IHostBuilder ConfigureNServiceBus(this IHostBuilder hostBuilder, string endpointName, Action<RoutingSettings>? configureRouting = null)
     {
-        Console.WriteLine($"=== Configuring NServiceBus for endpoint: {endpointName} ===");
-        
-        hostBuilder.UseNServiceBus(endpointName, (config, endpointConfiguration) =>
+        hostBuilder.UseNServiceBus((config, endpointConfiguration) =>
         {
-            Console.WriteLine($"=== NServiceBus Configuration Callback Started for: {endpointName} ===");
-            endpointConfiguration.LogDiagnostics();
-            // Note: SubscriptionRuleNamingConvention is obsolete in newer versions of NServiceBus.Transport.AzureServiceBus
-
+            // Configure Azure Service Bus rule name shortening (following das-recruit-jobs pattern)
+            endpointConfiguration.Transport.SubscriptionRuleNamingConvention = AzureRuleNameShortener.Shorten;
+            
             endpointConfiguration.AdvancedConfiguration.EnableInstallers();
             endpointConfiguration.AdvancedConfiguration.SendFailedMessagesTo($"{endpointName}-error");
             endpointConfiguration.AdvancedConfiguration.UseMessageConventions();
-
-            // Configure routing if provided
+            
+            // Configure routing if provided (for sending endpoints)
             configureRouting?.Invoke(endpointConfiguration.Routing);
 
-            var license = config["NServiceBus_License"];
+            var license = config["NServiceBusLicense"];
             if (!string.IsNullOrEmpty(license))
             {
                 var decodedLicence = WebUtility.HtmlDecode(license);
@@ -32,15 +29,12 @@ public static class NServiceBusExtensions
             }
 
 #if DEBUG
-            Console.WriteLine("=== Using LearningTransport for DEBUG ===");
             var transport = endpointConfiguration.AdvancedConfiguration.UseTransport<LearningTransport>();
             transport.StorageDirectory(Path.Combine(Directory.GetCurrentDirectory().Substring(0, Directory.GetCurrentDirectory().IndexOf("src")),
                 @"src\.learningtransport"));
 #endif
-            Console.WriteLine($"=== NServiceBus Configuration Completed for: {endpointName} ===");
         });
 
-        Console.WriteLine($"=== NServiceBus Configuration Method Completed for: {endpointName} ===");
         return hostBuilder;
     }
 }
