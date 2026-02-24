@@ -8,6 +8,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 
+
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.ImportPaymentsOrchestrator;
 
 public class WhenProcessingPeriodEndActivity
@@ -75,7 +76,7 @@ public class WhenProcessingPeriodEndActivity
 
         // Assert
         _mockLogger.Verify();
-    }   
+    }
 
     [Test]
     public async Task And_Different_Period_Values_Then_Logs_Correctly()
@@ -108,7 +109,7 @@ public class WhenProcessingPeriodEndActivity
         _mockLogger.Setup(x => x.Log(
             LogLevel.Information,
             It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Processing period end") && 
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Processing period end") &&
                                           v.ToString().Contains(correlationId) &&
                                           v.ToString().Contains(year.ToString()) &&
                                           v.ToString().Contains(period)),

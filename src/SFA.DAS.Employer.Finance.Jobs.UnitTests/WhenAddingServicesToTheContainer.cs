@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +12,8 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services;
+using System;
+using System.Collections.Generic;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
 {
@@ -23,7 +23,9 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
         [TestCase(typeof(IInternalApiClient<FinanceApiConfiguration>))]
         [TestCase(typeof(IProviderPaymentApiClient<ProviderEventsApiConfiguration>))]
         [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
-        [TestCase(typeof(IPeriodEndService))]     
+        [TestCase(typeof(IPeriodEndService))]
+        [TestCase(typeof(IRefreshPaymentDataService))]
+        [TestCase(typeof(IPaymentTransactionLinesService))]
         public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
         {
             var serviceCollection = new ServiceCollection();
@@ -31,8 +33,8 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
             var provider = serviceCollection.BuildServiceProvider();
 
             var type = provider.GetService(toResolve);
-            type.Should().NotBeNull();           
-        }    
+            type.Should().NotBeNull();
+        }
 
         private static void SetupServiceCollection(IServiceCollection services)
         {
@@ -51,14 +53,16 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
 
             services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
             services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
-            services.AddScoped<IPeriodEndService, PeriodEndService>();         
+            services.AddScoped<IPeriodEndService, PeriodEndService>();
+            services.AddScoped<IRefreshPaymentDataService, RefreshPaymentDataService>();
+            services.AddScoped<IPaymentTransactionLinesService, PaymentTransactionLinesService>();
         }
         private static IConfigurationRoot GenerateConfiguration()
         {
             var configSource = new MemoryConfigurationSource
             {
                 InitialData = new List<KeyValuePair<string, string>>
-                {                 
+                {
                     new("FUNCTIONS_WORKER_RUNTIME", "dotnet-isolated"),
                     new("AzureWebJobsServiceBus", "abc"),
                     new("NServiceBus_License", "test"),

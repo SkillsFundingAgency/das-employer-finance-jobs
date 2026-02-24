@@ -51,7 +51,7 @@ public class WhenGettingNewPeriodEndsActivity
     {
         // Arrange
         var correlationId = Guid.NewGuid().ToString();
-      
+
         _mockPeriodEndService.Setup(x => x.GetNewPeriodEndsAsync(correlationId)).ReturnsAsync(new List<PeriodEnd>());
 
         // Act

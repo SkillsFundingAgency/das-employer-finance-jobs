@@ -14,6 +14,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 
 
+
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Services;
 public class WhenGettingNewPeriodEnds
 {
@@ -69,10 +70,10 @@ public class WhenGettingNewPeriodEnds
         {
             new PeriodEnd { PeriodEndId = "PE-001" }
         };
-     
+
         _mockProviderPaymentApiClient
-         .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-         .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(paymentPeriodEnds, System.Net.HttpStatusCode.OK, null));
+            .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
+            .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(paymentPeriodEnds, System.Net.HttpStatusCode.OK, null));
 
         _mockFinanceApiClient
             .Setup(x => x.GetWithResponseCode<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()))
@@ -148,7 +149,7 @@ public class WhenGettingNewPeriodEnds
         result.Should().BeEmpty();
     }
 
-   
+
     [Test]
     public async Task And_Finance_Period_Ends_Is_Null_Then_Returns_All_Payment_Period_Ends()
     {
@@ -172,8 +173,8 @@ public class WhenGettingNewPeriodEnds
         };
 
         _mockProviderPaymentApiClient
-               .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-               .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(paymentPeriodEnds, System.Net.HttpStatusCode.OK, null));
+            .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
+            .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(paymentPeriodEnds, System.Net.HttpStatusCode.OK, null));
 
         _mockFinanceApiClient
             .Setup(x => x.GetWithResponseCode<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()))
@@ -211,11 +212,11 @@ public class WhenGettingNewPeriodEnds
                 CompletionDateTime = completionDateTime,
                 Links = new Links { PaymentsForPeriod = "test-link" }
             }
-        };    
+        };
 
         _mockProviderPaymentApiClient
-        .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-        .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(paymentPeriodEnds, System.Net.HttpStatusCode.OK, null));
+            .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
+            .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(paymentPeriodEnds, System.Net.HttpStatusCode.OK, null));
 
         _mockFinanceApiClient
             .Setup(x => x.GetWithResponseCode<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()))
@@ -245,7 +246,9 @@ public class WhenGettingNewPeriodEnds
         var correlationId = Guid.NewGuid().ToString();
         var expectedException = new InvalidOperationException("API Error");
 
-        _mockProviderPaymentApiClient.Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ThrowsAsync(expectedException);
+        _mockProviderPaymentApiClient
+            .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
+            .ThrowsAsync(expectedException);
 
         // Act & Assert
         var act = async () => await _periodEndService.GetNewPeriodEndsAsync(correlationId);
@@ -260,11 +263,10 @@ public class WhenGettingNewPeriodEnds
         var expectedException = new InvalidOperationException("Finance API Error");
 
         _mockProviderPaymentApiClient
-             .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-             .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(new List<PaymentPeriodEnd>(), System.Net.HttpStatusCode.OK, null));
+            .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
+            .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(new List<PaymentPeriodEnd>(), System.Net.HttpStatusCode.OK, null));
 
         _mockFinanceApiClient.Setup(x => x.GetWithResponseCode<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ThrowsAsync(expectedException);
-
 
         // Act & Assert
         var act = async () => await _periodEndService.GetNewPeriodEndsAsync(correlationId);
@@ -304,8 +306,10 @@ public class WhenGettingNewPeriodEnds
                 Links = new Links { PaymentsForPeriod = "link-2" }
             }
         };
-        _mockProviderPaymentApiClient.Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-                    .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(paymentPeriodEnds, System.Net.HttpStatusCode.OK, null));
+
+        _mockProviderPaymentApiClient
+            .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
+            .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(paymentPeriodEnds, System.Net.HttpStatusCode.OK, null));
 
         _mockFinanceApiClient
             .Setup(x => x.GetWithResponseCode<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()))
@@ -339,11 +343,11 @@ public class WhenGettingNewPeriodEnds
                                             CompletionDateTime = DateTime.UtcNow,
                                             Links = new Links { PaymentsForPeriod = "payments-link" }
                                         }
-                                    };     
+                                    };
 
         _mockProviderPaymentApiClient
-          .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-          .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(paymentPeriodEnds, System.Net.HttpStatusCode.OK, null));
+            .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
+            .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(paymentPeriodEnds, System.Net.HttpStatusCode.OK, null));
 
         _mockFinanceApiClient
             .Setup(x => x.GetWithResponseCode<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()))
@@ -381,7 +385,7 @@ public class WhenGettingNewPeriodEnds
         _mockLogger.Setup(x => x.Log(
             LogLevel.Information,
             It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Successfully retrieved") && v.ToString().Contains("period ends from payment period end API")),
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Successfully retrieved") && v.ToString().Contains("period ends from Provider Events API")),
             It.IsAny<Exception>(),
             It.IsAny<Func<It.IsAnyType, Exception, string>>()));
 
@@ -402,7 +406,7 @@ public class WhenGettingNewPeriodEnds
         _mockLogger.Setup(x => x.Log(
             LogLevel.Information,
             It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Retrieved") && v.ToString().Contains("period ends from Provider Events API")),
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Retrieved") && v.ToString().Contains("Provider Events API") && v.ToString().Contains("Finance API")),
             It.IsAny<Exception>(),
             It.IsAny<Func<It.IsAnyType, Exception, string>>()));
 
@@ -428,7 +432,9 @@ public class WhenGettingNewPeriodEnds
         var correlationId = Guid.NewGuid().ToString();
         var expectedException = new InvalidOperationException("Provider API failure");
 
-        _mockProviderPaymentApiClient.Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ThrowsAsync(expectedException);
+        _mockProviderPaymentApiClient
+            .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
+            .ThrowsAsync(expectedException);
 
         // Act & Assert
         var act = async () => await _periodEndService.GetNewPeriodEndsAsync(correlationId);
@@ -446,11 +452,10 @@ public class WhenGettingNewPeriodEnds
         var expectedException = new InvalidOperationException("Finance API failure");
 
         _mockProviderPaymentApiClient
-           .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
-           .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(new List<PaymentPeriodEnd>(), System.Net.HttpStatusCode.OK, null));
+            .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
+            .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(new List<PaymentPeriodEnd>(), System.Net.HttpStatusCode.OK, null));
 
         _mockFinanceApiClient.Setup(x => x.GetWithResponseCode<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ThrowsAsync(expectedException);
-
 
         _mockLogger.Setup(x => x.Log(
             LogLevel.Error,
