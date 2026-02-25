@@ -94,24 +94,6 @@
         "deployPrivateLinkedScopedResource": {
             "type": "bool"
         },
-        "applicationInsightsConnectionString": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Shared application insights connection string retrieved from the get-product-app-insights step"
-            }
-        },
-        "applicationInsightsResourceId": {
-            "type": "string",
-            "metadata": {
-                "description": "Shared application insights resource ID retrieved from the get-product-app-insights step"
-            }
-        },
-        "alertActionGroupResourceId": {
-            "type": "string",
-            "metadata": {
-                "description": "Resource ID of the action group for alerts"
-            }
-        }
     },
     "variables": {
         "deploymentUrlBase": "https://raw.githubusercontent.com/SkillsFundingAgency/das-platform-building-blocks/master/templates/",
@@ -201,6 +183,46 @@
         },
         {
             "apiVersion": "2021-04-01",
+            "name": "[concat(variables('functionAppName'), '-app-insights-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'application-insights.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "appInsightsName": {
+                        "value": "[variables('functionAppName')]"
+                    },
+                    "attachedService": {
+                        "value": "[variables('functionAppName')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2021-04-01",
+            "name": "[concat(variables('functionAppNameProcessAccountPayments'), '-app-insights-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'application-insights.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "appInsightsName": {
+                        "value": "[variables('functionAppNameProcessAccountPayments')]"
+                    },
+                    "attachedService": {
+                        "value": "[variables('functionAppNameProcessAccountPayments')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2021-04-01",
             "name": "[concat(variables('functionAppName'), '-', parameters('utcValue'))]",
             "type": "Microsoft.Resources/deployments",
             "resourceGroup": "[variables('resourceGroupName')]",
@@ -247,7 +269,7 @@
                                 },
                                 {
                                     "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-                                    "value": "[parameters('applicationInsightsConnectionString')]"
+                                    "value": "[reference(concat(variables('functionAppName'), '-app-insights-', parameters('utcValue'))).outputs.ConnectionString.value]"
                                 },
                                 {
                                     "name": "AzureWebJobsStorage",
@@ -286,7 +308,8 @@
                 }
             },
             "dependsOn": [
-                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]"
+                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]",
+                "[concat(variables('functionAppName'), '-app-insights-', parameters('utcValue'))]"
             ]
         },
         {
@@ -337,7 +360,7 @@
                                 },
                                 {
                                     "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-                                    "value": "[parameters('applicationInsightsConnectionString')]"
+                                    "value": "[reference(concat(variables('functionAppNameProcessAccountPayments'), '-app-insights-', parameters('utcValue'))).outputs.ConnectionString.value]"
                                 },
                                 {
                                     "name": "AzureWebJobsStorage",
@@ -376,7 +399,8 @@
                 }
             },
             "dependsOn": [
-                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]"
+                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]",
+                "[concat(variables('functionAppNameProcessAccountPayments'), '-app-insights-', parameters('utcValue'))]"
             ]
         },
         {
@@ -497,60 +521,6 @@
             ]
         },
         {
-            "apiVersion": "2021-04-01",
-            "name": "[concat(variables('functionAppName'), '-app-insights-alerts-', parameters('utcValue'))]",
-            "type": "Microsoft.Resources/deployments",
-            "resourceGroup": "[variables('resourceGroupName')]",
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[concat(variables('deploymentUrlBase'),'application-insights-failed-requests-alert.json')]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "serviceName": {
-                        "value": "[variables('functionAppName')]"
-                    },
-                    "applicationInsightsResourceId": {
-                        "value": "[parameters('applicationInsightsResourceId')]"
-                    },
-                    "alertActionGroupResourceId": {
-                        "value": "[parameters('alertActionGroupResourceId')]"
-                    }
-                }
-            },
-            "dependsOn": [
-                "[concat(variables('functionAppName'), '-', parameters('utcValue'))]"
-            ]
-        },
-        {
-            "apiVersion": "2021-04-01",
-            "name": "[concat(variables('functionAppNameProcessAccountPayments'), '-app-insights-alerts-', parameters('utcValue'))]",
-            "type": "Microsoft.Resources/deployments",
-            "resourceGroup": "[variables('resourceGroupName')]",
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[concat(variables('deploymentUrlBase'),'application-insights-failed-requests-alert.json')]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "serviceName": {
-                        "value": "[variables('functionAppNameProcessAccountPayments')]"
-                    },
-                    "applicationInsightsResourceId": {
-                        "value": "[parameters('applicationInsightsResourceId')]"
-                    },
-                    "alertActionGroupResourceId": {
-                        "value": "[parameters('alertActionGroupResourceId')]"
-                    }
-                }
-            },
-            "dependsOn": [
-                "[concat(variables('functionAppNameProcessAccountPayments'), '-', parameters('utcValue'))]"
-            ]
-        },
-        {
             "condition": "[parameters('deployPrivateLinkedScopedResource')]",
             "apiVersion": "2021-04-01",
             "name": "[concat(variables('functionAppName'), '-private-link-scoped-', parameters('utcValue'))]",
@@ -570,7 +540,7 @@
                         "value": "[variables('functionAppName')]"
                     },
                     "scopedResourceId": {
-                        "value": "[parameters('applicationInsightsResourceId')]"
+                        "value": "[reference(concat(variables('functionAppName'), '-app-insights-', parameters('utcValue'))).outputs.AppInsightsResourceId.value]"
                     }
                 }
             }
