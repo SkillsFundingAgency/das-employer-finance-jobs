@@ -570,7 +570,7 @@
                         "value": "[variables('functionAppName')]"
                     },
                     "scopedResourceId": {
-                        "value": "[reference(concat(variables('functionAppName'), '-app-insights-', parameters('utcValue'))).outputs.AppInsightsResourceId.value]"
+                        "value": "[parameters('applicationInsightsResourceId')]"
                     }
                 }
             }
