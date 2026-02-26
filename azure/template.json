@@ -185,6 +185,7 @@
             "apiVersion": "2021-04-01",
             "name": "[concat(variables('functionAppName'), '-app-insights-', parameters('utcValue'))]",
             "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[variables('resourceGroupName')]",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
@@ -205,6 +206,7 @@
             "apiVersion": "2021-04-01",
             "name": "[concat(variables('functionAppNameProcessAccountPayments'), '-app-insights-', parameters('utcValue'))]",
             "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[variables('resourceGroupName')]",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
