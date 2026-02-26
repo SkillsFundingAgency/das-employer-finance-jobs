@@ -1,7 +1,6 @@
 using System.Net;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Hosting;
-using NServiceBus;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
@@ -9,7 +8,7 @@ public static class NServiceBusExtensions
 {
     public static IHostBuilder ConfigureNServiceBus(this IHostBuilder hostBuilder, string endpointName, Action<RoutingSettings>? configureRouting = null)
     {
-        hostBuilder.UseNServiceBus((config, endpointConfiguration) =>
+        hostBuilder.UseNServiceBus(endpointName, (config, endpointConfiguration) =>
         {
             // Configure Azure Service Bus rule name shortening (following das-recruit-jobs pattern)
             endpointConfiguration.Transport.SubscriptionRuleNamingConvention = AzureRuleNameShortener.Shorten;

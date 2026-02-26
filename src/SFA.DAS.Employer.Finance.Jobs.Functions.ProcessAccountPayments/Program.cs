@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Functions.Worker;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments.Handlers;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
