@@ -17,8 +17,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
     <PackageReference Include="NServiceBus" Version="9.2.7" />
     <PackageReference Include="NServiceBus.AzureFunctions.Worker.ServiceBus" Version="5.2.3" />
+    <PackageReference Include="Polly" Version="8.6.5" />
     <PackageReference Include="SFA.DAS.Api.Common" Version="17.1.156" />
     <PackageReference Include="SFA.DAS.Configuration.AzureTableStorage" Version="17.1.138" />
+    <PackageReference Include="SFA.DAS.Provider.Events.Api.Client" Version="3.0.3" />
     <PackageReference Include="StackExchange.Redis" Version="2.8.16" />
   </ItemGroup>
 

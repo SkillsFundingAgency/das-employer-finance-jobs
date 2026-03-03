@@ -15,7 +15,8 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 public static class ServiceRegistrationExtensions
 {
     public static void AddServiceRegistration(this IServiceCollection services, IConfiguration configuration)
-    {        
+    {
+        services.AddConfigurationOptions(configuration);
 
         services.AddHttpClient();
      
@@ -30,5 +31,10 @@ public static class ServiceRegistrationExtensions
         services.AddScoped<IPeriodEndService, PeriodEndService>();
 
         services.AddScoped<IAccountService, AccountService>();
+
+        services.AddScoped<IRefreshPaymentDataService, RefreshPaymentDataService>();
+
+        services.AddScoped<IPaymentTransactionLinesService, PaymentTransactionLinesService>();
+
     }
 }

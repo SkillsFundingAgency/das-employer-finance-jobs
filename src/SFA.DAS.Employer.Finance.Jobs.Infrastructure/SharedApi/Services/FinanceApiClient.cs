@@ -45,5 +45,14 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services
         {
             return _apiClient.PostWithResponseCode<TResponse>(request);
         }
+        public async Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IPostApiRequest request, bool includeResponse = true)
+        {
+            return await PostWithResponseCode<object, TResponse>(request, includeResponse);
+        }
+
+        public async Task<ApiResponse<TResponse>> PostWithResponseCode<TData, TResponse>(IPostApiRequest<TData> request, bool includeResponse = true)
+        {
+            return await _apiClient.PostWithResponseCode<TData, TResponse>(request, includeResponse);
+        }
     }
 }
