@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
-[assembly: NServiceBusTriggerFunction("SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction")]
+[assembly: NServiceBusTriggerFunction("sfa.das.employer.finance.jobs.pap")]
 
 var hostBuilder = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
-    .UseNServiceBus("SFA.DAS.Employer.Finance.Jobs.ProcessAccountPayments", (config, endpointConfiguration) =>
+    .UseNServiceBus("sfa.das.employer.finance.jobs.pap", (config, endpointConfiguration) =>
     {
         endpointConfiguration.UseSerialization<SystemJsonSerializer>();
         endpointConfiguration.AdvancedConfiguration.EnableInstallers();

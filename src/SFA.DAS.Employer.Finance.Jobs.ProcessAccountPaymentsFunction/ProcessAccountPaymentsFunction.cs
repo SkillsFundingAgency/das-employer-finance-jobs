@@ -18,7 +18,7 @@ public class ProcessAccountPaymentsFunction
 
     [Function(nameof(ProcessAccountPaymentsFunction))]
     public async Task Run(
-        [ServiceBusTrigger("SFA.DAS.Employer.Finance.Jobs.ProcessAccountPayments", Connection = "AzureWebJobsServiceBus")]
+        [ServiceBusTrigger("sfa.das.employer.finance.jobs.pap", Connection = "AzureWebJobsServiceBus")]
         ImportAccountPaymentsCommand message,
         [DurableClient] DurableTaskClient starter)
     {
