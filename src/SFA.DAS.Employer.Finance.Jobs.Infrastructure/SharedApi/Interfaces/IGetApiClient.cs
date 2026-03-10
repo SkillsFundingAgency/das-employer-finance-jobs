@@ -9,5 +9,6 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces
         Task<TResponse> Get<TResponse>(IGetApiRequest request);
         Task<HttpStatusCode> GetResponseCode(IGetApiRequest request);
         Task<ApiResponse<TResponse>> GetWithResponseCode<TResponse>(IGetApiRequest request);
+        Task Post<TBody>(string url, TBody body);
     }
 }

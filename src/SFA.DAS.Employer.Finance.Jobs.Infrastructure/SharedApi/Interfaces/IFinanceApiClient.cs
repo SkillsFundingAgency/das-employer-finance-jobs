@@ -2,5 +2,6 @@
 {
     public interface IFinanceApiClient<T> : IInternalApiClient<T>
     {
+        Task Post<TBody>(string url, TBody body);
     }
 }

@@ -81,6 +81,27 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi
             return getWithResponseCode;
         }
 
+        public async Task Post<TBody>(string url, TBody body)
+        {
+            var json = JsonSerializer.Serialize(body);
+
+            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            };
+
+            await AddAuthenticationHeader(httpRequestMessage);
+
+            var response = await HttpClient.SendAsync(httpRequestMessage).ConfigureAwait(false);
+
+            if ((int)response.StatusCode < 200 || (int)response.StatusCode > 299)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException(
+                    $"Finance API POST failed. StatusCode: {response.StatusCode}, Response: {error}");
+            }
+        }
+
         private static bool IsNot200RangeResponseCode(HttpStatusCode statusCode)
         {
             return !((int)statusCode >= 200 && (int)statusCode <= 299);

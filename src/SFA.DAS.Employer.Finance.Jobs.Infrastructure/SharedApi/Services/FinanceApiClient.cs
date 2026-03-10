@@ -35,5 +35,10 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services
         {
             return _apiClient.GetWithResponseCode<TResponse>(request);
         }
+
+        public Task Post<TBody>(string url, TBody body)
+        {
+            return _apiClient.Post(url, body);
+        }
     }
 }
