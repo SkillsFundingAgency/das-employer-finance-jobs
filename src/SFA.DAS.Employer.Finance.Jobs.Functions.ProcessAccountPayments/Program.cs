@@ -4,7 +4,7 @@ using Microsoft.Azure.Functions.Worker;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments.Handlers;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
-[assembly: NServiceBusTriggerFunction("SFA.DAS.Employer.Finance.Jobs.PAP")]
+[assembly: NServiceBusTriggerFunction("SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments")]
 
 var host = new HostBuilder()
     .ConfigureFunctionsWebApplication()
