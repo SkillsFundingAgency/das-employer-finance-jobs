@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments": {
-      "commandName": "Project",
-      "commandLineArgs": "--port 7298",
-      "launchBrowser": false
-    }
-  }
-}

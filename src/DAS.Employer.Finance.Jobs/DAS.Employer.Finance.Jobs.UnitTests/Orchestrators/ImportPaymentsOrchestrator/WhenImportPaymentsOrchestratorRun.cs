@@ -34,7 +34,7 @@ public class WhenImportPaymentsOrchestratorRun
     public async Task Then_ShouldReturnSuccess_WhenPeriodEndsAreProcessed()
     {
         var correlationId = Guid.NewGuid().ToString();
-        var input = new ImportPaymentsOrchestratorInput { CorrelationId = correlationId, TriggeredAt = DateTime.UtcNow };
+        var input = new ImportPaymentsOrchestratorInput { CorrelationId = correlationId, TriggeredAt = DateTime.UtcNow, MaxConcurrentAccounts = 25 };
         var periodEnds = new List<PeriodEnd>
         {
             new PeriodEnd { PeriodEndId = "PE1", CalendarPeriodYear = 2024, PaymentsForPeriod = "Apr" },
@@ -44,8 +44,11 @@ public class WhenImportPaymentsOrchestratorRun
         _contextMock.Setup(c => c.GetInput<ImportPaymentsOrchestratorInput>()).Returns(input);
         _contextMock.Setup(c => c.CallActivityAsync<List<PeriodEnd>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))
             .ReturnsAsync(periodEnds);
-        _contextMock.Setup(c => c.CallActivityAsync(It.IsAny<TaskName>(), It.IsAny<ProcessPeriodEndInput>(), It.IsAny<TaskOptions>()))
-            .Returns(Task.CompletedTask);
+        _contextMock.Setup(c => c.CallSubOrchestratorAsync<PeriodEndResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<ProcessPeriodEndOrchestratorInput>(),
+                It.IsAny<SubOrchestrationOptions>()))
+            .ReturnsAsync(new PeriodEndResult());
 
         var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
 
@@ -60,7 +63,7 @@ public class WhenImportPaymentsOrchestratorRun
     public async Task Then_ShouldReturnSuccess_WhenNoPeriodEndsToProcess()
     {
         var correlationId = Guid.NewGuid().ToString();
-        var input = new ImportPaymentsOrchestratorInput { CorrelationId = correlationId, TriggeredAt = DateTime.UtcNow };
+        var input = new ImportPaymentsOrchestratorInput { CorrelationId = correlationId, TriggeredAt = DateTime.UtcNow, MaxConcurrentAccounts = 25 };
         var periodEnds = new List<PeriodEnd>();
 
         _contextMock.Setup(c => c.GetInput<ImportPaymentsOrchestratorInput>()).Returns(input);
@@ -80,7 +83,7 @@ public class WhenImportPaymentsOrchestratorRun
     public async Task Then_ShouldReturnFailure_WhenExceptionIsThrown()
     {
         var correlationId = Guid.NewGuid().ToString();
-        var input = new ImportPaymentsOrchestratorInput { CorrelationId = correlationId, TriggeredAt = DateTime.UtcNow };
+        var input = new ImportPaymentsOrchestratorInput { CorrelationId = correlationId, TriggeredAt = DateTime.UtcNow, MaxConcurrentAccounts = 25 };
 
         _contextMock.Setup(c => c.GetInput<ImportPaymentsOrchestratorInput>()).Returns(input);
         _contextMock.Setup(c => c.CallActivityAsync<List<PeriodEnd>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))

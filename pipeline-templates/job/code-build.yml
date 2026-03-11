@@ -28,16 +28,6 @@ jobs:
       modifyOutputPath: false
       zipAfterPublish: true
 
-  - task: DotNetCoreCLI@2
-    displayName: Publish - dotnet publish ${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments
-    inputs:
-      command: publish
-      publishWebProjects: false
-      projects: src/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments.csproj
-      arguments: -o $(build.artifactstagingdirectory)/publish/SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments -c ${{ parameters.BuildConfiguration }} --no-build
-      modifyOutputPath: false
-      zipAfterPublish: true
-
   - task: CopyFiles@2
     displayName: Copy Files to $(build.artifactstagingdirectory)/publish
     inputs:

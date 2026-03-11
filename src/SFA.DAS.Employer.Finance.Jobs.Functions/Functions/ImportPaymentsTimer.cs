@@ -7,7 +7,9 @@ using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 namespace SFA.DAS.Employer.Finance.Jobs.Functions;
 
 public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
-{   
+{
+    private const int MaxConcurrentAccounts = 50;
+
     [Function("ImportPaymentsTimer")]
     public async Task Run([TimerTrigger("0 0 * * * *", RunOnStartup = true)] TimerInfo timerInfo, [DurableClient] DurableTaskClient client)
     {
@@ -31,7 +33,8 @@ public class ImportPaymentsTimer(ILogger<ImportPaymentsTimer> logger)
                 new ImportPaymentsOrchestratorInput
                 {
                     CorrelationId = correlationId,
-                    TriggeredAt = DateTime.UtcNow
+                    TriggeredAt = DateTime.UtcNow,
+                    MaxConcurrentAccounts = MaxConcurrentAccounts
                 },
                 new StartOrchestrationOptions
                 {
@@ -52,4 +55,5 @@ public class ImportPaymentsOrchestratorInput
 {
     public string CorrelationId { get; set; }
     public DateTime TriggeredAt { get; set; }
+    public int MaxConcurrentAccounts { get; set; }
 }

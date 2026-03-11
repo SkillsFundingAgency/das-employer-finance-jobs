@@ -18,7 +18,6 @@ public static class LoggingExtensions
             // General filters
             builder.AddFilter("Microsoft", LogLevel.Warning);
             builder.AddFilter("System", LogLevel.Warning);
-            builder.AddFilter("NServiceBus", LogLevel.Debug);
             builder.AddFilter("StartupDiagnostics", LogLevel.Information);
             builder.AddFilter("SFA.DAS", LogLevel.Information);
 

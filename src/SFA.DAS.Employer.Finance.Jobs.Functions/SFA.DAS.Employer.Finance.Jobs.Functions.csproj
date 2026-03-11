@@ -24,14 +24,11 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.3.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
-	  
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs.Infrastructure\SFA.DAS.Employer.Finance.Jobs.Infrastructure.csproj" />
-    <ProjectReference Include="..\SFA.DAS.Employer.Finance.Messages\SFA.DAS.Employer.Finance.Messages.csproj" />
   </ItemGroup>
 
 </Project>
-

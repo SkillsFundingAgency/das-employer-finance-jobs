@@ -94,6 +94,7 @@ public class ImportPaymentsTimerTests
         clientMock.VerifyNoOtherCalls();
         _loggerMock.VerifyLogContains("Error starting ImportPaymentsOrchestrator");
     }
+
 }
 public static class LoggerExtensions
 {

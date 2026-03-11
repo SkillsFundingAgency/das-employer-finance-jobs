@@ -1,41 +1,38 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
-using NServiceBus;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
-using SFA.DAS.Employer.Finance.Messages.Commands;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 
 public class ProcessPeriodEndOrchestrator(
     ILogger<ProcessPeriodEndOrchestrator> logger,
     IPeriodEndService periodEndService,
-    IAccountService accountService,
-    IFunctionEndpoint functionEndpoint)
+    IAccountService accountService)
 {
     private const int PageSize = 10000;
 
     [Function(nameof(ProcessPeriodEndOrchestrator))]
     public async Task<PeriodEndResult> Run([OrchestrationTrigger] TaskOrchestrationContext context)
     {
-        var input = context.GetInput<PeriodEnd>();
+        var input = context.GetInput<ProcessPeriodEndOrchestratorInput>();
 
-        if (input == null)
+        if (input?.PeriodEnd == null)
         {
             throw new ArgumentNullException(nameof(input));
         }
 
-        ValidateOrThrow(input, context);
+        ValidateOrThrow(input.PeriodEnd, context);
 
         var periodEnd = await context.CallActivityAsync<PeriodEnd>(
             nameof(CreatePeriodEndActivity),
-            new CreatePeriodEndActivityInput { PeriodEnd = input, CorrelationId = context.NewGuid() });
+            new CreatePeriodEndActivityInput { PeriodEnd = input.PeriodEnd, CorrelationId = context.NewGuid() });
 
-        var periodEndRef = periodEnd.PeriodEndId ?? periodEnd.Id.ToString();
-        var totalCommandsPublished = await context.CallActivityAsync<int>(
-            nameof(PublishAccountPaymentCommandsActivity),
-            new PublishAccountPaymentCommandsInput { PeriodEndRef = periodEndRef, PeriodEnd = periodEnd });
+        var periodEndRef = string.IsNullOrWhiteSpace(periodEnd.PeriodEndId)
+            ? periodEnd.Id.ToString()
+            : periodEnd.PeriodEndId;
+        var totalCommandsPublished = await FanOutAccountImports(context, periodEndRef, input.MaxConcurrentAccounts);
 
         return new PeriodEndResult
         {
@@ -50,20 +47,20 @@ public class ProcessPeriodEndOrchestrator(
         return await periodEndService.CreatePeriodEndAsync(input.PeriodEnd, input.CorrelationId);
     }
 
-    [Function(nameof(PublishAccountPaymentCommandsActivity))]
-    public async Task<int> PublishAccountPaymentCommandsActivity(
-        [ActivityTrigger] PublishAccountPaymentCommandsInput input,
-        FunctionContext executionContext,
-        CancellationToken cancellationToken)
+    private async Task<int> FanOutAccountImports(TaskOrchestrationContext context, string periodEndRef, int maxConcurrentAccounts)
     {
-        var periodEndRef = input.PeriodEndRef;
+        var retryPolicy = new RetryPolicy(
+            5,
+            TimeSpan.FromSeconds(5));
+
         logger.LogInformation(
-            "PublishAccountPaymentCommandsActivity started for period end {PeriodEndRef}, fetching accounts from Finance API in pages of {PageSize}",
+            "FanOutAccountImports started for period end {PeriodEndRef}, fetching accounts from Finance API in pages of {PageSize}",
             periodEndRef,
             PageSize);
 
         var totalPublished = 0;
         var page = 1;
+        var maxConcurrency = maxConcurrentAccounts <= 0 ? 50 : maxConcurrentAccounts;
 
         while (true)
         {
@@ -71,36 +68,57 @@ public class ProcessPeriodEndOrchestrator(
             {
                 Page = page,
                 PageSize = PageSize,
-                CorrelationId = Guid.NewGuid()
+                CorrelationId = context.NewGuid()
             };
 
-            var accounts = await accountService.GetAccountsAsync(pageInput);
+            var accounts = await context.CallActivityAsync<List<Accounts>>(
+                nameof(GetAccountsPageActivity),
+                pageInput,
+                new TaskOptions(retryPolicy));
 
             if (accounts == null || accounts.Count == 0)
             {
                 logger.LogInformation(
-                    "PublishAccountPaymentCommandsActivity: no accounts returned for page {Page}, ending paged fetch",
+                    "FanOutAccountImports: no accounts returned for page {Page}, ending paged fetch",
                     page);
                 break;
             }
 
+            var runningTasks = new List<Task>();
             foreach (var account in accounts)
             {
-                var command = new ImportAccountPaymentsCommand
+                var instanceId = $"ProcessAccount-{periodEndRef}-{account.Id}";
+                var idempotencyKey = DeterministicGuid($"ImportAccountPayments-{periodEndRef}-{account.Id}");
+                var accountInput = new ProcessAccountInput
                 {
                     AccountId = account.Id,
-                    PeriodEndRef = periodEndRef
+                    PeriodEndRef = periodEndRef,
+                    CorrelationId = context.NewGuid().ToString(),
+                    IdempotencyKey = idempotencyKey.ToString(),
+                    TriggeredAt = context.CurrentUtcDateTime
                 };
 
-                var sendOptions = new SendOptions();
-                sendOptions.SetMessageId($"{nameof(ImportAccountPaymentsCommand)}-{periodEndRef}-{account.Id}");
+                runningTasks.Add(context.CallSubOrchestratorAsync<AccountProcessingResult>(
+                    nameof(ProcessAccountOrchestrator),
+                    accountInput,
+                    new SubOrchestrationOptions { InstanceId = instanceId }));
 
-                await functionEndpoint.Send(command, sendOptions, executionContext, cancellationToken);
                 totalPublished++;
+
+                if (runningTasks.Count >= maxConcurrency)
+                {
+                    await Task.WhenAll(runningTasks);
+                    runningTasks.Clear();
+                }
+            }
+
+            if (runningTasks.Count > 0)
+            {
+                await Task.WhenAll(runningTasks);
             }
 
             logger.LogInformation(
-                "PublishAccountPaymentCommandsActivity: published {Count} commands for page {Page} (total so far: {TotalPublished})",
+                "FanOutAccountImports: scheduled {Count} account imports for page {Page} (total so far: {TotalPublished})",
                 accounts.Count,
                 page,
                 totalPublished);
@@ -108,7 +126,7 @@ public class ProcessPeriodEndOrchestrator(
             if (accounts.Count < PageSize)
             {
                 logger.LogInformation(
-                    "PublishAccountPaymentCommandsActivity completed for period end {PeriodEndRef}: {TotalPublished} ImportAccountPaymentsCommands published across {TotalPages} pages",
+                    "FanOutAccountImports completed for period end {PeriodEndRef}: {TotalPublished} account imports scheduled across {TotalPages} pages",
                     periodEndRef,
                     totalPublished,
                     page);
@@ -119,6 +137,19 @@ public class ProcessPeriodEndOrchestrator(
         }
 
         return totalPublished;
+    }
+
+    [Function(nameof(GetAccountsPageActivity))]
+    public async Task<List<Accounts>> GetAccountsPageActivity([ActivityTrigger] GetAccountsRequest input)
+    {
+        return await accountService.GetAccountsAsync(input);
+    }
+
+    private static Guid DeterministicGuid(string input)
+    {
+        using var provider = System.Security.Cryptography.MD5.Create();
+        var hash = provider.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
+        return new Guid(hash);
     }
 
     private void ValidateOrThrow(PeriodEnd input, TaskOrchestrationContext context)

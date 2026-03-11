@@ -14,7 +14,7 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
     public async Task<ImportPaymentsResult> RunOrchestrator([OrchestrationTrigger] TaskOrchestrationContext context)
     {
         var input = context.GetInput<ImportPaymentsOrchestratorInput>();
-        var correlationId = input?.CorrelationId ?? Guid.NewGuid().ToString();
+        var correlationId = input?.CorrelationId ?? context.NewGuid().ToString();
 
         logger.LogInformation("[CorrelationId: {CorrelationId}] ImportPaymentsOrchestrator started", correlationId);
 
@@ -31,15 +31,25 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
             result.NewPeriodEndsCount = newPeriodEnds?.Count ?? 0;
             result.TotalPeriodEndsCount = newPeriodEnds?.Count ?? 0;
 
-            if (newPeriodEnds != null && newPeriodEnds.Count > 0)
+            if (newPeriodEnds is { Count: > 0 })
             {
                 logger.LogInformation("[CorrelationId: {CorrelationId}] Processing {Count} new period ends", correlationId, newPeriodEnds.Count);
               
                 foreach (var periodEnd in newPeriodEnds)
                 {
+                    var periodEndRef = string.IsNullOrWhiteSpace(periodEnd.PeriodEndId)
+                        ? periodEnd.Id.ToString()
+                        : periodEnd.PeriodEndId;
+                    var instanceId = $"ProcessPeriodEnd-{periodEndRef}";
+
                     await context.CallSubOrchestratorAsync<PeriodEndResult>(
                                   nameof(ProcessPeriodEndOrchestrator),
-                                  periodEnd);
+                                  new ProcessPeriodEndOrchestratorInput
+                                  {
+                                      PeriodEnd = periodEnd,
+                                      MaxConcurrentAccounts = input?.MaxConcurrentAccounts ?? 50
+                                  },
+                                  new SubOrchestrationOptions { InstanceId = instanceId });
                 }
             }
             else

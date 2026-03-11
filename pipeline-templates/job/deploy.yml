@@ -57,19 +57,8 @@ jobs:
             ResourceName: $(FunctionAppName)
             Tenant: $(Tenant)
             IsMultiRepoCheckout: true
-        - template: azure-pipelines-templates/deploy/step/app-role-assignments.yml@das-platform-building-blocks
-          parameters:
-            ServiceConnection: ${{ parameters.AppRoleAssignmentsServiceConnection }}
-            ResourceName: $(FunctionAppNameProcessAccountPayments)
-            Tenant: $(Tenant)
-            IsMultiRepoCheckout: true
         - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.ServiceConnection }}
             FunctionAppName: $(FunctionAppName)
             DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/SFA.DAS.Employer.Finance.Jobs.Functions/${{ parameters.SolutionBaseName }}.Functions.zip
-        - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
-          parameters:
-            ServiceConnection: ${{ parameters.ServiceConnection }}
-            FunctionAppName: $(FunctionAppNameProcessAccountPayments)
-            DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/SFA.DAS.Employer.Finance.Jobs.Functions.ProcessAccountPayments/${{ parameters.SolutionBaseName }}.Functions.ProcessAccountPayments.zip

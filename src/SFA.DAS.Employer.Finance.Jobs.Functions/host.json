@@ -12,7 +12,6 @@
             "default": "Information",
             "Microsoft": "Warning",
             "Microsoft.Hosting.Lifetime": "Information",
-            "NServiceBus": "Debug",
             "SFA.DAS": "Information"
         }
     },

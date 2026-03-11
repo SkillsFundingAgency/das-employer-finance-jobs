@@ -30,5 +30,7 @@ public static class ServiceRegistrationExtensions
         services.AddScoped<IPeriodEndService, PeriodEndService>();
 
         services.AddScoped<IAccountService, AccountService>();
+
+        services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
     }
 }
