@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction", "SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction\SFA.DAS.Employer.Finance.Jobs.ProcessAccountPaymentsFunction.csproj", "{3A1F7FAC-CF1C-446A-8C9B-DD4F5D3E2FA0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AddLogging", "AddLogging\AddLogging.csproj", "{EA60EF30-B6F0-460B-BB93-152110EC7D8D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,6 +55,10 @@ Global
 		{3A1F7FAC-CF1C-446A-8C9B-DD4F5D3E2FA0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3A1F7FAC-CF1C-446A-8C9B-DD4F5D3E2FA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3A1F7FAC-CF1C-446A-8C9B-DD4F5D3E2FA0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA60EF30-B6F0-460B-BB93-152110EC7D8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA60EF30-B6F0-460B-BB93-152110EC7D8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA60EF30-B6F0-460B-BB93-152110EC7D8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA60EF30-B6F0-460B-BB93-152110EC7D8D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
