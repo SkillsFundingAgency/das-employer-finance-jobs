@@ -1,15 +1,15 @@
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Orchestrators;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 var host = new HostBuilder()
-    .ConfigureFunctionsWebApplication()
+    .ConfigureFunctionsWorkerDefaults()
     .ConfigureAppConfiguration(builder => builder.BuildDasConfiguration())
     .ConfigureServices((context, services) =>
     {
         var configuration = context.Configuration;
-        
+
         // Setup Application Insights (following das-recruit-jobs pattern)
         services.AddApplicationInsightsTelemetryWorkerService(options =>
         {
@@ -17,8 +17,6 @@ var host = new HostBuilder()
             options.DeveloperMode = true;
 #endif
         });
-        
-        services.AddSingleton<IProcessAccountOrchestrationStarter, ProcessAccountOrchestrationStarter>();
 
         services.AddDasLogging();
         services.AddDasDataProtection(configuration);
