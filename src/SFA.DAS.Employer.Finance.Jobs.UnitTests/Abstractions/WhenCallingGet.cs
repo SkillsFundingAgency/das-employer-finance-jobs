@@ -4,19 +4,15 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
-using System.Threading.Tasks;
 using AutoFixture.NUnit3;
-using FluentAssertions;
-using Moq;
 using Moq.Protected;
-using NUnit.Framework;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
 public class WhenCallingGet
-{ 
+{
 
     [Test, AutoData]
     public async Task Then_The_Endpoint_Is_Called(
@@ -114,17 +110,19 @@ public class WhenCallingGet
         Assert.That(actualResult, Is.Null);
     }
 
-       private class GetTestRequestNoVersion : IGetApiRequest
-        {
-            private readonly int _id;
+    private class GetTestRequestNoVersion : IApiRequest
+    {
+        private readonly int _id;
 
-            public GetTestRequestNoVersion (int id)
-            {
-                _id = id;
-            }
-            public string GetUrl => $"test-url/get{_id}";
+        public GetTestRequestNoVersion(int id)
+        {
+            _id = id;
         }
-    private class GetTestRequest : IGetApiRequest
+        public string GetUrl => $"test-url/get{_id}";
+
+        public object Data => throw new System.NotImplementedException();
+    }
+    private class GetTestRequest : IApiRequest
     {
         private readonly int _id;
 
@@ -133,6 +131,8 @@ public class WhenCallingGet
             _id = id;
         }
         public string GetUrl => $"test-url/get{_id}";
+
+        public object Data => throw new System.NotImplementedException();
     }
 
     private class TestResponse

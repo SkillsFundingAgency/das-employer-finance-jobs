@@ -1,8 +1,5 @@
 using AutoFixture.NUnit3;
-using FluentAssertions;
-using Moq;
 using Moq.Protected;
-using NUnit.Framework;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
@@ -11,11 +8,10 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
 public class WhenCallingGetWithResponseCode
-{  
+{
 
     [Test, AutoData]
     public async Task Then_The_Endpoint_Is_Called(string authToken, int id, TestInternalApiConfiguration config)
@@ -166,7 +162,7 @@ public class WhenCallingGetWithResponseCode
     }
 
     [Test, AutoData]
-    public async Task Then_If_Returns_Not_Found_Result_Returns_Default_Body(int id, string authToken,TestInternalApiConfiguration config)
+    public async Task Then_If_Returns_Not_Found_Result_Returns_Default_Body(int id, string authToken, TestInternalApiConfiguration config)
     {
         //Arrange
         var azureClientCredentialHelper = new Mock<IAzureClientCredentialHelper>();
@@ -223,7 +219,7 @@ public class WhenCallingGetWithResponseCode
         actualResult.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
         actualResult.Body.Should().BeNull();
     }
-    private class GetTestRequest : IGetApiRequest
+    private class GetTestRequest : IApiRequest
     {
         private readonly int _id;
 
@@ -232,8 +228,10 @@ public class WhenCallingGetWithResponseCode
             _id = id;
         }
         public string GetUrl => $"test-url/get{_id}";
+
+        public object Data => throw new System.NotImplementedException();
     }
-    private class GetTestRequestNoVersion : IGetApiRequest
+    private class GetTestRequestNoVersion : IApiRequest
     {
         private readonly int _id;
 
@@ -242,5 +240,7 @@ public class WhenCallingGetWithResponseCode
             _id = id;
         }
         public string GetUrl => $"test-url/get{_id}";
+
+        public object Data => throw new System.NotImplementedException();
     }
 }

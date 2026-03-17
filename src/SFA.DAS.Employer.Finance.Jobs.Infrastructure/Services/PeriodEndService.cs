@@ -6,6 +6,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
+
 public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> financeApiClient, IProviderPaymentApiClient<ProviderEventsApiConfiguration> providerPaymentApiClient, ILogger<PeriodEndService> logger) : IPeriodEndService
 {  
     public async Task<List<PeriodEnd>> GetNewPeriodEndsAsync(string correlationId)
@@ -31,6 +32,27 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
 
         return newPeriodEnds;
     }
+
+    public async Task<PeriodEnd> CreatePeriodEndAsync(PeriodEnd periodEnd, Guid correlationId)
+    {
+        try
+        {
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Finance API to create period end", correlationId);
+            var request = new CreatePeriodEndRequest { Data = periodEnd };
+
+            var createdPeriodEnd = await financeApiClient.Post<PeriodEnd>(request);
+
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully created period end", correlationId);
+
+            return createdPeriodEnd;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[CorrelationId: {CorrelationId}] Error creating period end {ErrorMessage}", correlationId, ex.Message);
+            throw;
+        }
+    }
+
 
     private async Task<List<PeriodEnd>> GetPaymentPeriodEndsAsync(string correlationId)
     {
@@ -65,7 +87,7 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
                 PaymentsForPeriod = pe.Links.PaymentsForPeriod
             });
 
-            return periodEnds ?? new List<PeriodEnd>();
+            return periodEnds ?? [];
         }
         catch (Exception ex)
         {
@@ -73,6 +95,7 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
             throw;
         }
     }
+    
     private async Task<List<PeriodEnd>> GetFinancePeriodEndsAsync(string correlationId)
     {
         try
