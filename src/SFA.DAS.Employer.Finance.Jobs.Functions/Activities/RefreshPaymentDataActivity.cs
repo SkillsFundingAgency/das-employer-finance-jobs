@@ -14,7 +14,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions.Activities
         Task SaveAsync<T>(string key, T value);
     }
 
-    public class GetAccountPaymentIdsRequest : IGetApiRequest
+    public class GetAccountPaymentIdsRequest : IApiRequest
     {
         public GetAccountPaymentIdsRequest(long accountId)
         {
@@ -24,9 +24,10 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions.Activities
         public long AccountId { get; }
 
         public string GetUrl => $"/api/accounts/{AccountId}/payments/ids";
+        public object? Data => null;
     }
 
-    public class GetAccountPaymentsRequest : IGetApiRequest
+    public class GetAccountPaymentsRequest : IApiRequest
     {
         public GetAccountPaymentsRequest(string periodEndId, long accountId, string correlationId)
         {
@@ -41,6 +42,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions.Activities
 
         public string GetUrl =>
             $"/provider-api/accounts/{AccountId}/payments?periodEnd={PeriodEndId}&correlationId={CorrelationId}";
+        public object? Data => null;
     }
 
     public class RefreshPaymentDataActivity

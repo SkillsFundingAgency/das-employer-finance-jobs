@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using FluentAssertions;
+﻿using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using NUnit.Framework;
 using SFA.DAS.Api.Common.Infrastructure;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
@@ -23,7 +20,8 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
         [TestCase(typeof(IInternalApiClient<FinanceApiConfiguration>))]
         [TestCase(typeof(IProviderPaymentApiClient<ProviderEventsApiConfiguration>))]
         [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
-        [TestCase(typeof(IPeriodEndService))]     
+        [TestCase(typeof(IPeriodEndService))]
+        [TestCase(typeof(IAccountPaymentsImportService))]
         public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
         {
             var serviceCollection = new ServiceCollection();
@@ -51,7 +49,8 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
 
             services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
             services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
-            services.AddScoped<IPeriodEndService, PeriodEndService>();         
+            services.AddScoped<IPeriodEndService, PeriodEndService>();
+            services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         }
         private static IConfigurationRoot GenerateConfiguration()
         {
@@ -61,7 +60,6 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
                 {                 
                     new("FUNCTIONS_WORKER_RUNTIME", "dotnet-isolated"),
                     new("AzureWebJobsServiceBus", "abc"),
-                    new("NServiceBus_License", "test"),
                     new("FinanceApiConfiguration:Url", "https://test.com/"),
                     new("FinanceApiConfiguration:Identifier","https://test.com/"),
                     new("ProviderEventsApiConfiguration:Url", "https://test.com/"),

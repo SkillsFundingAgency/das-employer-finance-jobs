@@ -1,5 +1,3 @@
-using Azure.Core;
-using DurableTask.Core;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
@@ -17,7 +15,7 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
     public async Task<ImportPaymentsResult> RunOrchestrator([OrchestrationTrigger] TaskOrchestrationContext context)
     {
         var input = context.GetInput<ImportPaymentsOrchestratorInput>();
-        var correlationId = input?.CorrelationId ?? Guid.NewGuid().ToString();
+        var correlationId = input?.CorrelationId ?? context.NewGuid().ToString();
 
         logger.LogInformation("[CorrelationId: {CorrelationId}] ImportPaymentsOrchestrator started", correlationId);
 
@@ -34,54 +32,25 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
             result.NewPeriodEndsCount = newPeriodEnds?.Count ?? 0;
             result.TotalPeriodEndsCount = newPeriodEnds?.Count ?? 0;
 
-            if (newPeriodEnds != null && newPeriodEnds.Count > 0)
+            if (newPeriodEnds is { Count: > 0 })
             {
                 logger.LogInformation("[CorrelationId: {CorrelationId}] Processing {Count} new period ends", correlationId, newPeriodEnds.Count);
 
                 foreach (var periodEnd in newPeriodEnds)
                 {
-                    logger.LogInformation(
-                        "[CorrelationId: {CorrelationId}] Retrieving levy accounts for period end {PeriodEndId}",
-                        correlationId,
-                        periodEnd.PeriodEndId);
+                    var periodEndRef = string.IsNullOrWhiteSpace(periodEnd.PeriodEndId)
+                        ? periodEnd.Id.ToString()
+                        : periodEnd.PeriodEndId;
+                    var instanceId = $"ProcessPeriodEnd-{periodEndRef}";
 
-                    var accounts = await context.CallActivityAsync<List<long>>(
-                        nameof(GetLevyAccountsActivity),
-                        correlationId);
-
-                    if (accounts == null || accounts.Count == 0)
-                    {
-                        logger.LogInformation(
-                            "[CorrelationId: {CorrelationId}] No levy accounts returned for processing",
-                            correlationId);
-
-                        continue;
-                    }
-
-                    logger.LogInformation(
-                        "[CorrelationId: {CorrelationId}] Processing {AccountCount} accounts for period end {PeriodEndId}",
-                        correlationId,
-                        accounts.Count,
-                        periodEnd.PeriodEndId);
-
-                    var tasks = new List<Task>();
-
-                    foreach (var accountId in accounts)
-                    {
-                        var idempotencyKey = $"account-{accountId}-period-{periodEnd.PeriodEndId}-payment-data";
-
-                        await context.CallActivityAsync(
-                         nameof(RefreshPaymentDataActivity),
-                         new RefreshPaymentDataInput
-                         {
-                             AccountId = accountId,
-                             PeriodEnd = periodEnd,
-                             CorrelationId = correlationId,
-                             IdempotencyKey = idempotencyKey
-                         });
-                    }
-
-                    await Task.WhenAll(tasks);
+                    await context.CallSubOrchestratorAsync<PeriodEndResult>(
+                                  nameof(ProcessPeriodEndOrchestrator),
+                                  new ProcessPeriodEndOrchestratorInput
+                                  {
+                                      PeriodEnd = periodEnd,
+                                      MaxConcurrentAccounts = input?.MaxConcurrentAccounts ?? 50
+                                  },
+                                  new SubOrchestrationOptions { InstanceId = instanceId });
                 }
             }
             else
@@ -116,7 +85,6 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
     [Function("ProcessPeriodEndActivity")]
     public async Task ProcessPeriodEndActivity([ActivityTrigger] ProcessPeriodEndInput input)
     {
-        // TODO: GET levy accounts and send ImportAccounPaymentsCommand per account via NServicebus.
         logger.LogInformation("[CorrelationId: {CorrelationId}] Processing period end: Year={Year}, Period={Period}", input.CorrelationId, input.PeriodEnd.CalendarPeriodYear, input.PeriodEnd.PaymentsForPeriod);              
         await Task.CompletedTask;
     }
