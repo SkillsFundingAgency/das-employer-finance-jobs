@@ -1,17 +1,13 @@
 ﻿using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using System.Net;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.Activities
 {
-    public class GetLevyAccountsRequest : IGetApiRequest
-    {
-        public string GetUrl => "/api/accounts/levy";
-    }
-
     public class GetLevyAccountsActivity
     {
         private readonly IFinanceApiClient<FinanceApiConfiguration> _financeApi;

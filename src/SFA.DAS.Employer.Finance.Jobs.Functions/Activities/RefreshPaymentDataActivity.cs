@@ -43,15 +43,6 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions.Activities
             $"/provider-api/accounts/{AccountId}/payments?periodEnd={PeriodEndId}&correlationId={CorrelationId}";
     }
 
-    public class RefreshPaymentDataResult
-    {
-        public int PaymentsCreated { get; set; }
-
-        public List<Payment> PaymentDetails { get; set; } = new();
-
-        public string CorrelationId { get; set; }
-    }
-
     public class RefreshPaymentDataActivity
     {
         private readonly IProviderPaymentApiClient<ProviderEventsApiConfiguration> _providerApi;

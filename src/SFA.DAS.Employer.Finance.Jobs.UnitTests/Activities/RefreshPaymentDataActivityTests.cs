@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using RefreshPaymentDataResult = SFA.DAS.Employer.Finance.Jobs.Functions.Activities.RefreshPaymentDataResult;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Tests.Functions.Activities
 {

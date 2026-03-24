@@ -2,6 +2,7 @@
 using Moq;
 using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Functions.Activities;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
