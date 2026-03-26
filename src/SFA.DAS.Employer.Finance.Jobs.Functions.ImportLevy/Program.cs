@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Hosting;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Extensions;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
@@ -10,8 +9,8 @@ var host = new HostBuilder()
         var configuration = context.Configuration;
 
         services.AddDasLogging();
-        services.AddConfigurationOptions(configuration);
-        services.AddServiceRegistration(configuration);
+        SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions.AddConfigurationOptionsExtension.AddConfigurationOptions(services, configuration);
+        SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions.ServiceRegistrationExtensions.AddServiceRegistration(services, configuration);
     })
     .Build();
 
