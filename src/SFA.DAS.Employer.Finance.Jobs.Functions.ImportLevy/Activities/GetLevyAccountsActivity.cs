@@ -1,14 +1,12 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-using System.Net;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
 
 public class GetLevyAccountsActivity(
-    IFinanceApiClient<FinanceApiConfiguration> financeApi,
+    IAccountService accountService,
     ILogger<GetLevyAccountsActivity> logger)
 {
     public const int DefaultPageSize = 10000;
@@ -18,6 +16,9 @@ public class GetLevyAccountsActivity(
     {
         var allAccountIds = new List<long>();
         var pageNumber = 1;
+        var requestCorrelationId = Guid.TryParse(correlationId, out var parsedCorrelationId)
+            ? parsedCorrelationId
+            : Guid.NewGuid();
 
         while (true)
         {
@@ -27,18 +28,20 @@ public class GetLevyAccountsActivity(
                 pageNumber,
                 DefaultPageSize);
 
-            var response = await RetryAsync(
-                () => financeApi.GetWithResponseCode<List<long>>(
-                    new GetAccountsPageRequest(pageNumber, DefaultPageSize)),
-                correlationId);
-
-            if (response == null || response.StatusCode != HttpStatusCode.OK)
+            var request = new GetAccountsRequest
             {
-                throw new InvalidOperationException(
-                    $"[CorrelationId: {correlationId}] Failed to retrieve levy accounts page {pageNumber}");
-            }
+                Page = pageNumber,
+                PageSize = DefaultPageSize,
+                CorrelationId = requestCorrelationId
+            };
 
-            var pageAccountIds = response.Body ?? [];
+            var pageAccounts = await RetryAsync(
+                () => accountService.GetAccountsAsync(request),
+                correlationId) ?? [];
+
+            var pageAccountIds = pageAccounts
+                .Select(account => account.Id)
+                .ToList();
 
             logger.LogInformation(
                 "[CorrelationId: {CorrelationId}] Retrieved {Count} levy accounts from page {PageNumber}",
