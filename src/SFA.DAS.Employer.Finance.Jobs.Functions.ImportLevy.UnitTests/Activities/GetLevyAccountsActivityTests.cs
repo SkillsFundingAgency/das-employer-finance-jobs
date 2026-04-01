@@ -27,7 +27,7 @@ public class GetLevyAccountsActivityTests
     public async Task Run_RetrievesAllAccounts_AcrossMultiplePages()
     {
         var firstPage = Enumerable.Range(1, GetLevyAccountsActivity.DefaultPageSize)
-            .Select(CreateAccount)
+            .Select(id => CreateAccount(id))
             .ToList();
         var secondPage = new List<Accounts> { CreateAccount(10001), CreateAccount(10002) };
         var emptyPage = new List<Accounts>();
