@@ -30,12 +30,57 @@ public class ImportLevyOrchestrator(ILogger<ImportLevyOrchestrator> logger)
 
             result.AccountIds = accountIds;
             result.TotalAccountsCount = accountIds.Count;
-            result.Success = true;
 
             logger.LogInformation(
                 "[CorrelationId: {CorrelationId}] ImportLevyOrchestrator retrieved {Count} levy accounts",
                 correlationId,
                 accountIds.Count);
+
+            foreach (var accountId in accountIds)
+            {
+                var payeSchemes = await context.CallActivityAsync<List<PayeScheme>>(
+                    nameof(GetAccountPayeSchemesActivity),
+                    new GetAccountPayeSchemesActivityInput
+                    {
+                        CorrelationId = correlationId,
+                        AccountId = accountId
+                    }) ?? [];
+
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] Account {AccountId} returned {Count} PAYE schemes",
+                    correlationId,
+                    accountId,
+                    payeSchemes.Count);
+
+                if (payeSchemes.Count == 0)
+                {
+                    result.AccountsWithoutPayeSchemesCount++;
+                    continue;
+                }
+
+                result.TotalPayeSchemesCount += payeSchemes.Count;
+
+                var payeFanOutTasks = payeSchemes
+                    .Select(payeScheme => context.CallActivityAsync(
+                        nameof(ProcessLevyPayeSchemeActivity),
+                        new ProcessLevyPayeSchemeInput
+                        {
+                            CorrelationId = correlationId,
+                            AccountId = accountId,
+                            PayeSchemeReference = payeScheme.Reference
+                        }))
+                    .ToList();
+
+                await Task.WhenAll(payeFanOutTasks);
+            }
+
+            result.Success = true;
+
+            logger.LogInformation(
+                "[CorrelationId: {CorrelationId}] ImportLevyOrchestrator completed PAYE discovery for {AccountCount} accounts and {PayeSchemeCount} PAYE schemes",
+                correlationId,
+                result.TotalAccountsCount,
+                result.TotalPayeSchemesCount);
         }
         catch (Exception ex)
         {

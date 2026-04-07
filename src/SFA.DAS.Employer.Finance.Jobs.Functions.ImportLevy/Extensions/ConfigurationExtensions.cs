@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using SFA.DAS.Configuration.AzureTableStorage;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Extensions;
 
+[ExcludeFromCodeCoverage]
 public static class ConfigurationExtensions
 {
     public static IConfiguration BuildDasConfiguration(this IConfigurationBuilder configBuilder)

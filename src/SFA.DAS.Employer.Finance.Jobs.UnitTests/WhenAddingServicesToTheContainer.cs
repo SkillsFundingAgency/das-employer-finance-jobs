@@ -21,6 +21,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
         [TestCase(typeof(IProviderPaymentApiClient<ProviderEventsApiConfiguration>))]
         [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
         [TestCase(typeof(IPeriodEndService))]
+        [TestCase(typeof(IAccountService))]
         [TestCase(typeof(IAccountPaymentsImportService))]
         public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
         {
@@ -50,6 +51,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
             services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
             services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
             services.AddScoped<IPeriodEndService, PeriodEndService>();
+            services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         }
         private static IConfigurationRoot GenerateConfiguration()
