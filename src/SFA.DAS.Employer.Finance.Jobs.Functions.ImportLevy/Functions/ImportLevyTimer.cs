@@ -61,7 +61,9 @@ public class ImportLevyTimer(ILogger<ImportLevyTimer> logger)
                 "[CorrelationId: {CorrelationId}] Error starting ImportLevyOrchestrator: {ErrorMessage}",
                 correlationId,
                 ex.Message);
-            throw;
+            throw new InvalidOperationException(
+                $"[CorrelationId: {correlationId}] Failed to start ImportLevyOrchestrator.",
+                ex);
         }
     }
 }

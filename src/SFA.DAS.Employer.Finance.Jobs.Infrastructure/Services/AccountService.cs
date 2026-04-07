@@ -56,7 +56,9 @@ public class AccountService(IFinanceApiClient<FinanceApiConfiguration> financeAp
                 "Error getting PAYE schemes from Finance API for account {AccountId}: {ErrorMessage}",
                 request.AccountId,
                 ex.Message);
-            throw;
+            throw new InvalidOperationException(
+                $"Failed to get PAYE schemes for account {request.AccountId}.",
+                ex);
         }
     }
 
@@ -135,13 +137,15 @@ public class AccountService(IFinanceApiClient<FinanceApiConfiguration> financeAp
 
     private static bool TryGetProperty(JsonElement element, string propertyName, out JsonElement value)
     {
-        foreach (var property in element.EnumerateObject())
+        var matchingProperty = element.EnumerateObject()
+            .Where(property => string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            .Select(property => (JsonElement?)property.Value)
+            .FirstOrDefault();
+
+        if (matchingProperty.HasValue)
         {
-            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
-            {
-                value = property.Value;
-                return true;
-            }
+            value = matchingProperty.Value;
+            return true;
         }
 
         value = default;

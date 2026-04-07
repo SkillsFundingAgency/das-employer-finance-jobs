@@ -110,7 +110,7 @@ public class ImportLevyOrchestratorTests
 
         _context.Setup(c => c.GetInput<ImportLevyInput>()).Returns(input);
         _context.Setup(c => c.CallActivityAsync<List<long>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))
-            .ReturnsAsync((List<long>?)null);
+            .Returns(Task.FromResult((List<long>)null!));
 
         var result = await _orchestrator.RunOrchestrator(_context.Object);
 

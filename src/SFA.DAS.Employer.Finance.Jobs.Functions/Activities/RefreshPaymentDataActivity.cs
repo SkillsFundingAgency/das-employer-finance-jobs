@@ -97,7 +97,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions.Activities
                 return response?.Body ?? new List<Payment>();
             }, input.CorrelationId);
 
-            if (!allPayments.Any())
+            if (allPayments.Count == 0)
             {
                 _logger.LogInformation(
                     "[CorrelationId: {CorrelationId}] No payments found for account {AccountId}",
@@ -139,7 +139,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions.Activities
                         StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            if (!newPayments.Any())
+            if (newPayments.Count == 0)
             {
                 _logger.LogInformation(
                     "[CorrelationId: {CorrelationId}] No new payments to insert for account {AccountId}",

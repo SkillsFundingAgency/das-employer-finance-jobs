@@ -132,7 +132,9 @@ public class WhenGettingPayeSchemes
 
         var act = async () => await _accountService.GetPayeSchemesAsync(request);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("Finance API Error");
+        var exceptionAssertion = await act.Should().ThrowAsync<InvalidOperationException>();
+        exceptionAssertion.WithMessage("Failed to get PAYE schemes for account 60.");
+        exceptionAssertion.Which.InnerException.Should().BeSameAs(expectedException);
     }
 
     [Test]

@@ -22,12 +22,6 @@ public class GetLevyAccountsActivity(
 
         while (true)
         {
-            logger.LogInformation(
-                "[CorrelationId: {CorrelationId}] Retrieving levy accounts page {PageNumber} with page size {PageSize}",
-                correlationId,
-                pageNumber,
-                DefaultPageSize);
-
             var request = new GetAccountsRequest
             {
                 Page = pageNumber,
@@ -61,11 +55,6 @@ public class GetLevyAccountsActivity(
 
             allAccountIds.AddRange(pageAccountIds);
 
-            logger.LogInformation(
-                "[CorrelationId: {CorrelationId}] Retrieved {TotalCount} levy accounts so far",
-                correlationId,
-                allAccountIds.Count);
-
             pageNumber++;
         }
 
@@ -95,6 +84,15 @@ public class GetLevyAccountsActivity(
             }
         }
 
-        return await action();
+        try
+        {
+            return await action();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"[CorrelationId: {correlationId}] Failed to retrieve levy accounts after {retries} attempts.",
+                ex);
+        }
     }
 }

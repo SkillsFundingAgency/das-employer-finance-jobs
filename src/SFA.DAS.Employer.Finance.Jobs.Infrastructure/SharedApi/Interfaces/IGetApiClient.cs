@@ -6,10 +6,10 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces
 {
     public interface IGetApiClient<T>
     {
-        Task Post<TBody>(string url, TBody body);
         Task<TResponse> Get<TResponse>(IApiRequest request);
         Task<HttpStatusCode> GetResponseCode(IApiRequest request);
         Task<ApiResponse<TResponse>> GetWithResponseCode<TResponse>(IApiRequest request);
+        Task Post<TBody>(string url, TBody body);
         Task<TResponse> Post<TResponse>(IApiRequest request);
         Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IApiRequest request);
     }
