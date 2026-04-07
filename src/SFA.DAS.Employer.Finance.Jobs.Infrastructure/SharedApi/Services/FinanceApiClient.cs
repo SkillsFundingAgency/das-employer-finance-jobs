@@ -8,17 +8,16 @@ using System.Net;
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services
 {
     [ExcludeFromCodeCoverage]
-    public class FinanceApiClient : IFinanceApiClient<FinanceApiConfiguration>
+    public class FinanceApiClient : DelegatingInternalApiClient<FinanceApiConfiguration>, IFinanceApiClient<FinanceApiConfiguration>
     {
-        private readonly IInternalApiClient<FinanceApiConfiguration> _apiClient;
-
         public FinanceApiClient(IInternalApiClient<FinanceApiConfiguration> apiClient)
+            : base(apiClient)
         {
-            _apiClient = apiClient;
         }
+
         public Task<TResponse> Get<TResponse>(IApiRequest request)
         {
-            return _apiClient.Get<TResponse>(request);
+            return base.Get<TResponse>(request);
         }
 
         public Task<IEnumerable<TResponse>> GetAll<TResponse>(IGetAllApiRequest request)
@@ -28,27 +27,27 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services
 
         public Task<HttpStatusCode> GetResponseCode(IApiRequest request)
         {
-            return _apiClient.GetResponseCode(request);
+            return base.GetResponseCode(request);
         }
 
         public Task<ApiResponse<TResponse>> GetWithResponseCode<TResponse>(IApiRequest request)
         {
-            return _apiClient.GetWithResponseCode<TResponse>(request);
+            return base.GetWithResponseCode<TResponse>(request);
         }
 
         public Task Post<TBody>(string url, TBody body)
         {
-            return _apiClient.Post(url, body);
+            return base.Post(url, body);
         }
 
         public Task<TResponse> Post<TResponse>(IApiRequest request)
         {
-            return _apiClient.Post<TResponse>(request);
+            return base.Post<TResponse>(request);
         }
 
         public Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IApiRequest request)
         {
-            return _apiClient.PostWithResponseCode<TResponse>(request);
+            return base.PostWithResponseCode<TResponse>(request);
         }
     }
 }
