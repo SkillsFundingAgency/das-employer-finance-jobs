@@ -1,8 +1,8 @@
-using System.Text.Json;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
@@ -24,18 +24,20 @@ public class WhenGettingPayeSchemes
     }
 
     [Test]
-    public async Task Then_Returns_Paye_Schemes_From_Direct_Array_Response()
+    public async Task Then_Returns_Paye_Schemes_From_Typed_Response()
     {
         var request = new GetAccountPayeSchemesRequest { AccountId = 10, CorrelationId = Guid.NewGuid() };
-        var response = ParseJson("""
+        var response = new FinanceApiGetPayeSchemesResponse
+        {
+            Schemes =
             [
-              { "empRef": "123/AB456", "name": "Scheme one" },
-              { "ref": "123/CD789" }
+                new FinanceApiPayeScheme { EmpRef = "123/AB456", Name = "Scheme one" },
+                new FinanceApiPayeScheme { EmpRef = "123/CD789" }
             ]
-            """);
+        };
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<JsonElement>(It.Is<GetAccountPayeSchemesRequest>(r => r.AccountId == 10)))
+            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.Is<GetAccountPayeSchemesRequest>(r => r.AccountId == 10)))
             .ReturnsAsync(response);
 
         var result = await _accountService.GetPayeSchemesAsync(request);
@@ -45,45 +47,31 @@ public class WhenGettingPayeSchemes
     }
 
     [Test]
-    public async Task Then_Returns_Paye_Schemes_From_Wrapped_Response()
+    public async Task And_Response_Is_Null_Then_Returns_Empty_List()
     {
         var request = new GetAccountPayeSchemesRequest { AccountId = 20, CorrelationId = Guid.NewGuid() };
-        var response = ParseJson("""
-            {
-              "payeSchemes": [
-                { "empRef": "222/XY123" },
-                { "schemeReference": "222/XY999" }
-              ]
-            }
-            """);
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<JsonElement>(It.IsAny<GetAccountPayeSchemesRequest>()))
-            .ReturnsAsync(response);
+            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.IsAny<GetAccountPayeSchemesRequest>()))
+            .Returns(Task.FromResult((FinanceApiGetPayeSchemesResponse)null!));
 
         var result = await _accountService.GetPayeSchemesAsync(request);
 
-        result.Select(x => x.Reference).Should().Equal("222/XY123", "222/XY999");
+        result.Should().BeEmpty();
     }
 
     [Test]
-    public async Task Then_Returns_Paye_Schemes_From_String_Array_Response()
+    public async Task And_Response_Has_Empty_Schemes_Then_Returns_Empty_List()
     {
         var request = new GetAccountPayeSchemesRequest { AccountId = 30, CorrelationId = Guid.NewGuid() };
-        var response = ParseJson("""
-            [
-              "333/AA111",
-              "333/BB222"
-            ]
-            """);
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<JsonElement>(It.IsAny<GetAccountPayeSchemesRequest>()))
-            .ReturnsAsync(response);
+            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.IsAny<GetAccountPayeSchemesRequest>()))
+            .ReturnsAsync(new FinanceApiGetPayeSchemesResponse());
 
         var result = await _accountService.GetPayeSchemesAsync(request);
 
-        result.Select(x => x.Reference).Should().Equal("333/AA111", "333/BB222");
+        result.Should().BeEmpty();
     }
 
     [Test]
@@ -92,8 +80,8 @@ public class WhenGettingPayeSchemes
         var request = new GetAccountPayeSchemesRequest { AccountId = 40, CorrelationId = Guid.NewGuid() };
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<JsonElement>(It.IsAny<GetAccountPayeSchemesRequest>()))
-            .ReturnsAsync(default(JsonElement));
+            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.IsAny<GetAccountPayeSchemesRequest>()))
+            .ReturnsAsync(new FinanceApiGetPayeSchemesResponse { Schemes = [] });
 
         var result = await _accountService.GetPayeSchemesAsync(request);
 
@@ -104,15 +92,17 @@ public class WhenGettingPayeSchemes
     public async Task And_Response_Contains_Entries_Without_References_Then_Ignores_Them()
     {
         var request = new GetAccountPayeSchemesRequest { AccountId = 50, CorrelationId = Guid.NewGuid() };
-        var response = ParseJson("""
+        var response = new FinanceApiGetPayeSchemesResponse
+        {
+            Schemes =
             [
-              { "name": "Missing ref" },
-              { "empRef": "555/CC333" }
+                new FinanceApiPayeScheme { Name = "Missing ref" },
+                new FinanceApiPayeScheme { EmpRef = "555/CC333" }
             ]
-            """);
+        };
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<JsonElement>(It.IsAny<GetAccountPayeSchemesRequest>()))
+            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.IsAny<GetAccountPayeSchemesRequest>()))
             .ReturnsAsync(response);
 
         var result = await _accountService.GetPayeSchemesAsync(request);
@@ -127,7 +117,7 @@ public class WhenGettingPayeSchemes
         var expectedException = new InvalidOperationException("Finance API Error");
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<JsonElement>(It.IsAny<GetAccountPayeSchemesRequest>()))
+            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.IsAny<GetAccountPayeSchemesRequest>()))
             .ThrowsAsync(expectedException);
 
         var act = async () => await _accountService.GetPayeSchemesAsync(request);
@@ -148,25 +138,19 @@ public class WhenGettingPayeSchemes
         };
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<JsonElement>(It.Is<GetAccountPayeSchemesRequest>(r =>
+            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.Is<GetAccountPayeSchemesRequest>(r =>
                 r.AccountId == 70 &&
                 r.Source == "government-gateway" &&
                 r.GetUrl == "api/accounts/70/paye-schemes?source=government-gateway")))
-            .ReturnsAsync(ParseJson("[]"));
+            .ReturnsAsync(new FinanceApiGetPayeSchemesResponse { Schemes = [] });
 
         await _accountService.GetPayeSchemesAsync(request);
 
         _mockFinanceApiClient.Verify(
-            x => x.Get<JsonElement>(It.Is<GetAccountPayeSchemesRequest>(r =>
+            x => x.Get<FinanceApiGetPayeSchemesResponse>(It.Is<GetAccountPayeSchemesRequest>(r =>
                 r.AccountId == 70 &&
                 r.Source == "government-gateway" &&
                 r.GetUrl == "api/accounts/70/paye-schemes?source=government-gateway")),
             Times.Once);
-    }
-
-    private static JsonElement ParseJson(string json)
-    {
-        using var document = JsonDocument.Parse(json);
-        return document.RootElement.Clone();
     }
 }
