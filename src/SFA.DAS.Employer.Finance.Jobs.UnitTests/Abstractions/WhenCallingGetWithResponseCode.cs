@@ -1,4 +1,4 @@
-using AutoFixture.NUnit3;
+using AutoFixture.NUnit4;
 using Moq.Protected;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
