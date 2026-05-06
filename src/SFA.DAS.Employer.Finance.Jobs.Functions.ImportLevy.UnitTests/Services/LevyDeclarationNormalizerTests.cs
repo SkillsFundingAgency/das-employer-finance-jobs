@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 using HMRC.ESFA.Levy.Api.Types;
-=======
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -39,11 +36,7 @@ public class LevyDeclarationNormalizerTests
         result.Declarations[0].LevyDueYtd.Should().Be(100);
         result.Declarations[0].PayrollYear.Should().Be("25-26");
         result.Declarations[0].PayrollMonth.Should().Be(1);
-<<<<<<< HEAD
         result.Declarations[0].SubmissionType.Should().Be(LevyDeclarationSubmissionStatus.LatestSubmission.ToString());
-=======
-        result.Declarations[0].SubmissionType.Should().Be("FullPaymentSubmission");
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
         result.Declarations[0].LevyAllowanceForFullYear.Should().Be(15000);
     }
 
@@ -211,20 +204,6 @@ public class LevyDeclarationNormalizerTests
     }
 
     [Test]
-<<<<<<< HEAD
-=======
-    public void Normalize_Throws_WhenEndOfYearAdjustmentHasNoLevyDueYtd_AndIsNotNoPayment()
-    {
-        var input = CreateInput(
-            CreateHmrcDeclaration("invalid-adjustment", 1, new DateTime(2026, 4, 25), payrollYear: "25-26", payrollMonth: 12, levyDueYearToDate: null));
-
-        Action act = () => _normalizer.Normalize(input);
-
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Test]
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
     public void Normalize_Throws_WhenPayrollMonthIsInvalid()
     {
         var input = CreateInput(
@@ -236,11 +215,7 @@ public class LevyDeclarationNormalizerTests
             .WithMessage("*Payroll month must be between 1 and 12*");
     }
 
-<<<<<<< HEAD
     private static NormalizeLevyDeclarationsInput CreateInput(params Declaration[] declarations)
-=======
-    private static NormalizeLevyDeclarationsInput CreateInput(params HmrcLevyDeclaration[] declarations)
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
     {
         return new NormalizeLevyDeclarationsInput
         {
@@ -252,44 +227,25 @@ public class LevyDeclarationNormalizerTests
         };
     }
 
-<<<<<<< HEAD
     private static Declaration CreateHmrcDeclaration(
-=======
-    private static HmrcLevyDeclaration CreateHmrcDeclaration(
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
         string id,
         long submissionId,
         DateTime submissionTime,
         string payrollYear = "25-26",
         short payrollMonth = 1,
-<<<<<<< HEAD
         decimal levyDueYearToDate = 100,
         bool noPaymentForPeriod = false)
     {
         return new Declaration
-=======
-        decimal? levyDueYearToDate = 100,
-        bool noPaymentForPeriod = false)
-    {
-        return new HmrcLevyDeclaration
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
         {
             Id = id,
             SubmissionId = submissionId,
             SubmissionTime = submissionTime,
-<<<<<<< HEAD
             LevyDeclarationSubmissionStatus = LevyDeclarationSubmissionStatus.LatestSubmission,
             LevyAllowanceForFullYear = 15000,
             LevyDueYearToDate = levyDueYearToDate,
             NoPaymentForPeriod = noPaymentForPeriod,
             PayrollPeriod = new PayrollPeriod
-=======
-            SubmissionType = "FullPaymentSubmission",
-            LevyAllowanceForFullYear = 15000,
-            LevyDueYearToDate = levyDueYearToDate,
-            NoPaymentForPeriod = noPaymentForPeriod,
-            PayrollPeriod = new HmrcPayrollPeriod
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
             {
                 Year = payrollYear,
                 Month = payrollMonth

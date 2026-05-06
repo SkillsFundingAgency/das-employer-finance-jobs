@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 using HMRC.ESFA.Levy.Api.Types;
-=======
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Models;
 
@@ -51,11 +48,7 @@ public class LevyDeclarationNormalizer(ILogger<LevyDeclarationNormalizer> logger
         };
     }
 
-<<<<<<< HEAD
     private static NormalizedLevyDeclaration NormalizeDeclaration(Declaration declaration)
-=======
-    private static NormalizedLevyDeclaration NormalizeDeclaration(HmrcLevyDeclaration declaration)
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
     {
         return new NormalizedLevyDeclaration
         {
@@ -63,11 +56,7 @@ public class LevyDeclarationNormalizer(ILogger<LevyDeclarationNormalizer> logger
             SubmissionId = declaration.SubmissionId,
             LevyDueYtd = declaration.LevyDueYearToDate,
             SubmissionDate = declaration.SubmissionTime,
-<<<<<<< HEAD
             SubmissionType = declaration.LevyDeclarationSubmissionStatus.ToString(),
-=======
-            SubmissionType = declaration.SubmissionType,
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
             LevyAllowanceForFullYear = declaration.LevyAllowanceForFullYear,
             PayrollYear = declaration.PayrollPeriod?.Year ?? string.Empty,
             PayrollMonth = declaration.PayrollPeriod?.Month,

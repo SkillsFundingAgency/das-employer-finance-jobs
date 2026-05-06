@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 using HMRC.ESFA.Levy.Api.Types;
-=======
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -38,11 +35,7 @@ public class NormalizeLevyDeclarationsActivityTests
             ProcessingDate = new DateTime(2026, 4, 28),
             HmrcDeclarations =
             [
-<<<<<<< HEAD
                 new Declaration
-=======
-                new HmrcLevyDeclaration
->>>>>>> 8ec3ca5367ae1ad2a7507a98b45f20b5f7ab141c
                 {
                     Id = "declaration-1"
                 }
