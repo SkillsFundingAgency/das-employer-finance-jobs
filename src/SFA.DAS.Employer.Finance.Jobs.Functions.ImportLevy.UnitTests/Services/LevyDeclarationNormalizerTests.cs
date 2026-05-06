@@ -1,3 +1,4 @@
+using HMRC.ESFA.Levy.Api.Types;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -35,7 +36,7 @@ public class LevyDeclarationNormalizerTests
         result.Declarations[0].LevyDueYtd.Should().Be(100);
         result.Declarations[0].PayrollYear.Should().Be("25-26");
         result.Declarations[0].PayrollMonth.Should().Be(1);
-        result.Declarations[0].SubmissionType.Should().Be("FullPaymentSubmission");
+        result.Declarations[0].SubmissionType.Should().Be(LevyDeclarationSubmissionStatus.LatestSubmission.ToString());
         result.Declarations[0].LevyAllowanceForFullYear.Should().Be(15000);
     }
 
@@ -203,17 +204,6 @@ public class LevyDeclarationNormalizerTests
     }
 
     [Test]
-    public void Normalize_Throws_WhenEndOfYearAdjustmentHasNoLevyDueYtd_AndIsNotNoPayment()
-    {
-        var input = CreateInput(
-            CreateHmrcDeclaration("invalid-adjustment", 1, new DateTime(2026, 4, 25), payrollYear: "25-26", payrollMonth: 12, levyDueYearToDate: null));
-
-        Action act = () => _normalizer.Normalize(input);
-
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Test]
     public void Normalize_Throws_WhenPayrollMonthIsInvalid()
     {
         var input = CreateInput(
@@ -225,7 +215,7 @@ public class LevyDeclarationNormalizerTests
             .WithMessage("*Payroll month must be between 1 and 12*");
     }
 
-    private static NormalizeLevyDeclarationsInput CreateInput(params HmrcLevyDeclaration[] declarations)
+    private static NormalizeLevyDeclarationsInput CreateInput(params Declaration[] declarations)
     {
         return new NormalizeLevyDeclarationsInput
         {
@@ -237,25 +227,25 @@ public class LevyDeclarationNormalizerTests
         };
     }
 
-    private static HmrcLevyDeclaration CreateHmrcDeclaration(
+    private static Declaration CreateHmrcDeclaration(
         string id,
         long submissionId,
         DateTime submissionTime,
         string payrollYear = "25-26",
         short payrollMonth = 1,
-        decimal? levyDueYearToDate = 100,
+        decimal levyDueYearToDate = 100,
         bool noPaymentForPeriod = false)
     {
-        return new HmrcLevyDeclaration
+        return new Declaration
         {
             Id = id,
             SubmissionId = submissionId,
             SubmissionTime = submissionTime,
-            SubmissionType = "FullPaymentSubmission",
+            LevyDeclarationSubmissionStatus = LevyDeclarationSubmissionStatus.LatestSubmission,
             LevyAllowanceForFullYear = 15000,
             LevyDueYearToDate = levyDueYearToDate,
             NoPaymentForPeriod = noPaymentForPeriod,
-            PayrollPeriod = new HmrcPayrollPeriod
+            PayrollPeriod = new PayrollPeriod
             {
                 Year = payrollYear,
                 Month = payrollMonth
