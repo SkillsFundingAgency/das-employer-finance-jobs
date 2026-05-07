@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using System.Net;
+using FluentAssertions;
 using HMRC.ESFA.Levy.Api.Client;
 using HMRC.ESFA.Levy.Api.Types;
 using Microsoft.Extensions.Logging;
@@ -12,7 +13,6 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Exceptions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.HMRC;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services.HMRC;
 using SFA.DAS.TokenService.Api.Client;
-using System.Net;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.UnitTests.Services.HMRC;
 
