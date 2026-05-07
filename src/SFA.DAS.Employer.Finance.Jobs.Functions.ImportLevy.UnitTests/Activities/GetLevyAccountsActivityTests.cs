@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
@@ -16,6 +17,7 @@ public class GetLevyAccountsActivityTests
 {
     private Mock<IFinanceApiClient<FinanceApiConfiguration>> _financeApi = null!;
     private Mock<ILogger<GetLevyAccountsActivity>> _logger = null!;
+    private Mock<IRetryService> _retryService = null!;
     private GetLevyAccountsActivity _activity = null!;
 
     [SetUp]
@@ -23,8 +25,16 @@ public class GetLevyAccountsActivityTests
     {
         _financeApi = new Mock<IFinanceApiClient<FinanceApiConfiguration>>();
         _logger = new Mock<ILogger<GetLevyAccountsActivity>>();
+        _retryService = new Mock<IRetryService>();
+        _retryService
+            .Setup(x => x.ExecuteAsync(
+                It.IsAny<Func<Task<ApiResponse<List<long>>>>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<int>()))
+            .Returns((Func<Task<ApiResponse<List<long>>>> action, string _, string _, int _) => action());
 
-        _activity = new GetLevyAccountsActivity(_financeApi.Object, _logger.Object);
+        _activity = new GetLevyAccountsActivity(_financeApi.Object, _retryService.Object, _logger.Object);
     }
 
     [Test]
@@ -81,37 +91,19 @@ public class GetLevyAccountsActivityTests
     }
 
     [Test]
-    public async Task Run_Retries_And_Succeeds_After_Transient_Failure()
+    public void Run_Throws_WhenRetryServiceThrows()
     {
-        _financeApi
-            .SetupSequence(x => x.GetWithResponseCode<List<long>>(It.IsAny<GetAccountsPageRequest>()))
-            .ThrowsAsync(new Exception("temporary failure"))
-            .ReturnsAsync(CreateResponse(new List<long> { 1, 2 }))
-            .ReturnsAsync(CreateResponse(new List<long>()));
-
-        var result = await _activity.Run("corr-123");
-
-        result.Should().Equal(1, 2);
-
-        _financeApi.Verify(
-            x => x.GetWithResponseCode<List<long>>(It.Is<GetAccountsPageRequest>(r => r.PageNumber == 1)),
-            Times.Exactly(2));
-    }
-
-    [Test]
-    public void Run_Throws_When_All_Retries_Are_Exhausted()
-    {
-        _financeApi
-            .Setup(x => x.GetWithResponseCode<List<long>>(It.IsAny<GetAccountsPageRequest>()))
+        _retryService
+            .Setup(x => x.ExecuteAsync(
+                It.IsAny<Func<Task<ApiResponse<List<long>>>>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<int>()))
             .ThrowsAsync(new Exception("still failing"));
 
         Func<Task> act = async () => await _activity.Run("corr-123");
 
         act.Should().ThrowAsync<Exception>().Wait();
-
-        _financeApi.Verify(
-            x => x.GetWithResponseCode<List<long>>(It.Is<GetAccountsPageRequest>(r => r.PageNumber == 1)),
-            Times.Exactly(3));
     }
 
     private static ApiResponse<List<long>> CreateResponse(List<long> body)

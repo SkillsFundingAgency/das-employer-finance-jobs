@@ -1,14 +1,15 @@
-﻿using FluentAssertions;
+﻿using System.Net;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-using System.Net;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.UnitTests.Activities;
 
@@ -17,6 +18,7 @@ public class GetPayeSchemesByAccountActivityTests
 {
     private Mock<IFinanceApiClient<FinanceApiConfiguration>> _financeApi = null!;
     private Mock<ILogger<GetPayeSchemesByAccountActivity>> _logger = null!;
+    private Mock<IRetryService> _retryService = null!;
     private GetPayeSchemesByAccountActivity _activity = null!;
 
     [SetUp]
@@ -24,7 +26,15 @@ public class GetPayeSchemesByAccountActivityTests
     {
         _financeApi = new Mock<IFinanceApiClient<FinanceApiConfiguration>>();
         _logger = new Mock<ILogger<GetPayeSchemesByAccountActivity>>();
-        _activity = new GetPayeSchemesByAccountActivity(_financeApi.Object, _logger.Object);
+        _retryService = new Mock<IRetryService>();
+        _retryService
+            .Setup(x => x.ExecuteAsync(
+                It.IsAny<Func<Task<ApiResponse<List<PayeScheme>>>>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<int>()))
+            .Returns((Func<Task<ApiResponse<List<PayeScheme>>>> action, string _, string _, int _) => action());
+        _activity = new GetPayeSchemesByAccountActivity(_financeApi.Object, _retryService.Object, _logger.Object);
     }
 
     [Test]
@@ -51,38 +61,21 @@ public class GetPayeSchemesByAccountActivityTests
     }
 
     [Test]
-    public async Task Run_Retries_And_Succeeds_After_Transient_Failure()
+    public void Run_Throws_WhenRetryServiceThrows()
     {
         var request = new GetPayeSchemesByAccountActivityRequest(12345, "corr-123");
 
-        _financeApi
-            .SetupSequence(x => x.GetWithResponseCode<List<PayeScheme>>(It.IsAny<GetPayeSchemesByAccountRequest>()))
-            .ThrowsAsync(new Exception("temporary failure"))
-            .ReturnsAsync(CreateResponse(new List<PayeScheme> { new() { EmpRef = "123/AB12345" } }));
-
-        var result = await _activity.Run(request);
-
-        result.Should().HaveCount(1);
-        _financeApi.Verify(
-            x => x.GetWithResponseCode<List<PayeScheme>>(It.IsAny<GetPayeSchemesByAccountRequest>()),
-            Times.Exactly(2));
-    }
-
-    [Test]
-    public void Run_Throws_When_All_Retries_Are_Exhausted()
-    {
-        var request = new GetPayeSchemesByAccountActivityRequest(12345, "corr-123");
-
-        _financeApi
-            .Setup(x => x.GetWithResponseCode<List<PayeScheme>>(It.IsAny<GetPayeSchemesByAccountRequest>()))
+        _retryService
+            .Setup(x => x.ExecuteAsync(
+                It.IsAny<Func<Task<ApiResponse<List<PayeScheme>>>>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<int>()))
             .ThrowsAsync(new Exception("still failing"));
 
         Func<Task> act = async () => await _activity.Run(request);
 
         act.Should().ThrowAsync<Exception>().Wait();
-        _financeApi.Verify(
-            x => x.GetWithResponseCode<List<PayeScheme>>(It.IsAny<GetPayeSchemesByAccountRequest>()),
-            Times.Exactly(3));
     }
 
     private static ApiResponse<List<PayeScheme>> CreateResponse(List<PayeScheme> body)

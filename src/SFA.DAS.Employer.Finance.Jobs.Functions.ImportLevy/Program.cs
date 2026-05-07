@@ -14,6 +14,8 @@ var host = new HostBuilder()
         SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions.AddConfigurationOptionsExtension.AddConfigurationOptions(services, configuration);
         SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions.ServiceRegistrationExtensions.AddServiceRegistration(services, configuration);
         services.AddScoped<ILevyDeclarationNormalizer, LevyDeclarationNormalizer>();
+        services.AddScoped<IRetryDelay, RetryDelay>();
+        services.AddScoped<IRetryService, RetryService>();
     })
     .Build();
 
