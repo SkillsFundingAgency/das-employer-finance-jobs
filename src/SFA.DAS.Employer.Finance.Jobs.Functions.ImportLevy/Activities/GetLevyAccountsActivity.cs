@@ -1,9 +1,10 @@
+using System.Net;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-using System.Net;
+
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
 

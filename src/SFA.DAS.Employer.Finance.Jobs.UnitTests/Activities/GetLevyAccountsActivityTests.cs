@@ -1,11 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Collections.Generic;
+using System.Net;
+using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Functions.Activities;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-using System.Collections.Generic;
-using System.Net;
+
 
 namespace SFA.DAS.Employer.Finance.Jobs.Tests.Functions.Activities
 {

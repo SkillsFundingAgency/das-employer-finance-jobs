@@ -1,11 +1,12 @@
-﻿using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
+
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi
 {
