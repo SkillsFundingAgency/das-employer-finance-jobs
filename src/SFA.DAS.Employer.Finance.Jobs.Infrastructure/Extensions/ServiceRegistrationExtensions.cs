@@ -1,4 +1,5 @@
-﻿using HMRC.ESFA.Levy.Api.Client;
+﻿using System.Diagnostics.CodeAnalysis;
+using HMRC.ESFA.Levy.Api.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -15,7 +16,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services;
 using SFA.DAS.TokenService.Api.Client;
-using System.Diagnostics.CodeAnalysis;
+
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 [ExcludeFromCodeCoverage]
