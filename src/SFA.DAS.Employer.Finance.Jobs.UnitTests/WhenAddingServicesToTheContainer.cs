@@ -31,6 +31,7 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IHmrcTokenProvider))]
     [TestCase(typeof(IPeriodEndService))]
     [TestCase(typeof(IEnglishFractionsService))]
+    [TestCase(typeof(IEnglishFractionsPersistenceService))]
     [TestCase(typeof(IAccountPaymentsImportService))]
     public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
     {
@@ -76,6 +77,7 @@ public class WhenAddingServicesToTheContainer
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
         services.AddScoped<IPeriodEndService, PeriodEndService>();
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
+        services.AddScoped<IEnglishFractionsPersistenceService, EnglishFractionsPersistenceService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
     }
 
