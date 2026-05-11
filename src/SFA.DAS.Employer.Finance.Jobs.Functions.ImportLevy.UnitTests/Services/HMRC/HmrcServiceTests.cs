@@ -14,7 +14,6 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.HMRC;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services.HMRC;
 using SFA.DAS.TokenService.Api.Client;
 
-
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.UnitTests.Services.HMRC;
 
 [TestFixture]
