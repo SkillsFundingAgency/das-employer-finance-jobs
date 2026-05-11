@@ -25,6 +25,7 @@ public static class ServiceRegistrationExtensions
         services.AddSingleton<IHmrcClock, HmrcClock>();
         services.AddSingleton<IHmrcRequestThrottle, HmrcRequestThrottle>();
         services.AddSingleton<IHmrcTokenProvider, HmrcTokenProvider>();
+        services.AddSingleton<IEnglishFractionCalculationDateWriteTracker, EnglishFractionCalculationDateWriteTracker>();
 
         services.AddSingleton<IApprenticeshipLevyApiClient>(provider =>
         {
@@ -46,6 +47,7 @@ public static class ServiceRegistrationExtensions
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
         services.AddScoped<IEnglishFractionsPersistenceService, EnglishFractionsPersistenceService>();
+        services.AddScoped<IEnglishFractionCalculationDatePersistenceService, EnglishFractionCalculationDatePersistenceService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
     }
 }
