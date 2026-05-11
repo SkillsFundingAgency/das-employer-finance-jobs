@@ -1,14 +1,13 @@
+using AutoFixture.NUnit4;
+using Moq.Protected;
+using SFA.DAS.Api.Common.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
-using AutoFixture.NUnit3;
-using Moq.Protected;
-using SFA.DAS.Api.Common.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
-
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
 public class WhenCallingGetWithResponseCode

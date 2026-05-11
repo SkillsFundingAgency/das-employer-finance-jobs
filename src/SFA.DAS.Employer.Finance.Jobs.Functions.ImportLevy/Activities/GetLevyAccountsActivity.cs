@@ -1,15 +1,13 @@
-using System.Net;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
 
 public class GetLevyAccountsActivity(
-    IFinanceApiClient<FinanceApiConfiguration> financeApi,
+    IAccountService accountService,
     ILogger<GetLevyAccountsActivity> logger)
 {
     public const int DefaultPageSize = 10000;
@@ -20,54 +18,68 @@ public class GetLevyAccountsActivity(
         var allAccountIds = new List<long>();
         var pageNumber = 1;
 
-        while (true)
+        try
         {
-            logger.LogInformation(
-                "[CorrelationId: {CorrelationId}] Retrieving levy accounts page {PageNumber} with page size {PageSize}",
-                correlationId,
-                pageNumber,
-                DefaultPageSize);
-
-            var response = await RetryAsync(
-                () => financeApi.GetWithResponseCode<List<long>>(
-                    new GetAccountsPageRequest(pageNumber, DefaultPageSize)),
-                correlationId);
-
-            if (response == null || response.StatusCode != HttpStatusCode.OK)
-            {
-                throw new InvalidOperationException(
-                    $"[CorrelationId: {correlationId}] Failed to retrieve levy accounts page {pageNumber}");
-            }
-
-            var pageAccountIds = response.Body ?? [];
-
-            logger.LogInformation(
-                "[CorrelationId: {CorrelationId}] Retrieved {Count} levy accounts from page {PageNumber}",
-                correlationId,
-                pageAccountIds.Count,
-                pageNumber);
-
-            if (pageAccountIds.Count == 0)
+            while (true)
             {
                 logger.LogInformation(
-                    "[CorrelationId: {CorrelationId}] No levy accounts returned for page {PageNumber}. Pagination complete with {TotalCount} total accounts.",
+                    "[CorrelationId: {CorrelationId}] Retrieving levy accounts page {PageNumber} with page size {PageSize}",
                     correlationId,
                     pageNumber,
+                    DefaultPageSize);
+
+                var pageAccounts = await RetryAsync(
+                    () => accountService.GetAccountsAsync(
+                        new GetAccountsRequest
+                        {
+                            Page = pageNumber,
+                            PageSize = DefaultPageSize
+                        }),
+                    correlationId);
+
+                var pageAccountIds = pageAccounts.Select(account => account.Id).ToList();
+
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] Retrieved {Count} levy accounts from page {PageNumber}",
+                    correlationId,
+                    pageAccountIds.Count,
+                    pageNumber);
+
+                if (pageAccountIds.Count == 0)
+                {
+                    logger.LogInformation(
+                        "[CorrelationId: {CorrelationId}] No levy accounts returned for page {PageNumber}. Pagination complete with {TotalCount} total accounts.",
+                        correlationId,
+                        pageNumber,
+                        allAccountIds.Count);
+                    break;
+                }
+
+                allAccountIds.AddRange(pageAccountIds);
+
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] Retrieved {TotalCount} levy accounts so far",
+                    correlationId,
                     allAccountIds.Count);
-                break;
+
+                pageNumber++;
             }
 
-            allAccountIds.AddRange(pageAccountIds);
-
-            logger.LogInformation(
-                "[CorrelationId: {CorrelationId}] Retrieved {TotalCount} levy accounts so far",
-                correlationId,
-                allAccountIds.Count);
-
-            pageNumber++;
+            return allAccountIds;
         }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "[CorrelationId: {CorrelationId}] Failed retrieving levy accounts on page {PageNumber}: {ErrorMessage}",
+                correlationId,
+                pageNumber,
+                ex.Message);
 
-        return allAccountIds;
+            throw new InvalidOperationException(
+                $"[CorrelationId: {correlationId}] Failed retrieving levy accounts on page {pageNumber}: {ex.Message}",
+                ex);
+        }
     }
 
     private async Task<T> RetryAsync<T>(Func<Task<T>> action, string correlationId, int retries = 3)
