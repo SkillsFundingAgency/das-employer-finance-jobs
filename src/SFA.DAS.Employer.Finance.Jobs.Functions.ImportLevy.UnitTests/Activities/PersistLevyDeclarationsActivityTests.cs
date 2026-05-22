@@ -41,7 +41,7 @@ public class PersistLevyDeclarationsActivityTests
     }
 
     [Test]
-    public async Task Run_Posts_NormalizedDeclarations_WithGenerateTransactions_AndReturnsMetrics()
+    public async Task Run_Posts_NormalizedDeclarations_AndReturnsMetrics()
     {
         var input = CreateInput();
         IApiRequest? capturedRequest = null;
@@ -71,10 +71,8 @@ public class PersistLevyDeclarationsActivityTests
         capturedRequest!.GetUrl.Should().Be("api/levy-declarations");
         var data = capturedRequest.Data.Should().BeOfType<PersistLevyDeclarationRequestData>().Subject;
         data.AccountId.Should().Be(input.AccountId);
-        data.GenerateTransactions.Should().BeTrue();
-        data.EmployerLevyData.Should().ContainSingle();
-        data.EmployerLevyData[0].EmpRef.Should().Be(input.EmpRef);
-        data.EmployerLevyData[0].Declarations.Declarations.Should().BeEquivalentTo(input.Declarations);
+        data.EmpRef.Should().Be(input.EmpRef);
+        data.Declarations.Should().BeEquivalentTo(input.Declarations);
 
         _financeApi.Verify(
             x => x.PostWithResponseCode<PersistLevyDeclarationsResponse>(It.IsAny<IApiRequest>()),

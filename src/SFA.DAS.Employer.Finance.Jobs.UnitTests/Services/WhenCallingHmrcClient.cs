@@ -1,24 +1,20 @@
-using System;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using FluentAssertions;
 using HMRC.ESFA.Levy.Api.Client;
 using HMRC.ESFA.Levy.Api.Types;
 using HMRC.ESFA.Levy.Api.Types.Exceptions;
 using Microsoft.Extensions.Logging;
-using Moq;
-using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.HMRC;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 using SFA.DAS.Employer.Finance.Jobs.UnitTests.Helpers;
+using System.Net.Http;
+using System.Threading;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Services;
 
 public class WhenCallingHmrcClient
 {
     private Mock<IApprenticeshipLevyApiClient> _apprenticeshipLevyApiClient = null!;
-    private Mock<IHmrcRequestThrottle> _hmrcRequestThrottle = null!;
+    private Mock<IHmrcRateLimiter> _hmrcRateLimiter = null!;
     private Mock<IHmrcTokenProvider> _hmrcTokenProvider = null!;
     private FakeHmrcClock _hmrcClock = null!;
     private Mock<ILogger<HmrcClient>> _logger = null!;
@@ -28,20 +24,20 @@ public class WhenCallingHmrcClient
     public void SetUp()
     {
         _apprenticeshipLevyApiClient = new Mock<IApprenticeshipLevyApiClient>();
-        _hmrcRequestThrottle = new Mock<IHmrcRequestThrottle>();
+        _hmrcRateLimiter = new Mock<IHmrcRateLimiter>();
         _hmrcTokenProvider = new Mock<IHmrcTokenProvider>();
         _hmrcClock = new FakeHmrcClock(new DateTimeOffset(2026, 4, 13, 10, 0, 0, TimeSpan.Zero));
         _logger = new Mock<ILogger<HmrcClient>>();
 
-        _hmrcRequestThrottle.Setup(x => x.WaitAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+        _hmrcRateLimiter.Setup(x => x.WaitForAvailabilityAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TimeSpan.Zero);
 
         _hmrcTokenProvider.Setup(x => x.GetAccessTokenAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync("token-123");
 
         _client = new HmrcClient(
             _apprenticeshipLevyApiClient.Object,
-            _hmrcRequestThrottle.Object,
+            _hmrcRateLimiter.Object,
             _hmrcTokenProvider.Object,
             _hmrcClock,
             _logger.Object);

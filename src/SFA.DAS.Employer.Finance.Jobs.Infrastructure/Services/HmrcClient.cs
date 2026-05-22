@@ -3,12 +3,13 @@ using HMRC.ESFA.Levy.Api.Types;
 using HMRC.ESFA.Levy.Api.Types.Exceptions;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.HMRC;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 
 public class HmrcClient(
     IApprenticeshipLevyApiClient apprenticeshipLevyApiClient,
-    IHmrcRequestThrottle hmrcRequestThrottle,
+    IHmrcRateLimiter hmrcRateLimiter,
     IHmrcTokenProvider hmrcTokenProvider,
     IHmrcClock hmrcClock,
     ILogger<HmrcClient> logger) : IHmrcClient
@@ -53,7 +54,14 @@ public class HmrcClient(
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await hmrcRequestThrottle.WaitAsync(operationName, cancellationToken);
+            var waitDuration = await hmrcRateLimiter.WaitForAvailabilityAsync(cancellationToken);
+            if (waitDuration > TimeSpan.Zero)
+            {
+                logger.LogInformation(
+                    "HMRC request delayed for {OperationName}. Wait duration: {WaitDurationMs}ms",
+                    operationName,
+                    waitDuration.TotalMilliseconds);
+            }
 
             try
             {
@@ -108,3 +116,4 @@ public class HmrcClient(
             : RetryDelay;
     }
 }
+

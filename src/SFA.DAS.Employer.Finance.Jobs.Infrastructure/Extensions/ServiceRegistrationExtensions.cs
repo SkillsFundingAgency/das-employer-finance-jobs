@@ -6,7 +6,9 @@ using SFA.DAS.Api.Common.Infrastructure;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.HMRC;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services.HMRC;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
@@ -23,9 +25,14 @@ public static class ServiceRegistrationExtensions
 
         services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
         services.AddSingleton<IHmrcClock, HmrcClock>();
-        services.AddSingleton<IHmrcRequestThrottle, HmrcRequestThrottle>();
         services.AddSingleton<IHmrcTokenProvider, HmrcTokenProvider>();
         services.AddSingleton<IEnglishFractionCalculationDateWriteTracker, EnglishFractionCalculationDateWriteTracker>();
+        services.AddSingleton<IHmrcConfiguration>(provider => provider.GetRequiredService<HmrcConfiguration>());
+        services.AddSingleton<IHmrcRateLimiter>(provider =>
+        {
+            var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<LevyImportResilienceOptions>>().Value;
+            return new SlidingWindowHmrcRateLimiter(options.MaxRequestsPerWindow, TimeSpan.FromSeconds(options.WindowSeconds));
+        });
 
         services.AddSingleton<IApprenticeshipLevyApiClient>(provider =>
         {
@@ -38,6 +45,7 @@ public static class ServiceRegistrationExtensions
         });
 
         services.AddSingleton<IHmrcClient, HmrcClient>();
+        services.AddScoped<IHmrcService, HmrcService>();
 
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
         services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();

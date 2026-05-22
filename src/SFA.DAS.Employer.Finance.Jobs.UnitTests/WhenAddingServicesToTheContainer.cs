@@ -1,21 +1,21 @@
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
 using HMRC.ESFA.Levy.Api.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using NUnit.Framework;
 using SFA.DAS.Api.Common.Infrastructure;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.HMRC;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services.HMRC;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services;
+using System.Collections.Generic;
+using System.Net.Http;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests;
 
@@ -27,7 +27,7 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
     [TestCase(typeof(IApprenticeshipLevyApiClient))]
     [TestCase(typeof(IHmrcClient))]
-    [TestCase(typeof(IHmrcRequestThrottle))]
+    [TestCase(typeof(IHmrcRateLimiter))]
     [TestCase(typeof(IHmrcTokenProvider))]
     [TestCase(typeof(IEnglishFractionCalculationDateWriteTracker))]
     [TestCase(typeof(IPeriodEndService))]
@@ -59,12 +59,17 @@ public class WhenAddingServicesToTheContainer
 
         services.Configure<HmrcConfiguration>(configuration.GetSection("Hmrc"));
         services.AddSingleton(cfg => cfg.GetService<IOptions<HmrcConfiguration>>().Value);
+        services.Configure<LevyImportResilienceOptions>(configuration.GetSection(LevyImportResilienceOptions.SectionName));
 
         services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
         services.AddSingleton<IHmrcClock, HmrcClock>();
-        services.AddSingleton<IHmrcRequestThrottle, HmrcRequestThrottle>();
         services.AddSingleton<IHmrcTokenProvider, HmrcTokenProvider>();
         services.AddSingleton<IEnglishFractionCalculationDateWriteTracker, EnglishFractionCalculationDateWriteTracker>();
+        services.AddSingleton<IHmrcRateLimiter>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<LevyImportResilienceOptions>>().Value;
+            return new SlidingWindowHmrcRateLimiter(options.MaxRequestsPerWindow, TimeSpan.FromSeconds(options.WindowSeconds));
+        });
         services.AddSingleton<IApprenticeshipLevyApiClient>(provider =>
         {
             var client = new HttpClient
@@ -100,7 +105,9 @@ public class WhenAddingServicesToTheContainer
                 new KeyValuePair<string, string>("Hmrc:BaseUrl", "https://hmrc.test/"),
                 new KeyValuePair<string, string>("Hmrc:ClientId", "client-id"),
                 new KeyValuePair<string, string>("Hmrc:ClientSecret", "client-secret"),
-                new KeyValuePair<string, string>("Hmrc:Scope", "read:apprenticeship-levy")
+                new KeyValuePair<string, string>("Hmrc:Scope", "read:apprenticeship-levy"),
+                new KeyValuePair<string, string>("LevyImportResilience:MaxRequestsPerWindow", "6"),
+                new KeyValuePair<string, string>("LevyImportResilience:WindowSeconds", "2")
             ]
         };
         var provider = new MemoryConfigurationProvider(configSource);
@@ -108,3 +115,4 @@ public class WhenAddingServicesToTheContainer
         return new ConfigurationRoot(new List<IConfigurationProvider> { provider });
     }
 }
+

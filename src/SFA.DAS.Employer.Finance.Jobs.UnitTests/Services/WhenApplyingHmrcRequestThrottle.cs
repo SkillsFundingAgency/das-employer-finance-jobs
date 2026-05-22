@@ -1,7 +1,6 @@
-using FluentAssertions;
 using Microsoft.Extensions.Logging;
-using Moq;
-using NUnit.Framework;
+using Microsoft.Extensions.Options;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 using SFA.DAS.Employer.Finance.Jobs.UnitTests.Helpers;
 
@@ -14,7 +13,12 @@ public class WhenApplyingHmrcRequestThrottle
     {
         var clock = new FakeHmrcClock(new DateTimeOffset(2026, 4, 13, 9, 0, 0, TimeSpan.Zero));
         var logger = new Mock<ILogger<HmrcRequestThrottle>>();
-        var throttle = new HmrcRequestThrottle(clock, logger.Object);
+        var options = Options.Create(new LevyImportResilienceOptions
+        {
+            MaxRequestsPerWindow = 6,
+            WindowSeconds = 2
+        });
+        var throttle = new HmrcRequestThrottle(clock, options, logger.Object);
 
         for (var index = 0; index < 6; index++)
         {

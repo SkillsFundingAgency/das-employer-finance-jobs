@@ -112,18 +112,8 @@ public class PersistLevyDeclarationsActivity(
         return new PersistLevyDeclarationRequestData
         {
             AccountId = input.AccountId,
-            GenerateTransactions = true,
-            EmployerLevyData =
-            [
-                new PersistEmployerLevyData
-                {
-                    EmpRef = input.EmpRef,
-                    Declarations = new PersistLevyDeclarations
-                    {
-                        Declarations = input.Declarations
-                    }
-                }
-            ]
+            EmpRef = input.EmpRef,
+            Declarations = input.Declarations
         };
     }
 

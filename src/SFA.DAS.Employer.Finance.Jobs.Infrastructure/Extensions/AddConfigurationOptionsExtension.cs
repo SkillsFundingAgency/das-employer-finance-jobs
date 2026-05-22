@@ -20,5 +20,8 @@ public static class AddConfigurationOptionsExtension
 
         services.Configure<HmrcConfiguration>(configuration.GetSection("Hmrc"));
         services.AddSingleton(cfg => cfg.GetService<IOptions<HmrcConfiguration>>().Value);
+
+        services.Configure<LevyImportResilienceOptions>(configuration.GetSection(LevyImportResilienceOptions.SectionName));
+        services.Configure<ImportLevyProcessingOptions>(configuration.GetSection(ImportLevyProcessingOptions.SectionName));
     }
 }
