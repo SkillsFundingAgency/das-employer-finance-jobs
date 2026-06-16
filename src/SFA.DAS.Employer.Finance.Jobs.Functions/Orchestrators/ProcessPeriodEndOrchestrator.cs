@@ -3,6 +3,7 @@ using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 
@@ -23,20 +24,64 @@ public class ProcessPeriodEndOrchestrator(
             throw new ArgumentNullException(nameof(input));
         }
 
+        logger.LogInformation("[CorrelationId: {CorrelationId}] ProcessPeriodEndOrchestrator started for PeriodEnd: {PeriodEnd}", input.CorrelationId, input.PeriodEnd);
+       
         ValidateOrThrow(input.PeriodEnd, context);
 
         var periodEnd = await context.CallActivityAsync<PeriodEnd>(
             nameof(CreatePeriodEndActivity),
-            new CreatePeriodEndActivityInput { PeriodEnd = input.PeriodEnd, CorrelationId = context.NewGuid() });
+            new CreatePeriodEndActivityInput { PeriodEnd = input.PeriodEnd, CorrelationId = input.CorrelationId });
 
         var periodEndRef = string.IsNullOrWhiteSpace(periodEnd.PeriodEndId)
             ? periodEnd.Id.ToString()
             : periodEnd.PeriodEndId;
-        var totalCommandsPublished = await FanOutAccountImports(context, periodEndRef, input.MaxConcurrentAccounts);
+        var totalCommandsPublished = await FanOutAccountImports(context, periodEndRef, input.MaxConcurrentAccounts, input.CorrelationId, input.TargetAccountId);
+
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] ProcessPeriodEndOrchestrator completed for PeriodEndRef {PeriodEndRef}. Total account imports scheduled: {TotalCommandsPublished}",
+            input.CorrelationId,
+            periodEndRef,
+            totalCommandsPublished);
 
         return new PeriodEndResult
         {
             PeriodEndId = periodEnd.Id.ToString(),
+            TotalCommandsPublished = totalCommandsPublished
+        };
+    }
+
+    [Function(nameof(ProcessPeriodEndAccountsOrchestrator))]
+    public async Task<PeriodEndResult> ProcessPeriodEndAccountsOrchestrator([OrchestrationTrigger] TaskOrchestrationContext context)
+    {
+        var input = context.GetInput<ProcessPeriodEndOrchestratorInput>();
+
+        if (input?.PeriodEnd == null)
+        {
+            throw new ArgumentNullException(nameof(input));
+        }
+
+        var periodEndRef = string.IsNullOrWhiteSpace(input.PeriodEnd.PeriodEndId)
+            ? input.PeriodEnd.Id.ToString()
+            : input.PeriodEnd.PeriodEndId;
+
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] ProcessPeriodEndAccountsOrchestrator started for PeriodEndRef {PeriodEndRef}",
+            input.CorrelationId,
+            periodEndRef);
+
+        ValidateOrThrow(input.PeriodEnd, context);
+
+        var totalCommandsPublished = await FanOutAccountImports(context, periodEndRef, input.MaxConcurrentAccounts, input.CorrelationId, input.TargetAccountId);
+
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] ProcessPeriodEndAccountsOrchestrator completed for PeriodEndRef {PeriodEndRef}. Total account imports scheduled: {TotalCommandsPublished}",
+            input.CorrelationId,
+            periodEndRef,
+            totalCommandsPublished);
+
+        return new PeriodEndResult
+        {
+            PeriodEndId = input.PeriodEnd.Id.ToString(),
             TotalCommandsPublished = totalCommandsPublished
         };
     }
@@ -47,14 +92,15 @@ public class ProcessPeriodEndOrchestrator(
         return await periodEndService.CreatePeriodEndAsync(input.PeriodEnd, input.CorrelationId);
     }
 
-    private async Task<int> FanOutAccountImports(TaskOrchestrationContext context, string periodEndRef, int maxConcurrentAccounts)
+    private async Task<int> FanOutAccountImports(TaskOrchestrationContext context, string periodEndRef, int maxConcurrentAccounts, string CorrelationId, long? targetAccountId)
     {
         var retryPolicy = new RetryPolicy(
             5,
             TimeSpan.FromSeconds(5));
 
         logger.LogInformation(
-            "FanOutAccountImports started for period end {PeriodEndRef}, fetching accounts from Finance API in pages of {PageSize}",
+            "[CorrelationId: {CorrelationId}] FanOutAccountImports started for period end {PeriodEndRef}, fetching accounts from Finance API in pages of {PageSize}",
+            CorrelationId,
             periodEndRef,
             PageSize);
 
@@ -68,7 +114,7 @@ public class ProcessPeriodEndOrchestrator(
             {
                 Page = page,
                 PageSize = PageSize,
-                CorrelationId = context.NewGuid()
+                CorrelationId = CorrelationId
             };
 
             var accounts = await context.CallActivityAsync<List<Accounts>>(
@@ -79,54 +125,109 @@ public class ProcessPeriodEndOrchestrator(
             if (accounts == null || accounts.Count == 0)
             {
                 logger.LogInformation(
-                    "FanOutAccountImports: no accounts returned for page {Page}, ending paged fetch",
+                    "[CorrelationId: {CorrelationId}] FanOutAccountImports: no accounts returned for page {Page}, ending paged fetch",
+                    CorrelationId,
                     page);
                 break;
             }
 
-            var runningTasks = new List<Task>();
-            foreach (var account in accounts)
+            var accountsToProcess = targetAccountId.HasValue
+                ? accounts.Where(account => account.Id == targetAccountId.Value).ToList()
+                : accounts;
+
+            if (targetAccountId.HasValue)
             {
-                var instanceId = $"ProcessAccount-{periodEndRef}-{account.Id}";
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] FanOutAccountImports is restricted to AccountId {TargetAccountId}. Page {Page} contains {MatchedCount} matching accounts out of {PageCount}.",
+                    CorrelationId,
+                    targetAccountId.Value,
+                    page,
+                    accountsToProcess.Count,
+                    accounts.Count);
+            }
+
+            var activeAccountTasks = new List<(long AccountId, Task<AccountProcessingResult> Task)>();
+
+            foreach (var account in accountsToProcess)
+            {
+                while (activeAccountTasks.Count >= maxConcurrency)
+                {
+                    logger.LogInformation(
+                        "[CorrelationId: {CorrelationId}] FanOutAccountImports reached account concurrency limit ({ActiveCount}/{MaxConcurrency} active) for period end {PeriodEndRef} on page {Page}. Waiting for one account import to complete before scheduling more.",
+                        CorrelationId,
+                        activeAccountTasks.Count,
+                        maxConcurrency,
+                        periodEndRef,
+                        page);
+
+                    await WaitForOneAccountImportToComplete(activeAccountTasks, CorrelationId, periodEndRef);
+                }
+
+                var instanceId = $"ProcessAccount-PeriodEnd-{periodEndRef}-Account-{account.Id}-Correlation-{CorrelationId}";
                 var idempotencyKey = DeterministicGuid($"ImportAccountPayments-{periodEndRef}-{account.Id}");
                 var accountInput = new ProcessAccountInput
                 {
                     AccountId = account.Id,
                     PeriodEndRef = periodEndRef,
-                    CorrelationId = context.NewGuid().ToString(),
+                    CorrelationId = CorrelationId,
                     IdempotencyKey = idempotencyKey.ToString(),
                     TriggeredAt = context.CurrentUtcDateTime
                 };
 
-                runningTasks.Add(context.CallSubOrchestratorAsync<AccountProcessingResult>(
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] FanOutAccountImports scheduling account import for AccountId {AccountId} PeriodEnd {PeriodEndRef} on page {Page} with InstanceId {InstanceId}",
+                    CorrelationId,
+                    account.Id,
+                    periodEndRef,
+                    page,
+                    instanceId);
+
+                var accountTask = context.CallSubOrchestratorAsync<AccountProcessingResult>(
                     nameof(ProcessAccountOrchestrator),
                     accountInput,
-                    new SubOrchestrationOptions { InstanceId = instanceId }));
+                    new SubOrchestrationOptions { InstanceId = instanceId });
 
+                activeAccountTasks.Add((account.Id, accountTask));
                 totalPublished++;
+            }
 
-                if (runningTasks.Count >= maxConcurrency)
+            if (activeAccountTasks.Count > 0)
+            {
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] Waiting for the remaining {ActiveCount} active account imports to complete for period end {PeriodEndRef} on page {Page}.",
+                    CorrelationId,
+                    activeAccountTasks.Count,
+                    periodEndRef,
+                    page);
+
+                while (activeAccountTasks.Count > 0)
                 {
-                    await Task.WhenAll(runningTasks);
-                    runningTasks.Clear();
+                    await WaitForOneAccountImportToComplete(activeAccountTasks, CorrelationId, periodEndRef);
                 }
             }
 
-            if (runningTasks.Count > 0)
-            {
-                await Task.WhenAll(runningTasks);
-            }
-
             logger.LogInformation(
-                "FanOutAccountImports: scheduled {Count} account imports for page {Page} (total so far: {TotalPublished})",
-                accounts.Count,
+                "[CorrelationId: {CorrelationId}] FanOutAccountImports: scheduled {Count} account imports for page {Page} (total so far: {TotalPublished})",
+                CorrelationId,
+                accountsToProcess.Count,
                 page,
                 totalPublished);
+
+            if (targetAccountId.HasValue && accountsToProcess.Count > 0)
+            {
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] FanOutAccountImports completed restricted account import for AccountId {TargetAccountId} PeriodEnd {PeriodEndRef}",
+                    CorrelationId,
+                    targetAccountId.Value,
+                    periodEndRef);
+                break;
+            }
 
             if (accounts.Count < PageSize)
             {
                 logger.LogInformation(
-                    "FanOutAccountImports completed for period end {PeriodEndRef}: {TotalPublished} account imports scheduled across {TotalPages} pages",
+                    "[CorrelationId: {CorrelationId}] FanOutAccountImports completed for period end {PeriodEndRef}: {TotalPublished} account imports scheduled across {TotalPages} pages",
+                    CorrelationId,
                     periodEndRef,
                     totalPublished,
                     page);
@@ -137,6 +238,39 @@ public class ProcessPeriodEndOrchestrator(
         }
 
         return totalPublished;
+
+        async Task WaitForOneAccountImportToComplete(
+            List<(long AccountId, Task<AccountProcessingResult> Task)> activeAccountTasks,
+            string correlationId,
+            string periodEndRef)
+        {
+            var completedTask = await Task.WhenAny(activeAccountTasks.Select(active => active.Task));
+            var completedAccountTask = activeAccountTasks.First(active => active.Task == completedTask);
+            activeAccountTasks.Remove(completedAccountTask);
+
+            try
+            {
+                var accountResult = await completedTask;
+
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] FanOutAccountImports completed account import for AccountId {AccountId} PeriodEnd {PeriodEndRef}. Success {Success}. PaymentsProcessed {PaymentsProcessed}. TransfersProcessed {TransfersProcessed}",
+                    correlationId,
+                    completedAccountTask.AccountId,
+                    periodEndRef,
+                    accountResult.Success,
+                    accountResult.PaymentsProcessed,
+                    accountResult.TransfersProcessed);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "[CorrelationId: {CorrelationId}] FanOutAccountImports failed account import for AccountId {AccountId} PeriodEnd {PeriodEndRef}. Continuing with next account.",
+                    correlationId,
+                    completedAccountTask.AccountId,
+                    periodEndRef);
+            }
+        }
     }
 
     [Function(nameof(GetAccountsPageActivity))]

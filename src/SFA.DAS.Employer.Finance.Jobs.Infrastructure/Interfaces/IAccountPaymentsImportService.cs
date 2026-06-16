@@ -4,5 +4,6 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 
 public interface IAccountPaymentsImportService
 {
-    Task<AccountPaymentsImportResult> ImportAccountPaymentsAsync(AccountPaymentsImportRequest request, CancellationToken cancellationToken);
+    Task<AccountPaymentsImportResult> ImportAccountPaymentsAsync(AccountPaymentsImportInput input, CancellationToken cancellationToken);
+    Task<AccountExistingPaymentIdsImportResult> ImportAccountExistingPaymentIdsAsync(long accountId, string correlationId);
 }

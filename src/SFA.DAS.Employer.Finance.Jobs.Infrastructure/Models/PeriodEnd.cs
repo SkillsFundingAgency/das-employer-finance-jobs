@@ -1,7 +1,7 @@
 ﻿namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 public class PeriodEnd
-{   
+{
     public int Id { get; set; }
     public string PeriodEndId { get; set; }
     public int CalendarPeriodMonth { get; set; }

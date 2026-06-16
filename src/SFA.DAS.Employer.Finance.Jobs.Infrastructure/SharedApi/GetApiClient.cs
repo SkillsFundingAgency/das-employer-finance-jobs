@@ -7,158 +7,176 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
+public abstract class GetApiClient<T> : IGetApiClient<T> where T : IApiConfiguration
 {
-    public abstract class GetApiClient<T> : IGetApiClient<T> where T : IApiConfiguration
+    protected readonly HttpClient HttpClient;
+    protected readonly T Configuration;
+
+    public GetApiClient(
+        IHttpClientFactory httpClientFactory,
+        T apiConfiguration)
     {
-        protected readonly HttpClient HttpClient;
-        protected readonly T Configuration;
+        HttpClient = httpClientFactory.CreateClient();
+        HttpClient.BaseAddress = new Uri(apiConfiguration.Url);
+        Configuration = apiConfiguration;
+    }
 
-        public GetApiClient(
-            IHttpClientFactory httpClientFactory,
-            T apiConfiguration)
+    public async Task<TResponse> Get<TResponse>(IApiRequest request)
+    {
+        var result = await GetWithResponseCode<TResponse>(request);
+
+        if (IsNot200RangeResponseCode(result.StatusCode))
         {
-            HttpClient = httpClientFactory.CreateClient();
-            HttpClient.BaseAddress = new Uri(apiConfiguration.Url);
-            Configuration = apiConfiguration;
+            return default;
         }
 
-        public async Task<TResponse> Get<TResponse>(IApiRequest request)
+        return result.Body;
+    }
+
+    public async Task<HttpStatusCode> GetResponseCode(IApiRequest request)
+    {
+        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, request.GetUrl);
+        httpRequestMessage.AddVersion(request.Version);
+        await AddAuthenticationHeader(httpRequestMessage);
+
+        var response = await HttpClient.SendAsync(httpRequestMessage).ConfigureAwait(false);
+
+        return response.StatusCode;
+    }
+
+    public async Task<ApiResponse<TResponse>> GetWithResponseCode<TResponse>(IApiRequest request)
+    {
+        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, request.GetUrl);
+        httpRequestMessage.AddVersion(request.Version);
+        await AddAuthenticationHeader(httpRequestMessage);
+
+        var response = await HttpClient.SendAsync(httpRequestMessage).ConfigureAwait(false);
+
+        var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+        var errorContent = "";
+        var responseBody = (TResponse)default;
+
+        if (IsNot200RangeResponseCode(response.StatusCode))
         {
-            var result = await GetWithResponseCode<TResponse>(request);
-
-            if (IsNot200RangeResponseCode(result.StatusCode))
-            {
-                return default;
-            }
-
-            return result.Body;
-        }     
-
-        public async Task<HttpStatusCode> GetResponseCode(IApiRequest request)
+            errorContent = json;
+        }
+        else if (string.IsNullOrWhiteSpace(json))
         {
-            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, request.GetUrl);
-            httpRequestMessage.AddVersion(request.Version);
-            await AddAuthenticationHeader(httpRequestMessage);
-
-            var response = await HttpClient.SendAsync(httpRequestMessage).ConfigureAwait(false);
-
-            return response.StatusCode;
+            // 204 No Content from a potential returned null
+            // Will throw if attempts to deserialise but didn't
+            // feel right making it part of the error if branch
+            // even if there is no content.
+        }
+        else
+        {
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            options.Converters.Add(new JsonStringEnumConverter());
+            responseBody = JsonSerializer.Deserialize<TResponse>(json, options);
         }
 
-        public async Task<ApiResponse<TResponse>> GetWithResponseCode<TResponse>(IApiRequest request)
+        var getWithResponseCode = new ApiResponse<TResponse>(responseBody, response.StatusCode, errorContent, GetHeaders(response));
+
+        return getWithResponseCode;
+    }
+
+    public async Task<TResponse> Post<TResponse>(IApiRequest request)
+    {
+        var result = await PostWithResponseCode<TResponse>(request);
+
+        if (IsNot200RangeResponseCode(result.StatusCode))
         {
-            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, request.GetUrl);
-            httpRequestMessage.AddVersion(request.Version);
-            await AddAuthenticationHeader(httpRequestMessage);
-
-            var response = await HttpClient.SendAsync(httpRequestMessage).ConfigureAwait(false);
-
-            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-            var errorContent = "";
-            var responseBody = (TResponse)default;
-
-            if (IsNot200RangeResponseCode(response.StatusCode))
-            {
-                errorContent = json;
-            }
-            else if (string.IsNullOrWhiteSpace(json))
-            {
-                // 204 No Content from a potential returned null
-                // Will throw if attempts to deserialise but didn't
-                // feel right making it part of the error if branch
-                // even if there is no content.
-            }
-            else
-            {
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                options.Converters.Add(new JsonStringEnumConverter());
-                responseBody = JsonSerializer.Deserialize<TResponse>(json, options);
-            }
-
-            var getWithResponseCode = new ApiResponse<TResponse>(responseBody, response.StatusCode, errorContent, GetHeaders(response));
-
-            return getWithResponseCode;
+            return default;
         }
 
-        public async Task<TResponse> Post<TResponse>(IApiRequest request)
+        return result.Body;
+    }
+    public async Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IApiRequest request)
+    {
+        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, request.GetUrl);
+
+        return await SendWithBody<TResponse>(request, httpRequestMessage);
+    }
+
+    public async Task<TResponse> Put<TResponse>(IApiRequest request)
+    {
+        var result = await PutWithResponseCode<TResponse>(request);
+
+        if (IsNot200RangeResponseCode(result.StatusCode))
         {
-            var result = await PostWithResponseCode<TResponse>(request);
-
-            if (IsNot200RangeResponseCode(result.StatusCode))
-            {
-                return default;
-            }
-
-            return result.Body;
+            return default;
         }
 
-        public async Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IApiRequest request)
+        return result.Body;
+    }
+
+    public async Task<ApiResponse<TResponse>> PutWithResponseCode<TResponse>(IApiRequest request)
+    {
+        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Put, request.GetUrl);
+
+        return await SendWithBody<TResponse>(request, httpRequestMessage);
+    }
+
+    private async Task<ApiResponse<TResponse>> SendWithBody<TResponse>(IApiRequest request, HttpRequestMessage httpRequestMessage)
+    {
+        httpRequestMessage.AddVersion(request.Version);
+
+        var json = JsonSerializer.Serialize(request.Data, new JsonSerializerOptions
         {
-            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, request.GetUrl);
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
 
-            httpRequestMessage.AddVersion(request.Version);
+        httpRequestMessage.Content =
+            new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-            var json = JsonSerializer.Serialize(request.Data, new JsonSerializerOptions
+        await AddAuthenticationHeader(httpRequestMessage);
+
+        var response = await HttpClient.SendAsync(httpRequestMessage)
+            .ConfigureAwait(false);
+
+        var responseJson = await response.Content
+            .ReadAsStringAsync()
+            .ConfigureAwait(false);
+
+        var errorContent = string.Empty;
+        var responseBody = default(TResponse);
+
+        if (IsNot200RangeResponseCode(response.StatusCode))
+        {
+            errorContent = responseJson;
+        }
+        else if (!string.IsNullOrWhiteSpace(responseJson))
+        {
+            var options = new JsonSerializerOptions
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            });
+                PropertyNameCaseInsensitive = true
+            };
+            options.Converters.Add(new JsonStringEnumConverter());
 
-            httpRequestMessage.Content =
-                new StringContent(json, Encoding.UTF8, "application/json");
-
-            await AddAuthenticationHeader(httpRequestMessage);
-
-            var response = await HttpClient.SendAsync(httpRequestMessage)
-                                           .ConfigureAwait(false);
-
-            var responseJson = await response.Content
-                                             .ReadAsStringAsync()
-                                             .ConfigureAwait(false);
-
-            var errorContent = string.Empty;
-            var responseBody = default(TResponse);
-
-            if (IsNot200RangeResponseCode(response.StatusCode))
-            {
-                errorContent = responseJson;
-            }
-            else if (!string.IsNullOrWhiteSpace(responseJson))
-            {
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
-                options.Converters.Add(new JsonStringEnumConverter());
-
-                responseBody = JsonSerializer.Deserialize<TResponse>(responseJson, options);
-            }
-
-            return new ApiResponse<TResponse>(
-                responseBody,
-                response.StatusCode,
-                errorContent,
-                GetHeaders(response));
+            responseBody = JsonSerializer.Deserialize<TResponse>(responseJson, options);
         }
 
+        return new ApiResponse<TResponse>(
+            responseBody,
+            response.StatusCode,
+            errorContent,
+            GetHeaders(response));
+    }
+    private static bool IsNot200RangeResponseCode(HttpStatusCode statusCode)
+    {
+        return !((int)statusCode >= 200 && (int)statusCode <= 299);
+    }
 
+    protected abstract Task AddAuthenticationHeader(HttpRequestMessage httpRequestMessage);
 
-        private static bool IsNot200RangeResponseCode(HttpStatusCode statusCode)
+    private static Dictionary<string, IEnumerable<string>> GetHeaders(HttpResponseMessage httpResponseMessage)
+    {
+        if (httpResponseMessage == null || httpResponseMessage?.Headers == null || !httpResponseMessage.Headers.Any())
         {
-            return !((int)statusCode >= 200 && (int)statusCode <= 299);
+            return new Dictionary<string, IEnumerable<string>>();
         }
-
-        protected abstract Task AddAuthenticationHeader(HttpRequestMessage httpRequestMessage);
-
-        private static Dictionary<string, IEnumerable<string>> GetHeaders(HttpResponseMessage httpResponseMessage)
-        {
-            if (httpResponseMessage == null || httpResponseMessage?.Headers == null || !httpResponseMessage.Headers.Any())
-            {
-                return new Dictionary<string, IEnumerable<string>>();
-            }
-            return httpResponseMessage.Headers.ToDictionary(h => h.Key, h => h.Value);
-        }
+        return httpResponseMessage.Headers.ToDictionary(h => h.Key, h => h.Value);
     }
 }

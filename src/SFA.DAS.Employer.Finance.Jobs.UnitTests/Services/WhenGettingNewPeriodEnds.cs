@@ -227,8 +227,8 @@ public class WhenGettingNewPeriodEnds
         periodEnd.PeriodEndId.Should().Be("PE-001");
         periodEnd.CalendarPeriodYear.Should().Be(2024);
         periodEnd.CalendarPeriodMonth.Should().Be(3);
-        periodEnd.AccountDataValidAt.Should().Be(commitmentDataValidAt);
-        periodEnd.CommitmentDataValidAt.Should().Be(accountDataValidAt);
+        periodEnd.AccountDataValidAt.Should().Be(accountDataValidAt);
+        periodEnd.CommitmentDataValidAt.Should().Be(commitmentDataValidAt);
         periodEnd.CompletionDateTime.Should().Be(completionDateTime);
         periodEnd.PaymentsForPeriod.Should().Be("test-link");
     }
