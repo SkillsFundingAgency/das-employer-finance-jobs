@@ -9,7 +9,7 @@ public class ImportAccountPaymentsRequest : IApiRequest
 
     public object Data { get; set; }
 
-    public AccountPaymentsImportRequest Payload
+    public AccountPaymentsImportInput Payload
     {
         set => Data = value;
     }

@@ -64,7 +64,7 @@ public class WhenCallingGet
         var testObject = JsonSerializer.Serialize(new TestResponse { MyResponse = responseValue });
         var response = new HttpResponseMessage
         {
-            Content = new StringContent(testObject, Encoding.UTF8, "application/json"),
+            Content = new StringContent(testObject, System.Text.Encoding.UTF8, "application/json"),
             StatusCode = HttpStatusCode.OK
         };
         var getTestRequest = new GetTestRequest(id);
