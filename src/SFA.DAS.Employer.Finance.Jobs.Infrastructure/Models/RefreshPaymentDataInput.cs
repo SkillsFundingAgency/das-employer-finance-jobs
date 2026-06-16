@@ -1,11 +1,13 @@
-namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+﻿using SFA.DAS.Provider.Events.Api.Types;
 
-public class RefreshPaymentDataInput
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models
 {
-    public long AccountId { get; set; }
-    public PeriodEnd PeriodEnd { get; set; } = new();
-    public string IdempotencyKey { get; set; } = string.Empty;
-    public string CorrelationId { get; set; } = string.Empty;
-    public int PaymentsCreated { get; set; }
-    public List<Payment> PaymentDetails { get; set; } = new();
+    public class RefreshPaymentDataInput
+    {
+        public List<Payment> Payments { get; set; }
+        public List<string> PaymentIds { get; set; }
+        public long AccountId { get; set; }
+        public string CorrelationId { get; set; } = string.Empty;
+        public string IdempotencyKey { get; set; } = string.Empty; //Format: "account-{accountId}-period-{periodEnd}-payment-data"
+    }
 }
