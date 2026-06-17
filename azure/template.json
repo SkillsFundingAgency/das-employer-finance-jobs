@@ -93,6 +93,13 @@
         },
         "deployPrivateLinkedScopedResource": {
             "type": "bool"
+        },
+        "importLevyTimerDisabled": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "When true, disables the ImportLevyTimer function via AzureWebJobs.ImportLevyTimer.Disabled app setting."
+            }
         }
     },
     "variables": {
@@ -482,6 +489,10 @@
                                 {
                                     "name": "WEBSITE_RUN_FROM_PACKAGE",
                                     "value": "1"
+                                },
+                                {
+                                    "name": "AzureWebJobs.ImportLevyTimer.Disabled",
+                                    "value": "[parameters('importLevyTimerDisabled')]"
                                 }
                             ]
                         }
