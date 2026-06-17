@@ -28,6 +28,16 @@ jobs:
       modifyOutputPath: false
       zipAfterPublish: true
 
+  - task: DotNetCoreCLI@2
+    displayName: Publish - dotnet publish ImportLevy Functions
+    inputs:
+      command: publish
+      publishWebProjects: false
+      projects: src/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.csproj
+      arguments: -o $(build.artifactstagingdirectory)/publish/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy -c ${{ parameters.BuildConfiguration }} --no-build
+      modifyOutputPath: false
+      zipAfterPublish: true
+
   - task: CopyFiles@2
     displayName: Copy Files to $(build.artifactstagingdirectory)/publish
     inputs:

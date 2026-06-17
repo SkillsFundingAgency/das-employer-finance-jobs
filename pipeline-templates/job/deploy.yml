@@ -62,3 +62,14 @@ jobs:
             ServiceConnection: ${{ parameters.ServiceConnection }}
             FunctionAppName: $(FunctionAppName)
             DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/SFA.DAS.Employer.Finance.Jobs.Functions/${{ parameters.SolutionBaseName }}.Functions.zip
+        - template: azure-pipelines-templates/deploy/step/app-role-assignments.yml@das-platform-building-blocks
+          parameters:
+            ServiceConnection: ${{ parameters.AppRoleAssignmentsServiceConnection }}
+            ResourceName: $(ImportLevyFunctionAppName)
+            Tenant: $(Tenant)
+            IsMultiRepoCheckout: true
+        - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
+          parameters:
+            ServiceConnection: ${{ parameters.ServiceConnection }}
+            FunctionAppName: $(ImportLevyFunctionAppName)
+            DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.zip

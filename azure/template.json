@@ -100,8 +100,10 @@
         "resourceNamePrefix": "[toLower(concat('das-', parameters('resourceEnvironmentName'),'-', parameters('serviceName')))]",
         "resourceGroupName": "[concat(variables('resourceNamePrefix'), '-rg')]",
         "functionAppName": "[concat(variables('resourceNamePrefix'), '-fa')]",
+        "importLevyFunctionAppName": "[concat(variables('resourceNamePrefix'), '-levy-fa')]",
         "appServicePlanName": "[concat(variables('resourceNamePrefix'), '-asp')]",
         "configNames": "SFA.DAS.EmployerFinance.Jobs_2.0,SFA.DAS.Encoding_1.0",
+        "importLevyConfigNames": "SFA.DAS.EmployerFinance.Jobs_2.0",
         "routeTableId": {
             "id": "[resourceId(subscription().subscriptionId, parameters('sharedEnvResourceGroup'), 'Microsoft.Network/routeTables', parameters('SharedRouteTableName'))]"
         },
@@ -223,7 +225,7 @@
                         "value": "[variables('resourceGroupName')]"
                     },
                     "netFrameworkVersion": {
-                        "value": "v8.0"
+                        "value": "v10.0"
                     },
                     "subnetResourceId": {
                         "value": "[reference(concat(parameters('subnetObject').name, '-', parameters('utcValue'))).outputs.SubnetResourceId.value]"
@@ -385,6 +387,160 @@
                     }
                 }
             }
+        },
+        {
+            "apiVersion": "2021-04-01",
+            "name": "[concat(variables('importLevyFunctionAppName'), '-app-insights-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[variables('resourceGroupName')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'application-insights.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "appInsightsName": {
+                        "value": "[variables('importLevyFunctionAppName')]"
+                    },
+                    "attachedService": {
+                        "value": "[variables('importLevyFunctionAppName')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2021-04-01",
+            "name": "[concat(variables('importLevyFunctionAppName'), '-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[variables('resourceGroupName')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'function-app-v2.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "functionAppName": {
+                        "value": "[variables('importLevyFunctionAppName')]"
+                    },
+                    "appServicePlanName": {
+                        "value": "[variables('appServicePlanName')]"
+                    },
+                    "appServicePlanResourceGroup": {
+                        "value": "[variables('resourceGroupName')]"
+                    },
+                    "netFrameworkVersion": {
+                        "value": "v10.0"
+                    },
+                    "subnetResourceId": {
+                        "value": "[reference(concat(parameters('subnetObject').name, '-', parameters('utcValue'))).outputs.SubnetResourceId.value]"
+                    },
+                    "functionAppAppSettings": {
+                        "value": {
+                            "array": [
+                                {
+                                    "name": "EnvironmentName",
+                                    "value": "[parameters('environmentName')]"
+                                },
+                                {
+                                    "name": "ConfigurationStorageConnectionString",
+                                    "value": "[parameters('configurationStorageConnectionString')]"
+                                },
+                                {
+                                    "name": "ConfigNames",
+                                    "value": "[variables('importLevyConfigNames')]"
+                                },
+                                {
+                                    "name": "Version",
+                                    "value": "1.0"
+                                },
+                                {
+                                    "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                                    "value": "[reference(concat(variables('importLevyFunctionAppName'), '-app-insights-', parameters('utcValue'))).outputs.ConnectionString.value]"
+                                },
+                                {
+                                    "name": "AzureWebJobsStorage",
+                                    "value": "[parameters('sharedStorageAccountConnectionString')]"
+                                },
+                                {
+                                    "name": "LoggingRedisConnectionString",
+                                    "value": "[parameters('loggingRedisConnectionString')]"
+                                },
+                                {
+                                    "name": "LoggingRedisKey",
+                                    "value": "[parameters('loggingRedisKey')]"
+                                },
+                                {
+                                    "name": "FUNCTIONS_EXTENSION_VERSION",
+                                    "value": "~4"
+                                },
+                                {
+                                    "name": "FUNCTIONS_WORKER_RUNTIME",
+                                    "value": "dotnet-isolated"
+                                },
+                                {
+                                    "name": "WEBSITE_RUN_FROM_PACKAGE",
+                                    "value": "1"
+                                }
+                            ]
+                        }
+                    },
+                    "ipSecurityRestrictions": {
+                        "value": "[parameters('workerAccessRestrictions')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]",
+                "[concat(variables('importLevyFunctionAppName'), '-app-insights-', parameters('utcValue'))]"
+            ]
+        },
+        {
+            "apiVersion": "2022-09-01",
+            "name": "[concat(variables('importLevyFunctionAppName'), '-cors-policies-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[variables('resourceGroupName')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'cors-policy.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "functionAppName": {
+                        "value": "[variables('importLevyFunctionAppName')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('importLevyFunctionAppName'), '-', parameters('utcValue'))]"
+            ]
+        },
+        {
+            "condition": "[parameters('deployPrivateLinkedScopedResource')]",
+            "apiVersion": "2021-04-01",
+            "name": "[concat(variables('importLevyFunctionAppName'), '-private-link-scoped-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[parameters('sharedEnvResourceGroup')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'private-linked-scoped-resource.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "privateLinkScopeName": {
+                        "value": "[variables('privateLinkScopeName')]"
+                    },
+                    "scopedResourceName": {
+                        "value": "[variables('importLevyFunctionAppName')]"
+                    },
+                    "scopedResourceId": {
+                        "value": "[reference(concat(variables('importLevyFunctionAppName'), '-app-insights-', parameters('utcValue'))).outputs.AppInsightsResourceId.value]"
+                    }
+                }
+            }
         }
     ],
     "outputs": {
@@ -395,6 +551,10 @@
         "FunctionAppName": {
             "type": "string",
             "value": "[variables('functionAppName')]"
+        },
+        "ImportLevyFunctionAppName": {
+            "type": "string",
+            "value": "[variables('importLevyFunctionAppName')]"
         }
     }
 }
