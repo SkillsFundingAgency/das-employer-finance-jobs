@@ -56,6 +56,35 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services
             };
         }
 
+        public async Task<CreateTransferTransactionLinesResult> CreateTransferTransactionLines(CreateTransferTransactionLinesInput input)
+        {
+            logger.LogInformation("[CorrelationId: {CorrelationId}] CreateTransferTransactionLinesActivity started", input.CorrelationId);
+
+            var transferTransactionLines = BuildTransferTransactionLines(input, input.CorrelationId);
+            if (!transferTransactionLines.Any())
+            {
+                logger.LogInformation("[CorrelationId: {CorrelationId}] No transfer transaction lines to create, returning empty result.", input.CorrelationId);
+                return new CreateTransferTransactionLinesResult
+                {
+                    TransactionsCreated = 0,
+                    Transactions = [],
+                    Status = "Succeeded",
+                    Message = "Successfully created 0 transfer transaction lines in Finance API"
+                };
+            }
+
+            var transactionsCreated = await PostTransactionLinesToStaging(transferTransactionLines, input.CorrelationId);
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully created {count} transfer transaction lines in Finance API", input.CorrelationId, transactionsCreated);
+
+            return new CreateTransferTransactionLinesResult
+            {
+                TransactionsCreated = transactionsCreated,
+                Transactions = transferTransactionLines,
+                Status = "Succeeded",
+                Message = $"Successfully created {transactionsCreated} transfer transaction lines in Finance API"
+            };
+        }
+
         private static bool IsSameTransactionLine(PaymentTransactionLine existingTransactionLine, PaymentTransactionLine newTransactionLine)
         {
             return existingTransactionLine.TransactionType == newTransactionLine.TransactionType
@@ -115,6 +144,77 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services
                 logger.LogError(ex, "[CorrelationId: {CorrelationId}]  Exception in creating transaction lines: {Message} ", correlationId, ex.Message);
                 throw;
             }
+        }
+
+        private List<PaymentTransactionLine> BuildTransferTransactionLines(CreateTransferTransactionLinesInput input, string correlationId)
+        {
+            try
+            {
+                var transfers = input.Transfers ?? [];
+                if (!transfers.Any())
+                {
+                    return [];
+                }
+
+                return transfers
+                    .GroupBy(transfer => transfer.SenderAccountId)
+                    .SelectMany(senderTransferGroup => CreateTransferTransactionLines(senderTransferGroup, input.PeriodEnd))
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "[CorrelationId: {CorrelationId}] Exception in creating transfer transaction lines: {Message} ", correlationId, ex.Message);
+                throw;
+            }
+        }
+
+        private static IEnumerable<PaymentTransactionLine> CreateTransferTransactionLines(
+            IGrouping<long, AccountTransfer> senderTransferGroup,
+            string inputPeriodEnd)
+        {
+            if (!senderTransferGroup.Any())
+            {
+                return [];
+            }
+
+            var firstTransfer = senderTransferGroup.First();
+            var senderAccountId = senderTransferGroup.Key;
+            var receiverAccountId = firstTransfer.ReceiverAccountId;
+            var transferTotal = RoundTransactionAmount(senderTransferGroup.Sum(transfer => transfer.Amount));
+            var periodEnd = string.IsNullOrWhiteSpace(firstTransfer.PeriodEnd)
+                ? inputPeriodEnd
+                : firstTransfer.PeriodEnd;
+            var dateCreated = DateTime.UtcNow;
+
+            var senderTransferTransaction = new PaymentTransactionLine
+            {
+                AccountId = senderAccountId,
+                Amount = -transferTotal,
+                DateCreated = dateCreated,
+                TransactionDate = dateCreated,
+                TransactionType = 4,
+                PeriodEnd = periodEnd,
+                TransferSenderAccountId = senderAccountId,
+                TransferSenderAccountName = firstTransfer.SenderAccountName,
+                TransferReceiverAccountId = receiverAccountId,
+                TransferReceiverAccountName = firstTransfer.ReceiverAccountName
+            };
+
+            var receiverTransferTransaction = new PaymentTransactionLine
+            {
+                AccountId = receiverAccountId,
+                Amount = transferTotal,
+                DateCreated = dateCreated,
+                TransactionDate = dateCreated,
+                TransactionType = 4,
+                PeriodEnd = periodEnd,
+                TransferSenderAccountId = senderAccountId,
+                TransferSenderAccountName = firstTransfer.SenderAccountName,
+                TransferReceiverAccountId = receiverAccountId,
+                TransferReceiverAccountName = firstTransfer.ReceiverAccountName
+            };
+
+            return [senderTransferTransaction, receiverTransferTransaction];
         }
 
         private async Task<List<PaymentTransactionLine>> GetExistingTransactionLinesAsync(long accountId, string periodEnd, string correlationId)
