@@ -24,17 +24,17 @@ jobs:
       command: publish
       publishWebProjects: false
       projects: src/${{ parameters.SolutionBaseName }}.Functions/${{ parameters.SolutionBaseName }}.Functions.csproj
-      arguments: -o $(build.artifactstagingdirectory)/publish/SFA.DAS.Employer.Finance.Jobs.Functions -c ${{ parameters.BuildConfiguration }} --no-build
+      arguments: -o $(build.artifactstagingdirectory)/publish/SFA.DAS.Employer.Finance.Jobs.Functions -c $(BuildConfiguration) --no-build
       modifyOutputPath: false
       zipAfterPublish: true
 
   - task: DotNetCoreCLI@2
-    displayName: Publish - dotnet publish ImportLevy Functions
+    displayName: Publish - dotnet publish ${{ parameters.SolutionBaseName }}.Functions.ImportLevy
     inputs:
       command: publish
       publishWebProjects: false
-      projects: src/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.csproj
-      arguments: -o $(build.artifactstagingdirectory)/publish/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy -c ${{ parameters.BuildConfiguration }} --no-build
+      projects: src/${{ parameters.SolutionBaseName }}.Functions.ImportLevy/${{ parameters.SolutionBaseName }}.Functions.ImportLevy.csproj
+      arguments: -o $(build.artifactstagingdirectory)/publish/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy -c $(BuildConfiguration) --no-build
       modifyOutputPath: false
       zipAfterPublish: true
 
