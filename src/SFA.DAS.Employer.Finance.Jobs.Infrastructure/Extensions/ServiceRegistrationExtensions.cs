@@ -35,6 +35,8 @@ public static class ServiceRegistrationExtensions
 
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
 
+        services.AddScoped<IAccountTransfersService, AccountTransfersService>();
+
         services.AddScoped<IRefreshPaymentDataService, RefreshPaymentDataService>();
 
         services.AddScoped<IPaymentTransactionLinesService, PaymentTransactionLinesService>();

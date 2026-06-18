@@ -86,6 +86,30 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
             refreshPaymentsResult.PaymentsCreated,
             refreshPaymentsResult.PaymentDetails?.Count ?? 0,
             refreshPaymentsResult.Message);
+
+        var refreshAccountTransfersInput = new RefreshAccountTransfersInput
+        {
+            AccountId = input.AccountId,
+            AccountName = input.AccountName,
+            PeriodEndRef = input.PeriodEndRef,
+            CorrelationId = correlationId,
+            TriggeredAt = input.TriggeredAt,
+            Payments = importPaymentsResult.Payments ?? []
+        };
+
+        var refreshAccountTransfersResult = await context.CallActivityAsync<RefreshAccountTransfersResult>(
+                                    nameof(AccountTransferActivities.RefreshAccountTransfersActivity),
+                                    refreshAccountTransfersInput,
+                                    new TaskOptions(retryPolicy));
+
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, received RefreshAccountTransfersActivity result for AccountId {AccountId} PeriodEnd {PeriodEndRef}. Status: {Status}. TransfersProcessed: {TransfersProcessed}. Message: {Message}",
+            correlationId,
+            input.AccountId,
+            input.PeriodEndRef,
+            refreshAccountTransfersResult.Status,
+            refreshAccountTransfersResult.TransfersProcessed,
+            refreshAccountTransfersResult.Message);
        
         var paymentMetadataResult = new CreatePaymentMetadataResult
         {
@@ -188,18 +212,20 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
             Success = importPaymentsResult.Status == "Succeeded"
                       && importExistingPaymentIdsResult.Status == "Succeeded"
                       && refreshPaymentsResult.Status == "Succeeded"
+                      && refreshAccountTransfersResult.Status == "Succeeded"
                       && paymentMetadataResult.Status == "Succeeded"
                       && paymentTransactionLinesResult.Status == "Succeeded",
             PaymentsProcessed = refreshPaymentsResult.PaymentsCreated,
-            TransfersProcessed = 0
+            TransfersProcessed = refreshAccountTransfersResult.TransfersProcessed
         };
 
         logger.LogInformation(
-            "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator completed for AccountId {AccountId} PeriodEnd {PeriodEndRef}. PaymentsProcessed: {PaymentsProcessed}",
+            "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator completed for AccountId {AccountId} PeriodEnd {PeriodEndRef}. PaymentsProcessed: {PaymentsProcessed}. TransfersProcessed: {TransfersProcessed}",
             correlationId,
             input?.AccountId,
             input?.PeriodEndRef,
-            result.PaymentsProcessed);
+            result.PaymentsProcessed,
+            result.TransfersProcessed);
         return result;
     }
 }

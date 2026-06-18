@@ -168,6 +168,7 @@ public class ProcessPeriodEndOrchestrator(
                 var accountInput = new ProcessAccountInput
                 {
                     AccountId = account.Id,
+                    AccountName = account.Name,
                     PeriodEndRef = periodEndRef,
                     CorrelationId = CorrelationId,
                     IdempotencyKey = idempotencyKey.ToString(),
