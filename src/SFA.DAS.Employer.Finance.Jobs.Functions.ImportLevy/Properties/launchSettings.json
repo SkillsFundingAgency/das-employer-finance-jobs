@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7300",
+      "launchBrowser": false
+    }
+  }
+}
