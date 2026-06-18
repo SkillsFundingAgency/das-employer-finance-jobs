@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
@@ -13,18 +14,18 @@ public class AccountService(IFinanceApiClient<FinanceApiConfiguration> financeAp
     {
         try
         {
-            logger.LogInformation("Calling Finance API to get accounts, page {Page}, pageSize {PageSize}", request.Page, request.PageSize);
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Finance API to get accounts, page {Page}, pageSize {PageSize}", request.CorrelationId, request.Page, request.PageSize);
 
             var response = await financeApiClient.Get<FinanceApiGetAccountsResponse>(request);
 
             var accounts = response?.Accounts ?? [];
-            logger.LogInformation("Finance API returned {Count} accounts for page {Page}", accounts.Count, request.Page);
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Finance API returned {Count} accounts for page {Page}", request.CorrelationId, accounts.Count, request.Page);
 
             return accounts;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error getting accounts from Finance API for page {Page}: {ErrorMessage}", request.Page, ex.Message);
+            logger.LogError(ex, " [CorrelationId: {CorrelationId}] Error getting accounts from Finance API for page {Page}: {ErrorMessage}", request.CorrelationId, request.Page, ex.Message);
             throw;
         }
     }

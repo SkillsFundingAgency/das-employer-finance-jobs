@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -11,64 +10,64 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services;
+using System.Collections.Generic;
 
-namespace SFA.DAS.Employer.Finance.Jobs.UnitTests
+namespace SFA.DAS.Employer.Finance.Jobs.UnitTests;
+
+public class WhenAddingServicesToTheContainer
 {
-    public class WhenAddingServicesToTheContainer
+    [TestCase(typeof(IAzureClientCredentialHelper))]
+    [TestCase(typeof(IInternalApiClient<FinanceApiConfiguration>))]
+    [TestCase(typeof(IProviderPaymentApiClient<ProviderEventsApiConfiguration>))]
+    [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
+    [TestCase(typeof(IPeriodEndService))]
+    [TestCase(typeof(IAccountPaymentsImportService))]
+    public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
     {
-        [TestCase(typeof(IAzureClientCredentialHelper))]
-        [TestCase(typeof(IInternalApiClient<FinanceApiConfiguration>))]
-        [TestCase(typeof(IProviderPaymentApiClient<ProviderEventsApiConfiguration>))]
-        [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
-        [TestCase(typeof(IPeriodEndService))]
-        [TestCase(typeof(IAccountPaymentsImportService))]
-        public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
+        var serviceCollection = new ServiceCollection();
+        SetupServiceCollection(serviceCollection);
+        var provider = serviceCollection.BuildServiceProvider();
+
+        var type = provider.GetService(toResolve);
+        type.Should().NotBeNull();
+    }
+
+    private static void SetupServiceCollection(IServiceCollection services)
+    {
+        services.AddHttpClient();
+        services.AddOptions();
+
+        var configuration = GenerateConfiguration();
+        services.Configure<FinanceApiConfiguration>(configuration.GetSection(nameof(FinanceApiConfiguration)));
+        services.AddSingleton(cfg => cfg.GetService<IOptions<FinanceApiConfiguration>>().Value);
+
+        services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
+        services.AddSingleton(cfg => cfg.GetService<IOptions<ProviderEventsApiConfiguration>>().Value);
+
+        services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
+        services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
+
+        services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
+        services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
+        services.AddScoped<IPeriodEndService, PeriodEndService>();
+        services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
+    }
+    private static IConfigurationRoot GenerateConfiguration()
+    {
+        var configSource = new MemoryConfigurationSource
         {
-            var serviceCollection = new ServiceCollection();
-            SetupServiceCollection(serviceCollection);
-            var provider = serviceCollection.BuildServiceProvider();
-
-            var type = provider.GetService(toResolve);
-            type.Should().NotBeNull();           
-        }    
-
-        private static void SetupServiceCollection(IServiceCollection services)
-        {
-            services.AddHttpClient();
-            services.AddOptions();
-
-            var configuration = GenerateConfiguration();
-            services.Configure<FinanceApiConfiguration>(configuration.GetSection(nameof(FinanceApiConfiguration)));
-            services.AddSingleton(cfg => cfg.GetService<IOptions<FinanceApiConfiguration>>().Value);
-
-            services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
-            services.AddSingleton(cfg => cfg.GetService<IOptions<ProviderEventsApiConfiguration>>().Value);
-
-            services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
-            services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
-
-            services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
-            services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
-            services.AddScoped<IPeriodEndService, PeriodEndService>();
-            services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
-        }
-        private static IConfigurationRoot GenerateConfiguration()
-        {
-            var configSource = new MemoryConfigurationSource
+            InitialData = new List<KeyValuePair<string, string>>
             {
-                InitialData = new List<KeyValuePair<string, string>>
-                {                 
-                    new("FUNCTIONS_WORKER_RUNTIME", "dotnet-isolated"),
-                    new("AzureWebJobsServiceBus", "abc"),
-                    new("FinanceApiConfiguration:Url", "https://test.com/"),
-                    new("FinanceApiConfiguration:Identifier","https://test.com/"),
-                    new("ProviderEventsApiConfiguration:Url", "https://test.com/"),
-                    new("ProviderEventsApiConfiguration:Identifier","https://test.com/")
-                }
-            };
-            var provider = new MemoryConfigurationProvider(configSource);
+                new("FUNCTIONS_WORKER_RUNTIME", "dotnet-isolated"),
+                new("AzureWebJobsServiceBus", "abc"),
+                new("FinanceApiConfiguration:Url", "https://test.com/"),
+                new("FinanceApiConfiguration:Identifier","https://test.com/"),
+                new("ProviderEventsApiConfiguration:Url", "https://test.com/"),
+                new("ProviderEventsApiConfiguration:Identifier","https://test.com/")
+            }
+        };
+        var provider = new MemoryConfigurationProvider(configSource);
 
-            return new ConfigurationRoot(new List<IConfigurationProvider> { provider });
-        }
+        return new ConfigurationRoot(new List<IConfigurationProvider> { provider });
     }
 }

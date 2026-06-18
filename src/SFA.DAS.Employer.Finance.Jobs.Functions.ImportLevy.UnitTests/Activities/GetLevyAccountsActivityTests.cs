@@ -5,6 +5,7 @@ using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.UnitTests.Activities;
 
@@ -20,6 +21,7 @@ public class GetLevyAccountsActivityTests
     {
         _accountService = new Mock<IAccountService>();
         _logger = new Mock<ILogger<GetLevyAccountsActivity>>();
+
         _activity = new GetLevyAccountsActivity(_accountService.Object, _logger.Object);
     }
 
@@ -30,13 +32,12 @@ public class GetLevyAccountsActivityTests
             .Select(id => CreateAccount(id))
             .ToList();
         var secondPage = new List<Accounts> { CreateAccount(10001), CreateAccount(10002) };
-        var emptyPage = new List<Accounts>();
 
         _accountService
             .SetupSequence(x => x.GetAccountsAsync(It.IsAny<GetAccountsRequest>()))
             .ReturnsAsync(firstPage)
             .ReturnsAsync(secondPage)
-            .ReturnsAsync(emptyPage);
+            .ReturnsAsync(new List<Accounts>());
 
         var result = await _activity.Run("corr-123");
 
@@ -125,7 +126,7 @@ public class GetLevyAccountsActivityTests
             x => x.GetAccountsAsync(It.Is<GetAccountsRequest>(r =>
                 r.Page == 1 &&
                 r.PageSize == GetLevyAccountsActivity.DefaultPageSize &&
-                r.CorrelationId == correlationId)),
+                r.CorrelationId == correlationId.ToString())),
             Times.Once);
     }
 

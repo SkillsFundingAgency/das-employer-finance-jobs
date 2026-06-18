@@ -3,7 +3,11 @@
     "DAS.Employer.Finance.Jobs": {
       "commandName": "Project",
       "commandLineArgs": "--port 7015",
-      "launchBrowser": false
+      "launchBrowser": false,
+      "environmentVariables": {
+        "ResourceEnvironmentName": "LOCAL"
+      }
     }
   }
 }
+ 

@@ -1,7 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
 
@@ -16,9 +16,7 @@ public class GetLevyAccountsActivity(
     {
         var allAccountIds = new List<long>();
         var pageNumber = 1;
-        var requestCorrelationId = Guid.TryParse(correlationId, out var parsedCorrelationId)
-            ? parsedCorrelationId
-            : Guid.NewGuid();
+        var requestCorrelationId = ActivityExecutionHelper.ParseCorrelationIdOrNew(correlationId).ToString();
 
         while (true)
         {
@@ -35,9 +33,14 @@ public class GetLevyAccountsActivity(
                 CorrelationId = requestCorrelationId
             };
 
-            var pageAccounts = await RetryAsync(
+            var pageAccounts = await ActivityExecutionHelper.RetryAsync(
                 () => accountService.GetAccountsAsync(request),
-                correlationId) ?? [];
+                logger,
+                correlationId,
+                "[CorrelationId: {CorrelationId}] [Retry {Attempt}] Temporary error calling Finance API, retrying...",
+                ex => new InvalidOperationException(
+                    $"[CorrelationId: {correlationId}] Failed to retrieve levy accounts page {pageNumber} after 3 attempts.",
+                    ex)) ?? [];
 
             var pageAccountIds = pageAccounts
                 .Select(account => account.Id)
@@ -60,41 +63,9 @@ public class GetLevyAccountsActivity(
             }
 
             allAccountIds.AddRange(pageAccountIds);
-
-            logger.LogInformation(
-                "[CorrelationId: {CorrelationId}] Retrieved {TotalCount} levy accounts so far",
-                correlationId,
-                allAccountIds.Count);
-
             pageNumber++;
         }
 
         return allAccountIds;
-    }
-
-    private async Task<T> RetryAsync<T>(Func<Task<T>> action, string correlationId, int retries = 3)
-    {
-        var delay = TimeSpan.FromSeconds(2);
-
-        for (var attempt = 1; attempt <= retries; attempt++)
-        {
-            try
-            {
-                return await action();
-            }
-            catch (Exception ex) when (attempt < retries)
-            {
-                logger.LogWarning(
-                    ex,
-                    "[CorrelationId: {CorrelationId}] [Retry {Attempt}] Temporary error calling Finance API, retrying...",
-                    correlationId,
-                    attempt);
-
-                await Task.Delay(delay);
-                delay *= 2;
-            }
-        }
-
-        return await action();
     }
 }

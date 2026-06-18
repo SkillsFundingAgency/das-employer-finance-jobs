@@ -25,7 +25,7 @@ public class WhenCallingGetResponseCode
         config.Url = "https://test.local";
         var response = new HttpResponseMessage
         {
-            Content = new StringContent("", Encoding.UTF8, "application/json"),
+            Content = new StringContent("", System.Text.Encoding.UTF8, "application/json"),
             StatusCode = code
         };
         var getTestRequest = new GetTestRequest(id);
@@ -73,7 +73,7 @@ public class WhenCallingGetResponseCode
             config.Url = "https://test.local";
             var response = new HttpResponseMessage
             {
-                Content = new StringContent("", Encoding.UTF8, "application/json"),
+                Content = new StringContent("", System.Text.Encoding.UTF8, "application/json"),
                 StatusCode = statusCode
             };
             var getTestRequest = new GetTestRequest(id);
