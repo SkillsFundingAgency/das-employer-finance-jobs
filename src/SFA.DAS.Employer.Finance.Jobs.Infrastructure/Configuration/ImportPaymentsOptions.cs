@@ -15,6 +15,7 @@ public class ImportPaymentsOptions
     public int ActiveInstanceInactivityThresholdMinutes { get; set; } = DefaultActiveInstanceInactivityThresholdMinutes;
     public int StaleInstanceTerminationTimeoutSeconds { get; set; } = DefaultStaleInstanceTerminationTimeoutSeconds;
     public bool AdminEndpointsEnabled { get; set; }
+    public bool TransferStagedToOperationalProcessingEnabled { get; set; }
 
     public int GetMaxConcurrentAccounts() => GetMaxConcurrentAccountsOrDefault(MaxConcurrentAccounts);
 

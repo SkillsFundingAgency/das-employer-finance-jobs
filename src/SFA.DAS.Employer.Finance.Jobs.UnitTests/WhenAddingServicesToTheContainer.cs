@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SFA.DAS.Api.Common.Infrastructure;
 using SFA.DAS.Api.Common.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
@@ -22,6 +23,7 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
     [TestCase(typeof(IPeriodEndService))]
     [TestCase(typeof(IAccountPaymentsImportService))]
+    [TestCase(typeof(ITransferStagedToOperationalService))]
     public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
     {
         var serviceCollection = new ServiceCollection();
@@ -44,6 +46,9 @@ public class WhenAddingServicesToTheContainer
         services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
         services.AddSingleton(cfg => cfg.GetService<IOptions<ProviderEventsApiConfiguration>>().Value);
 
+        services.Configure<ImportPaymentsOptions>(configuration.GetSection(nameof(ImportPaymentsOptions)));
+        services.AddSingleton(cfg => cfg.GetService<IOptions<ImportPaymentsOptions>>().Value);
+
         services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
 
@@ -51,6 +56,7 @@ public class WhenAddingServicesToTheContainer
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
         services.AddScoped<IPeriodEndService, PeriodEndService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
+        services.AddScoped<ITransferStagedToOperationalService, TransferStagedToOperationalService>();
     }
     private static IConfigurationRoot GenerateConfiguration()
     {
