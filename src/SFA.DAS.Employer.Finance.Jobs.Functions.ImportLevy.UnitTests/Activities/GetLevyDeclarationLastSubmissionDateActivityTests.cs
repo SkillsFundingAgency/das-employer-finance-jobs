@@ -40,7 +40,7 @@ public class GetLevyDeclarationLastSubmissionDateActivityTests
 
         var result = await _activity.Run(request);
 
-        result.EmpRef.Should().Be("123/AB12345");
+        result.Reference.Should().Be("123/AB12345");
         result.LastSubmissionDate.Should().Be(submissionDate);
         _financeApi.Verify(
             x => x.GetWithResponseCode<LastSubmissionDateResult>(It.Is<GetLevyDeclarationLastSubmissionDateRequest>(r =>
@@ -60,7 +60,7 @@ public class GetLevyDeclarationLastSubmissionDateActivityTests
 
         var result = await _activity.Run(request);
 
-        result.EmpRef.Should().Be("123/AB12345");
+        result.Reference.Should().Be("123/AB12345");
         _financeApi.Verify(
             x => x.GetWithResponseCode<LastSubmissionDateResult>(It.IsAny<GetLevyDeclarationLastSubmissionDateRequest>()),
             Times.Exactly(2));

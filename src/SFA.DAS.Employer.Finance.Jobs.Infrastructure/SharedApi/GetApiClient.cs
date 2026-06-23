@@ -1,15 +1,13 @@
-﻿using System.Net;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
+﻿using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
-
 public abstract class GetApiClient<T> : IGetApiClient<T> where T : IApiConfiguration
 {
     protected readonly HttpClient HttpClient;
@@ -34,7 +32,7 @@ public abstract class GetApiClient<T> : IGetApiClient<T> where T : IApiConfigura
         }
 
         return result.Body;
-    }     
+    }
 
     public async Task<HttpStatusCode> GetResponseCode(IApiRequest request)
     {
@@ -83,26 +81,6 @@ public abstract class GetApiClient<T> : IGetApiClient<T> where T : IApiConfigura
         return getWithResponseCode;
     }
 
-    public async Task Post<TBody>(string url, TBody body)
-    {
-        var json = JsonSerializer.Serialize(body);
-
-        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
-        };
-
-        await AddAuthenticationHeader(httpRequestMessage);
-
-        var response = await HttpClient.SendAsync(httpRequestMessage).ConfigureAwait(false);
-
-        if ((int)response.StatusCode < 200 || (int)response.StatusCode > 299)
-        {
-            var error = await response.Content.ReadAsStringAsync();
-            throw new InvalidOperationException(
-                $"Finance API POST failed. StatusCode: {response.StatusCode}, Response: {error}");
-        }
-    }
     public async Task<TResponse> Post<TResponse>(IApiRequest request)
     {
         var result = await PostWithResponseCode<TResponse>(request);
@@ -114,11 +92,34 @@ public abstract class GetApiClient<T> : IGetApiClient<T> where T : IApiConfigura
 
         return result.Body;
     }
-
     public async Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IApiRequest request)
     {
         var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, request.GetUrl);
 
+        return await SendWithBody<TResponse>(request, httpRequestMessage);
+    }
+
+    public async Task<TResponse> Put<TResponse>(IApiRequest request)
+    {
+        var result = await PutWithResponseCode<TResponse>(request);
+
+        if (IsNot200RangeResponseCode(result.StatusCode))
+        {
+            return default;
+        }
+
+        return result.Body;
+    }
+
+    public async Task<ApiResponse<TResponse>> PutWithResponseCode<TResponse>(IApiRequest request)
+    {
+        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Put, request.GetUrl);
+
+        return await SendWithBody<TResponse>(request, httpRequestMessage);
+    }
+
+    private async Task<ApiResponse<TResponse>> SendWithBody<TResponse>(IApiRequest request, HttpRequestMessage httpRequestMessage)
+    {
         httpRequestMessage.AddVersion(request.Version);
 
         var json = JsonSerializer.Serialize(request.Data, new JsonSerializerOptions
@@ -128,16 +129,16 @@ public abstract class GetApiClient<T> : IGetApiClient<T> where T : IApiConfigura
         });
 
         httpRequestMessage.Content =
-            new StringContent(json, Encoding.UTF8, "application/json");
+            new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
         await AddAuthenticationHeader(httpRequestMessage);
 
         var response = await HttpClient.SendAsync(httpRequestMessage)
-                                       .ConfigureAwait(false);
+            .ConfigureAwait(false);
 
         var responseJson = await response.Content
-                                         .ReadAsStringAsync()
-                                         .ConfigureAwait(false);
+            .ReadAsStringAsync()
+            .ConfigureAwait(false);
 
         var errorContent = string.Empty;
         var responseBody = default(TResponse);

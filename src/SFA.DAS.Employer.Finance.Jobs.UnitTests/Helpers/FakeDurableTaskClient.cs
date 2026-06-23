@@ -1,3 +1,4 @@
+#nullable enable
 using System.Threading;
 using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
@@ -9,13 +10,13 @@ public class FakeDurableTaskClient : DurableTaskClient
     {
     }
 
-    public override Task<string> ScheduleNewOrchestrationInstanceAsync(TaskName orchestratorName, object input = null, StartOrchestrationOptions options = null,
+    public override Task<string> ScheduleNewOrchestrationInstanceAsync(TaskName orchestratorName, object? input = null, StartOrchestrationOptions? options = null,
         CancellationToken cancellation = new())
     {
         return Task.FromResult(options?.InstanceId ?? Guid.NewGuid().ToString());
     }
 
-    public override Task RaiseEventAsync(string instanceId, string eventName, object eventPayload = null, CancellationToken cancellation = new())
+    public override Task RaiseEventAsync(string instanceId, string eventName, object? eventPayload = null, CancellationToken cancellation = new())
     {
         return Task.CompletedTask;
     }
@@ -32,28 +33,28 @@ public class FakeDurableTaskClient : DurableTaskClient
         return Task.FromResult(new OrchestrationMetadata(Guid.NewGuid().ToString(), instanceId));
     }
 
-    public override Task TerminateInstanceAsync(string instanceId, object output = null, CancellationToken cancellation = new())
+    public override Task TerminateInstanceAsync(string instanceId, object? output = null, CancellationToken cancellation = new())
     {
         return Task.CompletedTask;
     }
 
-    public override Task SuspendInstanceAsync(string instanceId, string reason = null, CancellationToken cancellation = new())
+    public override Task SuspendInstanceAsync(string instanceId, string? reason = null, CancellationToken cancellation = new())
     {
         return Task.CompletedTask;
     }
 
-    public override Task ResumeInstanceAsync(string instanceId, string reason = null, CancellationToken cancellation = new())
+    public override Task ResumeInstanceAsync(string instanceId, string? reason = null, CancellationToken cancellation = new())
     {
         return Task.CompletedTask;
     }
 
-    public override Task<OrchestrationMetadata> GetInstancesAsync(string instanceId, bool getInputsAndOutputs = false,
+    public override Task<OrchestrationMetadata?> GetInstancesAsync(string instanceId, bool getInputsAndOutputs = false,
         CancellationToken cancellation = new())
     {
-        return Task.FromResult(new OrchestrationMetadata(Guid.NewGuid().ToString(), instanceId));
+        return Task.FromResult<OrchestrationMetadata?>(new OrchestrationMetadata(Guid.NewGuid().ToString(), instanceId));
     }
 
-    public override AsyncPageable<OrchestrationMetadata> GetAllInstancesAsync(OrchestrationQuery filter = null)
+    public override AsyncPageable<OrchestrationMetadata> GetAllInstancesAsync(OrchestrationQuery? filter = null)
     {
         return new FakeOrchestrationMetadataAsyncPageable();
     }
@@ -70,6 +71,7 @@ public class FakeDurableTaskClient : DurableTaskClient
 
     public override ValueTask DisposeAsync()
     {
+        GC.SuppressFinalize(this);
         return ValueTask.CompletedTask;
     }
 }

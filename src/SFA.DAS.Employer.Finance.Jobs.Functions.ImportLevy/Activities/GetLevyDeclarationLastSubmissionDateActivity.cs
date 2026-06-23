@@ -42,7 +42,7 @@ public class GetLevyDeclarationLastSubmissionDateActivity(
 
         return new PayeScheme
         {
-            EmpRef = request.EmpRef,
+            Reference = request.EmpRef,
             LastSubmissionDate = lastSubmissionDate
         };
     }

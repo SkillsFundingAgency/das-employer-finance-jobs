@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using HMRC.ESFA.Levy.Api.Client;
+﻿using HMRC.ESFA.Levy.Api.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -15,18 +14,19 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services;
+using SFA.DAS.Encoding;
 using SFA.DAS.TokenService.Api.Client;
-
+using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
+
 [ExcludeFromCodeCoverage]
 public static class ServiceRegistrationExtensions
 {
     public static void AddServiceRegistration(this IServiceCollection services, IConfiguration configuration)
-    {        
-
+    {
         services.AddHttpClient();
-     
+
         services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
 
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
@@ -41,8 +41,21 @@ public static class ServiceRegistrationExtensions
 
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
 
+        services.AddScoped<IRefreshPaymentDataService, RefreshPaymentDataService>();
+
+        services.AddScoped<IPaymentTransactionLinesService, PaymentTransactionLinesService>();
+
+        services.AddScoped<ICommitmentsApiClient, CommitmentsApiClient>();
+
+        services.AddScoped<IEmployerFinanceOuterApiClient, EmployerFinanceOuterApiClient>();
+
+        services.AddScoped<IPaymentMetadataService, PaymentMetadataService>();
+
+        services.AddScoped<IEncodingService, EncodingService>();
+
         services.AddHmrcServices(configuration);
     }
+
     private static IServiceCollection AddHmrcServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<HmrcConfiguration>(configuration.GetSection(ConfigurationKeys.Hmrc));
@@ -54,10 +67,9 @@ public static class ServiceRegistrationExtensions
             return new ApprenticeshipLevyApiClient(client);
         });
 
-        //Note: in configuration section the related services name must exist....
         services.Configure<TokenServiceApiClientConfiguration>(configuration.GetSection(ConfigurationKeys.TokenServiceApi));
         services.AddSingleton<ITokenServiceApiClientConfiguration>(cfg => cfg.GetService<IOptions<TokenServiceApiClientConfiguration>>()!.Value);
-        services.AddSingleton<ITokenServiceApiClient>(_ => new TokenServiceApiClient(_.GetService<ITokenServiceApiClientConfiguration>()));
+        services.AddSingleton<ITokenServiceApiClient>(_ => new TokenServiceApiClient(_.GetService<ITokenServiceApiClientConfiguration>()!));
 
         services.AddSingleton<IHmrcService, HmrcService>();
 

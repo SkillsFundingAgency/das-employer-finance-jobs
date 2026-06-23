@@ -1,10 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Net;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-
+using System.Diagnostics.CodeAnalysis;
+using System.Net;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services;
 
@@ -37,11 +36,6 @@ public class FinanceApiClient : IFinanceApiClient<FinanceApiConfiguration>
         return _apiClient.GetWithResponseCode<TResponse>(request);
     }
 
-    public Task Post<TBody>(string url, TBody body)
-    {
-        return _apiClient.Post(url, body);
-    }
-
     public Task<TResponse> Post<TResponse>(IApiRequest request)
     {
         return _apiClient.Post<TResponse>(request);
@@ -50,5 +44,15 @@ public class FinanceApiClient : IFinanceApiClient<FinanceApiConfiguration>
     public Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IApiRequest request)
     {
         return _apiClient.PostWithResponseCode<TResponse>(request);
+    }
+
+    public Task<TResponse> Put<TResponse>(IApiRequest request)
+    {
+        return _apiClient.Put<TResponse>(request);
+    }
+
+    public Task<ApiResponse<TResponse>> PutWithResponseCode<TResponse>(IApiRequest request)
+    {
+        return _apiClient.PutWithResponseCode<TResponse>(request);
     }
 }

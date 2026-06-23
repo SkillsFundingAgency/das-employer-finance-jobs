@@ -28,8 +28,9 @@ public class ImportLevyOrchestrator(ILogger<ImportLevyOrchestrator> logger)
         try
         {
             var accountIds = await context.CallActivityAsync<List<long>>(
-                                        nameof(GetLevyAccountsActivity),
-                                        correlationId) ?? [];
+                nameof(GetLevyAccountsActivity),
+                correlationId) ?? [];
+
             result.AccountIds = accountIds;
             result.TotalAccountsCount = accountIds.Count;
 
@@ -42,25 +43,47 @@ public class ImportLevyOrchestrator(ILogger<ImportLevyOrchestrator> logger)
             foreach (var accountId in accountIds)
             {
                 payeSchemeTasks.Add(context.CallActivityAsync<List<PayeScheme>>(
-                    nameof(GetPayeSchemesByAccountActivity),
-                    new GetPayeSchemesByAccountActivityRequest(accountId, correlationId)));
+                    nameof(GetAccountPayeSchemesActivity),
+                    new GetAccountPayeSchemesActivityInput
+                    {
+                        CorrelationId = correlationId,
+                        AccountId = accountId
+                    }));
             }
 
             var payeSchemesByAccount = await Task.WhenAll(payeSchemeTasks);
-            var allPayeSchemes = payeSchemesByAccount.SelectMany(x => x ?? []).ToList();
+            var allPayeSchemes = new List<PayeScheme>();
+            foreach (var payeSchemes in payeSchemesByAccount)
+            {
+                if (payeSchemes == null || payeSchemes.Count == 0)
+                {
+                    result.AccountsWithoutPayeSchemesCount++;
+                    continue;
+                }
+
+                allPayeSchemes.AddRange(payeSchemes);
+            }
+
+            result.TotalPayeSchemesCount = allPayeSchemes.Count;
 
             replaySafeLogger.LogInformation(
-                "[CorrelationId: {CorrelationId}] Retrieved {PayeSchemeCount} total PAYE schemes across {AccountCount} accounts; now retriving last submision dates",
+                "[CorrelationId: {CorrelationId}] Retrieved {PayeSchemeCount} total PAYE schemes across {AccountCount} accounts; now retrieving last submission dates",
                 correlationId,
                 allPayeSchemes.Count,
                 accountIds.Count);
+
+            if (allPayeSchemes.Count == 0)
+            {
+                result.Success = true;
+                return result;
+            }
 
             var submissionDateTasks = new List<Task<PayeScheme>>(allPayeSchemes.Count);
             foreach (var payeScheme in allPayeSchemes)
             {
                 submissionDateTasks.Add(context.CallActivityAsync<PayeScheme>(
                     nameof(GetLevyDeclarationLastSubmissionDateActivity),
-                    new GetLevyDeclarationLastSubmissionDateActivityRequest(payeScheme.EmpRef, correlationId)));
+                    new GetLevyDeclarationLastSubmissionDateActivityRequest(payeScheme.Reference, correlationId)));
             }
 
             var payeSchemesWithSubmissionDate = (await Task.WhenAll(submissionDateTasks)).ToList();
@@ -72,7 +95,7 @@ public class ImportLevyOrchestrator(ILogger<ImportLevyOrchestrator> logger)
 
             result.PayeSchemes = payeSchemesWithSubmissionDate;
 
-            var results = new List<ImportLevyDeclarationsActivityResult>(payeSchemesWithSubmissionDate.Count);
+            var levyImportResults = new List<ImportLevyDeclarationsActivityResult>(payeSchemesWithSubmissionDate.Count);
             foreach (var payeSchemeBatch in payeSchemesWithSubmissionDate.Chunk(MaxConcurrentHmrcImportActivities))
             {
                 var importLevyTasks = new List<Task<ImportLevyDeclarationsActivityResult>>(payeSchemeBatch.Length);
@@ -80,19 +103,19 @@ public class ImportLevyOrchestrator(ILogger<ImportLevyOrchestrator> logger)
                 {
                     importLevyTasks.Add(context.CallActivityAsync<ImportLevyDeclarationsActivityResult>(
                         nameof(ImportLevyDeclarationsActivity),
-                        new ImportLevyActivityRequest(payeScheme.EmpRef, payeScheme.LastSubmissionDate, correlationId)));
+                        new ImportLevyActivityRequest(payeScheme.Reference, payeScheme.LastSubmissionDate, correlationId)));
                 }
 
-                results.AddRange(await Task.WhenAll(importLevyTasks));
+                levyImportResults.AddRange(await Task.WhenAll(importLevyTasks));
             }
 
             replaySafeLogger.LogInformation(
                 "[CorrelationId: {CorrelationId}] Levy import activities completed. EmployeeReferencesProcessed: {EmployeeReferencesProcessed}, DeclarationsImported: {DeclarationsImported}",
                 correlationId,
-                results.Count,
-                results.Sum(x => x.DeclarationsCount));
+                levyImportResults.Count,
+                levyImportResults.Sum(x => x.DeclarationsCount));
 
-            result.LevyDeclarationsActivityResults = results;
+            result.LevyDeclarationsActivityResults = levyImportResults;
             result.Success = true;
         }
         catch (Exception ex)

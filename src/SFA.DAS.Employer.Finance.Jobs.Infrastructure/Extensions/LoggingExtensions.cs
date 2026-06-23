@@ -14,7 +14,7 @@ public static class LoggingExtensions
             builder.AddFilter<ApplicationInsightsLoggerProvider>(string.Empty, LogLevel.Information);
             builder.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Information);
             builder.AddFilter<ApplicationInsightsLoggerProvider>("SFA.DAS", LogLevel.Information);
-            
+
             // General filters
             builder.AddFilter("Microsoft", LogLevel.Warning);
             builder.AddFilter("System", LogLevel.Warning);
