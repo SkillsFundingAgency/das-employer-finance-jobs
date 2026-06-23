@@ -37,6 +37,8 @@ public static class ServiceRegistrationExtensions
 
         services.AddScoped<IRefreshPaymentDataService, RefreshPaymentDataService>();
 
+        services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();
+
         services.AddScoped<IPaymentTransactionLinesService, PaymentTransactionLinesService>();
 
         services.AddScoped<ICommitmentsApiClient, CommitmentsApiClient>();

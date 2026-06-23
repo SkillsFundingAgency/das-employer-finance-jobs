@@ -11,14 +11,9 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
     [Function(nameof(ProcessAccountOrchestrator))]
     public async Task<AccountProcessingResult> RunOrchestrator([OrchestrationTrigger] TaskOrchestrationContext context)
     {
-        var input = context.GetInput<ProcessAccountInput>();
-        var correlationId = input?.CorrelationId ?? context.NewGuid().ToString();
-        var idempotencyKey = input?.IdempotencyKey ?? $"{input?.AccountId}_{input?.PeriodEndRef}";
-
-        if (input == null)
-        {
-            throw new ArgumentNullException(nameof(input));
-        }
+        var input = context.GetInput<ProcessAccountInput>() ?? throw new ArgumentNullException("input");
+        var correlationId = input.CorrelationId ?? context.NewGuid().ToString();
+        var idempotencyKey = input.IdempotencyKey ?? $"{input.AccountId}_{input.PeriodEndRef}";
 
         logger.LogInformation(
             "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator started for AccountId {AccountId} PeriodEnd {PeriodEndRef}",
@@ -86,6 +81,47 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
             refreshPaymentsResult.PaymentsCreated,
             refreshPaymentsResult.PaymentDetails?.Count ?? 0,
             refreshPaymentsResult.Message);
+
+        if (refreshPaymentsResult.Status == "Succeeded")
+        {
+            var publishRefreshPaymentDataCompletedEventInput = new PublishRefreshPaymentDataCompletedEventInput
+            {
+                AccountId = input.AccountId,
+                PeriodEnd = input.PeriodEndRef,
+                PaymentsProcessed = refreshPaymentsResult.PaymentsCreated > 0,
+                CorrelationId = correlationId
+            };
+
+            try
+            {
+                var publishRefreshPaymentDataCompletedEventResult = await context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
+                    nameof(RefreshPaymentDataCompletedEventActivities.PublishRefreshPaymentDataCompletedEventActivity),
+                    publishRefreshPaymentDataCompletedEventInput,
+                    new TaskOptions(retryPolicy));
+
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, received PublishRefreshPaymentDataCompletedEventActivity result with Status: {Status} Message: {Message}",
+                    correlationId,
+                    publishRefreshPaymentDataCompletedEventResult.Status,
+                    publishRefreshPaymentDataCompletedEventResult.Message);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, PublishRefreshPaymentDataCompletedEventActivity failed for AccountId {AccountId} PeriodEnd {PeriodEndRef}. Continuing account payment processing.",
+                    correlationId,
+                    input.AccountId,
+                    input.PeriodEndRef);
+            }
+        }
+        else
+        {
+            logger.LogInformation(
+                "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, RefreshPaymentDataCompletedEvent is not published because RefreshPaymentDataActivity returned Status: {RefreshPaymentDataStatus}.",
+                correlationId,
+                refreshPaymentsResult.Status);
+        }
        
         var paymentMetadataResult = new CreatePaymentMetadataResult
         {
@@ -177,14 +213,14 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
             logger.LogInformation(
                 "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, CreatePaymentTransactionLinesActivity is not started because staging did not produce payment details for AccountId {AccountId} PeriodEnd {PeriodEndRef}. RefreshPaymentDataStatus: {RefreshPaymentDataStatus}",
                 correlationId,
-                input?.AccountId,
-                input?.PeriodEndRef,
+                input.AccountId,
+                input.PeriodEndRef,
                 refreshPaymentsResult.Status);
         }
 
         var result = new AccountProcessingResult
         {
-            AccountId = input?.AccountId ?? 0,
+            AccountId = input.AccountId,
             Success = importPaymentsResult.Status == "Succeeded"
                       && importExistingPaymentIdsResult.Status == "Succeeded"
                       && refreshPaymentsResult.Status == "Succeeded"
@@ -197,8 +233,8 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
         logger.LogInformation(
             "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator completed for AccountId {AccountId} PeriodEnd {PeriodEndRef}. PaymentsProcessed: {PaymentsProcessed}",
             correlationId,
-            input?.AccountId,
-            input?.PeriodEndRef,
+            input.AccountId,
+            input.PeriodEndRef,
             result.PaymentsProcessed);
         return result;
     }
