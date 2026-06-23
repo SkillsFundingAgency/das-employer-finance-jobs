@@ -85,7 +85,9 @@ public class ImportLevyTimerTests
 
         Func<Task> act = async () => await timer.Run(timerInfo, clientMock.Object);
 
-        await act.Should().ThrowAsync<Exception>().WithMessage("Boom");
+        var exceptionAssertion = await act.Should().ThrowAsync<InvalidOperationException>();
+        exceptionAssertion.WithMessage("[CorrelationId: *] Failed to start ImportLevyOrchestrator.");
+        exceptionAssertion.Which.InnerException.Should().BeOfType<Exception>().Which.Message.Should().Be("Boom");
         _logger.VerifyLogContains("Error starting ImportLevyOrchestrator");
     }
 }
