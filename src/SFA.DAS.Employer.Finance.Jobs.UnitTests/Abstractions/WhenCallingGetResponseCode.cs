@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
-using AutoFixture.NUnit4;
+using AutoFixture.NUnit3;
 using Moq.Protected;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
@@ -25,7 +25,7 @@ public class WhenCallingGetResponseCode
         config.Url = "https://test.local";
         var response = new HttpResponseMessage
         {
-            Content = new StringContent("", Encoding.UTF8, "application/json"),
+            Content = new StringContent("", System.Text.Encoding.UTF8, "application/json"),
             StatusCode = code
         };
         var getTestRequest = new GetTestRequest(id);
@@ -73,7 +73,7 @@ public class WhenCallingGetResponseCode
             config.Url = "https://test.local";
             var response = new HttpResponseMessage
             {
-                Content = new StringContent("", Encoding.UTF8, "application/json"),
+                Content = new StringContent("", System.Text.Encoding.UTF8, "application/json"),
                 StatusCode = statusCode
             };
             var getTestRequest = new GetTestRequest(id);

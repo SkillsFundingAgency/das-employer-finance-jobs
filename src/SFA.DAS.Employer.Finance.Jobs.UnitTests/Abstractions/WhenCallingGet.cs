@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
-using AutoFixture.NUnit4;
+using AutoFixture.NUnit3;
 using Moq.Protected;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
@@ -64,7 +64,7 @@ public class WhenCallingGet
         var testObject = JsonSerializer.Serialize(new TestResponse { MyResponse = responseValue });
         var response = new HttpResponseMessage
         {
-            Content = new StringContent(testObject, Encoding.UTF8, "application/json"),
+            Content = new StringContent(testObject, System.Text.Encoding.UTF8, "application/json"),
             StatusCode = HttpStatusCode.OK
         };
         var getTestRequest = new GetTestRequest(id);

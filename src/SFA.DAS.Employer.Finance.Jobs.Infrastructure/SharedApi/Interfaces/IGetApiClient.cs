@@ -1,16 +1,16 @@
-﻿using System.Net;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+﻿using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
+using System.Net;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
+
+public interface IGetApiClient<T>
 {
-    public interface IGetApiClient<T>
-    {
-        Task<TResponse> Get<TResponse>(IApiRequest request);
-        Task<HttpStatusCode> GetResponseCode(IApiRequest request);
-        Task<ApiResponse<TResponse>> GetWithResponseCode<TResponse>(IApiRequest request);
-        Task Post<TBody>(string url, TBody body);
-        Task<TResponse> Post<TResponse>(IApiRequest request);
-        Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IApiRequest request);
-    }
+    Task<TResponse> Get<TResponse>(IApiRequest request);
+    Task<HttpStatusCode> GetResponseCode(IApiRequest request);
+    Task<ApiResponse<TResponse>> GetWithResponseCode<TResponse>(IApiRequest request);
+    Task<TResponse> Post<TResponse>(IApiRequest request);
+    Task<ApiResponse<TResponse>> PostWithResponseCode<TResponse>(IApiRequest request);
+    Task<TResponse> Put<TResponse>(IApiRequest request);
+    Task<ApiResponse<TResponse>> PutWithResponseCode<TResponse>(IApiRequest request);
 }

@@ -1,4 +1,4 @@
-using AutoFixture.NUnit4;
+using AutoFixture.NUnit3;
 using Moq.Protected;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
@@ -22,7 +22,7 @@ public class WhenCallingGetWithResponseCode
         config.Url = "https://test.local";
         var response = new HttpResponseMessage
         {
-            Content = new StringContent("\"test\"", Encoding.UTF8, "application/json"),
+            Content = new StringContent("\"test\"", System.Text.Encoding.UTF8, "application/json"),
             StatusCode = HttpStatusCode.OK
         };
         var getTestRequest = new GetTestRequest(id);
@@ -170,7 +170,7 @@ public class WhenCallingGetWithResponseCode
         config.Url = "https://test.local";
         var response = new HttpResponseMessage
         {
-            Content = new StringContent("", Encoding.UTF8, "text/plain"),
+            Content = new StringContent("", System.Text.Encoding.UTF8, "text/plain"),
             StatusCode = HttpStatusCode.NotFound
         };
         var getTestRequest = new GetTestRequestNoVersion(id);
@@ -200,7 +200,7 @@ public class WhenCallingGetWithResponseCode
         config.Identifier = "";
         var response = new HttpResponseMessage
         {
-            Content = new StringContent(responseContent, Encoding.UTF8, "text/plain"),
+            Content = new StringContent(responseContent, System.Text.Encoding.UTF8, "text/plain"),
             StatusCode = HttpStatusCode.TooManyRequests
         };
         var getTestRequest = new GetTestRequestNoVersion(id);

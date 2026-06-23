@@ -1,4 +1,5 @@
 ﻿using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 

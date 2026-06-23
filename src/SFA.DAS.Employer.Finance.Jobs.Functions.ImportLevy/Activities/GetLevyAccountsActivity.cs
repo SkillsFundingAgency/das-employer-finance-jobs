@@ -1,7 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
 
@@ -16,10 +16,16 @@ public class GetLevyAccountsActivity(
     {
         var allAccountIds = new List<long>();
         var pageNumber = 1;
-        var requestCorrelationId = ActivityExecutionHelper.ParseCorrelationIdOrNew(correlationId);
+        var requestCorrelationId = ActivityExecutionHelper.ParseCorrelationIdOrNew(correlationId).ToString();
 
         while (true)
         {
+            logger.LogInformation(
+                "[CorrelationId: {CorrelationId}] Retrieving levy accounts page {PageNumber} with page size {PageSize}",
+                correlationId,
+                pageNumber,
+                DefaultPageSize);
+
             var request = new GetAccountsRequest
             {
                 Page = pageNumber,
@@ -33,7 +39,7 @@ public class GetLevyAccountsActivity(
                 correlationId,
                 "[CorrelationId: {CorrelationId}] [Retry {Attempt}] Temporary error calling Finance API, retrying...",
                 ex => new InvalidOperationException(
-                    $"[CorrelationId: {correlationId}] Failed to retrieve levy accounts after 3 attempts.",
+                    $"[CorrelationId: {correlationId}] Failed to retrieve levy accounts page {pageNumber} after 3 attempts.",
                     ex)) ?? [];
 
             var pageAccountIds = pageAccounts
@@ -57,7 +63,6 @@ public class GetLevyAccountsActivity(
             }
 
             allAccountIds.AddRange(pageAccountIds);
-
             pageNumber++;
         }
 
