@@ -39,8 +39,8 @@ public class AccountService(IFinanceApiClient<FinanceApiConfiguration> financeAp
                 request.AccountId,
                 request.Source);
 
-            var response = await financeApiClient.Get<FinanceApiGetPayeSchemesResponse>(request);
-            var payeSchemes = response?.Schemes?
+            var schemes = await financeApiClient.Get<List<FinanceApiPayeScheme>>(request);
+            var payeSchemes = schemes?
                 .Where(scheme => !string.IsNullOrWhiteSpace(scheme.EmpRef))
                 .Select(scheme => new PayeScheme
                 {

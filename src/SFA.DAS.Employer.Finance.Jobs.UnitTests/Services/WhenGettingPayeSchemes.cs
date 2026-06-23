@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
@@ -27,17 +28,14 @@ public class WhenGettingPayeSchemes
     public async Task Then_Returns_Paye_Schemes_From_Typed_Response()
     {
         var request = new GetAccountPayeSchemesRequest { AccountId = 10, CorrelationId = Guid.NewGuid() };
-        var response = new FinanceApiGetPayeSchemesResponse
-        {
-            Schemes =
-            [
-                new FinanceApiPayeScheme { EmpRef = "123/AB456", Name = "Scheme one" },
-                new FinanceApiPayeScheme { EmpRef = "123/CD789" }
-            ]
-        };
+        List<FinanceApiPayeScheme> response =
+        [
+            new FinanceApiPayeScheme { EmpRef = "123/AB456", Name = "Scheme one" },
+            new FinanceApiPayeScheme { EmpRef = "123/CD789" }
+        ];
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.Is<GetAccountPayeSchemesRequest>(r => r.AccountId == 10)))
+            .Setup(x => x.Get<List<FinanceApiPayeScheme>>(It.Is<GetAccountPayeSchemesRequest>(r => r.AccountId == 10)))
             .ReturnsAsync(response);
 
         var result = await _accountService.GetPayeSchemesAsync(request);
@@ -52,8 +50,8 @@ public class WhenGettingPayeSchemes
         var request = new GetAccountPayeSchemesRequest { AccountId = 20, CorrelationId = Guid.NewGuid() };
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.IsAny<GetAccountPayeSchemesRequest>()))
-            .Returns(Task.FromResult((FinanceApiGetPayeSchemesResponse)null!));
+            .Setup(x => x.Get<List<FinanceApiPayeScheme>>(It.IsAny<GetAccountPayeSchemesRequest>()))
+            .Returns(Task.FromResult((List<FinanceApiPayeScheme>)null!));
 
         var result = await _accountService.GetPayeSchemesAsync(request);
 
@@ -66,8 +64,8 @@ public class WhenGettingPayeSchemes
         var request = new GetAccountPayeSchemesRequest { AccountId = 30, CorrelationId = Guid.NewGuid() };
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.IsAny<GetAccountPayeSchemesRequest>()))
-            .ReturnsAsync(new FinanceApiGetPayeSchemesResponse());
+            .Setup(x => x.Get<List<FinanceApiPayeScheme>>(It.IsAny<GetAccountPayeSchemesRequest>()))
+            .ReturnsAsync([]);
 
         var result = await _accountService.GetPayeSchemesAsync(request);
 
@@ -80,8 +78,8 @@ public class WhenGettingPayeSchemes
         var request = new GetAccountPayeSchemesRequest { AccountId = 40, CorrelationId = Guid.NewGuid() };
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.IsAny<GetAccountPayeSchemesRequest>()))
-            .ReturnsAsync(new FinanceApiGetPayeSchemesResponse { Schemes = [] });
+            .Setup(x => x.Get<List<FinanceApiPayeScheme>>(It.IsAny<GetAccountPayeSchemesRequest>()))
+            .ReturnsAsync([]);
 
         var result = await _accountService.GetPayeSchemesAsync(request);
 
@@ -92,17 +90,14 @@ public class WhenGettingPayeSchemes
     public async Task And_Response_Contains_Entries_Without_References_Then_Ignores_Them()
     {
         var request = new GetAccountPayeSchemesRequest { AccountId = 50, CorrelationId = Guid.NewGuid() };
-        var response = new FinanceApiGetPayeSchemesResponse
-        {
-            Schemes =
-            [
-                new FinanceApiPayeScheme { Name = "Missing ref" },
-                new FinanceApiPayeScheme { EmpRef = "555/CC333" }
-            ]
-        };
+        List<FinanceApiPayeScheme> response =
+        [
+            new FinanceApiPayeScheme { Name = "Missing ref" },
+            new FinanceApiPayeScheme { EmpRef = "555/CC333" }
+        ];
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.IsAny<GetAccountPayeSchemesRequest>()))
+            .Setup(x => x.Get<List<FinanceApiPayeScheme>>(It.IsAny<GetAccountPayeSchemesRequest>()))
             .ReturnsAsync(response);
 
         var result = await _accountService.GetPayeSchemesAsync(request);
@@ -117,7 +112,7 @@ public class WhenGettingPayeSchemes
         var expectedException = new InvalidOperationException("Finance API Error");
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.IsAny<GetAccountPayeSchemesRequest>()))
+            .Setup(x => x.Get<List<FinanceApiPayeScheme>>(It.IsAny<GetAccountPayeSchemesRequest>()))
             .ThrowsAsync(expectedException);
 
         var act = async () => await _accountService.GetPayeSchemesAsync(request);
@@ -138,16 +133,16 @@ public class WhenGettingPayeSchemes
         };
 
         _mockFinanceApiClient
-            .Setup(x => x.Get<FinanceApiGetPayeSchemesResponse>(It.Is<GetAccountPayeSchemesRequest>(r =>
+            .Setup(x => x.Get<List<FinanceApiPayeScheme>>(It.Is<GetAccountPayeSchemesRequest>(r =>
                 r.AccountId == 70 &&
                 r.Source == "government-gateway" &&
                 r.GetUrl == "api/accounts/70/paye-schemes?source=government-gateway")))
-            .ReturnsAsync(new FinanceApiGetPayeSchemesResponse { Schemes = [] });
+            .ReturnsAsync([]);
 
         await _accountService.GetPayeSchemesAsync(request);
 
         _mockFinanceApiClient.Verify(
-            x => x.Get<FinanceApiGetPayeSchemesResponse>(It.Is<GetAccountPayeSchemesRequest>(r =>
+            x => x.Get<List<FinanceApiPayeScheme>>(It.Is<GetAccountPayeSchemesRequest>(r =>
                 r.AccountId == 70 &&
                 r.Source == "government-gateway" &&
                 r.GetUrl == "api/accounts/70/paye-schemes?source=government-gateway")),
