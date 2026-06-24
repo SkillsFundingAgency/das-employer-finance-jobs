@@ -44,7 +44,7 @@ public class GetLevyDeclarationLastSubmissionDateActivityTests
         result.LastSubmissionDate.Should().Be(submissionDate);
         _financeApi.Verify(
             x => x.GetWithResponseCode<LastSubmissionDateResult>(It.Is<GetLevyDeclarationLastSubmissionDateRequest>(r =>
-                r.GetUrl == "api/paye-schemes/123%2fAB12345/last-submission-date")),
+                r.GetUrl == "api/paye-schemes/last-submission-date?empRef=123%2FAB12345")),
             Times.Once);
     }
 
@@ -64,6 +64,23 @@ public class GetLevyDeclarationLastSubmissionDateActivityTests
         _financeApi.Verify(
             x => x.GetWithResponseCode<LastSubmissionDateResult>(It.IsAny<GetLevyDeclarationLastSubmissionDateRequest>()),
             Times.Exactly(2));
+    }
+
+    [Test]
+    public async Task Run_Builds_Query_String_Url_For_At_Paye_Ref()
+    {
+        var request = new GetLevyDeclarationLastSubmissionDateActivityRequest("001/AC004317", "corr-123");
+
+        _financeApi
+            .Setup(x => x.GetWithResponseCode<LastSubmissionDateResult>(It.IsAny<GetLevyDeclarationLastSubmissionDateRequest>()))
+            .ReturnsAsync(CreateResponse(new LastSubmissionDateResult { LastSubmissionDate = null }));
+
+        await _activity.Run(request);
+
+        _financeApi.Verify(
+            x => x.GetWithResponseCode<LastSubmissionDateResult>(It.Is<GetLevyDeclarationLastSubmissionDateRequest>(r =>
+                r.GetUrl == "api/paye-schemes/last-submission-date?empRef=001%2FAC004317")),
+            Times.Once);
     }
 
     [Test]
