@@ -21,6 +21,8 @@ public static class ServiceRegistrationExtensions
 
         services.AddHttpClient();
 
+        services.ConfigureNServiceBusForSend(configuration);
+
         services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
 
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));

@@ -28,9 +28,6 @@ public static class AddConfigurationOptionsExtension
         services.Configure<ImportPaymentsOptions>(configuration.GetSection(nameof(ImportPaymentsOptions)));
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<ImportPaymentsOptions>>().Value);
 
-        services.Configure<RefreshPaymentDataCompletedEventOptions>(configuration.GetSection(nameof(RefreshPaymentDataCompletedEventOptions)));
-        services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<RefreshPaymentDataCompletedEventOptions>>().Value);
-
         var encodingConfig = new EncodingConfig { Encodings = [] };
         configuration.GetSection(nameof(encodingConfig.Encodings)).Bind(encodingConfig.Encodings);
         services.AddSingleton(encodingConfig);

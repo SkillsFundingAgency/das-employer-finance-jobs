@@ -2,9 +2,9 @@
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using NServiceBus;
 using SFA.DAS.Api.Common.Infrastructure;
 using SFA.DAS.Api.Common.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
@@ -48,12 +48,10 @@ public class WhenAddingServicesToTheContainer
         services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
         services.AddSingleton(cfg => cfg.GetService<IOptions<ProviderEventsApiConfiguration>>().Value);
 
-        services.Configure<RefreshPaymentDataCompletedEventOptions>(configuration.GetSection(nameof(RefreshPaymentDataCompletedEventOptions)));
-        services.AddSingleton(cfg => cfg.GetService<IOptions<RefreshPaymentDataCompletedEventOptions>>().Value);
-
         services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
 
+        services.AddSingleton(new Mock<IMessageSession>().Object);
         services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
         services.AddScoped<IPeriodEndService, PeriodEndService>();
