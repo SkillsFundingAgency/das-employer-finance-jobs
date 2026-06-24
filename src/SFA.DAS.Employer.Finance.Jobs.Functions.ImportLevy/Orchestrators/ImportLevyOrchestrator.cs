@@ -103,7 +103,7 @@ public class ImportLevyOrchestrator(ILogger<ImportLevyOrchestrator> logger)
                 {
                     importLevyTasks.Add(context.CallActivityAsync<ImportLevyDeclarationsActivityResult>(
                         nameof(ImportLevyDeclarationsActivity),
-                        new ImportLevyActivityRequest(payeScheme.Reference, payeScheme.LastSubmissionDate, correlationId)));
+                        new ImportLevyActivityRequest(payeScheme.Reference, payeScheme.LastSubmissionDate?.AddDays(-1), correlationId)));
                 }
 
                 levyImportResults.AddRange(await Task.WhenAll(importLevyTasks));

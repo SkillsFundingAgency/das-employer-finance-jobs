@@ -36,7 +36,7 @@ public class GetLevyDeclarationLastSubmissionDateActivityTests
 
         _financeApi
             .Setup(x => x.GetWithResponseCode<LastSubmissionDateResult>(It.IsAny<GetLevyDeclarationLastSubmissionDateRequest>()))
-            .ReturnsAsync(CreateResponse(new LastSubmissionDateResult { LastSumissionDate = submissionDate }));
+            .ReturnsAsync(CreateResponse(new LastSubmissionDateResult { LastSubmissionDate = submissionDate }));
 
         var result = await _activity.Run(request);
 
@@ -44,7 +44,7 @@ public class GetLevyDeclarationLastSubmissionDateActivityTests
         result.LastSubmissionDate.Should().Be(submissionDate);
         _financeApi.Verify(
             x => x.GetWithResponseCode<LastSubmissionDateResult>(It.Is<GetLevyDeclarationLastSubmissionDateRequest>(r =>
-                r.GetUrl == "api/levy-declarations/123%2fAB12345/last-submission-date")),
+                r.GetUrl == "api/paye-schemes/123%2fAB12345/last-submission-date")),
             Times.Once);
     }
 
@@ -56,7 +56,7 @@ public class GetLevyDeclarationLastSubmissionDateActivityTests
         _financeApi
             .SetupSequence(x => x.GetWithResponseCode<LastSubmissionDateResult>(It.IsAny<GetLevyDeclarationLastSubmissionDateRequest>()))
             .ThrowsAsync(new Exception("temporary failure"))
-            .ReturnsAsync(CreateResponse(new LastSubmissionDateResult { LastSumissionDate = new DateTime(2026, 4, 1) }));
+            .ReturnsAsync(CreateResponse(new LastSubmissionDateResult { LastSubmissionDate = new DateTime(2026, 4, 1) }));
 
         var result = await _activity.Run(request);
 

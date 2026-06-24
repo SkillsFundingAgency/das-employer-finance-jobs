@@ -83,6 +83,12 @@ public class ImportLevyOrchestratorTests
         result.AccountsWithoutPayeSchemesCount.Should().Be(0);
         result.LevyDeclarationsActivityResults.Should().HaveCount(3);
         result.LevyDeclarationsActivityResults.Sum(x => x.DeclarationsCount).Should().Be(6);
+
+        _context.Verify(c => c.CallActivityAsync<ImportLevyDeclarationsActivityResult>(
+                It.Is<TaskName>(x => x.Name == nameof(ImportLevyDeclarationsActivity)),
+                It.Is<ImportLevyActivityRequest>(r => r.FromDate == new DateTime(2026, 1, 31)),
+                It.IsAny<TaskOptions>()),
+            Times.Exactly(3));
     }
 
     [Test]
