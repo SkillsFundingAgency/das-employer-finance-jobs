@@ -8,6 +8,13 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Extensions;
 public class WhenUsingNServiceBusExtensions
 {
     [Test]
+    public void Then_Endpoint_Name_Is_Unique_To_The_New_Jobs_Function_App()
+    {
+        NServiceBusExtensions.EndpointName.Should().Be("SFA.DAS.EmployerFinance.Jobs.Functions");
+        NServiceBusExtensions.EndpointName.Should().NotBe("SFA.DAS.EmployerFinance.Jobs");
+    }
+
+    [Test]
     public void Then_Fully_Qualified_Namespace_Is_Read_From_Functions_Service_Bus_Setting()
     {
         var configuration = BuildConfiguration(new KeyValuePair<string, string>("AzureWebJobsServiceBus__fullyQualifiedNamespace", "test.servicebus.windows.net"));
@@ -28,6 +35,16 @@ public class WhenUsingNServiceBusExtensions
     }
 
     [Test]
+    public void Then_Fully_Qualified_Namespace_Is_Read_From_Plain_Service_Bus_Setting()
+    {
+        var configuration = BuildConfiguration(new KeyValuePair<string, string>("AzureWebJobsServiceBus", "plain.servicebus.windows.net"));
+
+        var result = NServiceBusExtensions.GetFullyQualifiedNamespace(configuration);
+
+        result.Should().Be("plain.servicebus.windows.net");
+    }
+
+    [Test]
     public void Then_Fully_Qualified_Namespace_Is_Extracted_From_Connection_String()
     {
         const string connectionString = "Endpoint=sb://connection.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc";
@@ -43,6 +60,34 @@ public class WhenUsingNServiceBusExtensions
         const string connectionString = "SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc";
 
         Assert.Throws<FormatException>(() => connectionString.GetFullyQualifiedNamespace());
+    }
+
+    [Test]
+    public void Then_License_Is_Read_From_NServiceBus_License_Setting()
+    {
+        var configuration = BuildConfiguration(new KeyValuePair<string, string>("NServiceBusLicense", "license"));
+
+        var result = NServiceBusExtensions.GetLicense(configuration);
+
+        result.Should().Be("license");
+    }
+
+    [Test]
+    public void Then_License_Is_Read_From_Legacy_Finance_Jobs_Setting()
+    {
+        var configuration = BuildConfiguration(new KeyValuePair<string, string>("EmployerFinanceJobsConfiguration:NServiceBusLicense", "legacy-license"));
+
+        var result = NServiceBusExtensions.GetLicense(configuration);
+
+        result.Should().Be("legacy-license");
+    }
+
+    [Test]
+    public void Then_Missing_License_Returns_Empty_String()
+    {
+        var result = NServiceBusExtensions.GetLicense(BuildConfiguration());
+
+        result.Should().BeEmpty();
     }
 
     private static IConfigurationRoot BuildConfiguration(params KeyValuePair<string, string>[] values)

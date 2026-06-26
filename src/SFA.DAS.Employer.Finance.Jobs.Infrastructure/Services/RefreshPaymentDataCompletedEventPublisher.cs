@@ -21,6 +21,6 @@ public class RefreshPaymentDataCompletedEventPublisher(
             refreshPaymentDataCompletedEvent.PeriodEnd,
             refreshPaymentDataCompletedEvent.PaymentsProcessed);
 
-        await messageSession.Publish(refreshPaymentDataCompletedEvent, publishOptions);
+        await messageSession.Publish(refreshPaymentDataCompletedEvent, publishOptions, cancellationToken);
     }
 }

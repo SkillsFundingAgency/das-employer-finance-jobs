@@ -1,3 +1,4 @@
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using NServiceBus;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
@@ -35,8 +36,9 @@ public class WhenPublishingRefreshPaymentDataCompletedEvent
         _messageSessionMock
             .Setup(session => session.Publish(
                 completedEvent,
-                It.IsAny<PublishOptions>()))
-            .Callback<object, PublishOptions>((_, options) => publishOptions = options)
+                It.IsAny<PublishOptions>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<object, PublishOptions, CancellationToken>((_, options, _) => publishOptions = options)
             .Returns(Task.CompletedTask);
 
         await _publisher.Publish(completedEvent, "correlation-id");
@@ -44,7 +46,8 @@ public class WhenPublishingRefreshPaymentDataCompletedEvent
         _messageSessionMock.Verify(
             session => session.Publish(
                 completedEvent,
-                It.IsAny<PublishOptions>()),
+                It.IsAny<PublishOptions>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
         publishOptions.Should().NotBeNull();
         publishOptions.GetHeaders()[Headers.CorrelationId].Should().Be("correlation-id");
