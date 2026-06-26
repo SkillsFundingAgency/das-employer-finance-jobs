@@ -11,7 +11,7 @@ public class ImportLevyTimer(ILogger<ImportLevyTimer> logger)
 {
     [Function("ImportLevyTimer")]
     public async Task Run(
-        [TimerTrigger("0 0 * * * *")] TimerInfo timerInfo,
+        [TimerTrigger("0 0 13 23 * *")] TimerInfo timerInfo,
         [DurableClient] DurableTaskClient client)
     {
         var correlationId = Guid.NewGuid().ToString();
