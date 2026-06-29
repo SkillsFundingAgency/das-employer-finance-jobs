@@ -13,7 +13,7 @@ public static class NServiceBusExtensions
     {
         var endpointConfiguration = new EndpointConfiguration(EndpointName);
 
-        endpointConfiguration.UseSerialization<SystemJsonSerializer>();
+        endpointConfiguration.UseSerialization<NewtonsoftJsonSerializer>();
         endpointConfiguration.SendOnly();
         endpointConfiguration.SendFailedMessagesTo($"{EndpointName}-errors");
         endpointConfiguration.EnableInstallers();
