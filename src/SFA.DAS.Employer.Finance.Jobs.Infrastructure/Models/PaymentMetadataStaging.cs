@@ -7,6 +7,9 @@ public class PaymentMetadataStaging
     public int? FrameworkCode { get; set; }
     public int? ProgrammeType { get; set; }
     public int? PathwayCode { get; set; }
+    public string? CourseCode { get; set; }
+    public string LearningType { get; set; } = "Apprenticeship";
+    public long? CohortId { get; set; }
     public string? PathwayName { get; set; }
     public string? ApprenticeshipCourseName { get; set; }
     public DateTime? ApprenticeshipCourseStartDate { get; set; }

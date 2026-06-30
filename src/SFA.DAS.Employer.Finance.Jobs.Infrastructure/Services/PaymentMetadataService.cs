@@ -6,6 +6,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Provider.Events.Api.Types;
+using LearningType = SFA.DAS.Provider.Events.Api.Types.LearningType;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 
@@ -112,9 +113,11 @@ public class PaymentMetadataService(
             FrameworkCode = payment.FrameworkCode,
             ProgrammeType = payment.ProgrammeType,
             PathwayCode = payment.PathwayCode,
+            CourseCode = payment.CourseCode,
             ApprenticeName = BuildApprenticeName(apprenticeship),
             ApprenticeNINumber = apprenticeship?.NINumber,
             ApprenticeshipCourseStartDate = apprenticeship?.StartDate,
+            CohortId = apprenticeship?.CohortId,
             CorrelationId = correlationId
         };
 
@@ -127,11 +130,8 @@ public class PaymentMetadataService(
     {
         if (payment.StandardCode is > 0)
         {
-            var standards = await GetStandards();
-            var standard = standards?.Standards.SingleOrDefault(s => s.Id == payment.StandardCode.Value);
-
-            metadata.ApprenticeshipCourseName = standard?.Title;
-            metadata.ApprenticeshipCourseLevel = standard?.Level;
+            var standard = await GetStandard(payment.StandardCode.Value.ToString());
+            AddStandardDetails(metadata, standard);
             return;
         }
 
@@ -146,7 +146,19 @@ public class PaymentMetadataService(
             metadata.ApprenticeshipCourseName = framework?.FrameworkName;
             metadata.ApprenticeshipCourseLevel = framework?.Level;
             metadata.PathwayName = framework?.PathwayName;
+            return;
         }
+
+        if (!string.IsNullOrEmpty(payment.CourseCode))
+        {
+            var standard = await GetStandard(payment.CourseCode);
+            AddStandardDetails(metadata, standard);
+            return;
+        }
+
+        logger.LogWarning(
+            "No framework code, standard code or course code set on payment. Cannot get course details. PaymentId: {PaymentId}",
+            payment.Id);
     }
 
     private Task<StandardsResponse?> GetStandards()
@@ -157,6 +169,21 @@ public class PaymentMetadataService(
     private Task<FrameworksResponse?> GetFrameworks()
     {
         return _frameworksTask ??= outerApiClient.GetFrameworks();
+    }
+
+    private async Task<StandardResponse?> GetStandard(string standardId)
+    {
+        var standards = await GetStandards();
+        return standards?.Standards.SingleOrDefault(s => s.Id == standardId);
+    }
+
+    private static void AddStandardDetails(PaymentMetadataStaging metadata, StandardResponse? standard)
+    {
+        metadata.ApprenticeshipCourseName = standard?.Title;
+        metadata.ApprenticeshipCourseLevel = standard?.Level;
+        metadata.LearningType = Enum.TryParse(standard?.LearningType, out LearningType learningType)
+            ? learningType.ToString()
+            : LearningType.Apprenticeship.ToString();
     }
 
     private async Task<bool> PostPaymentMetadataToStaging(Guid paymentId, PaymentMetadataStaging metadata, string correlationId)

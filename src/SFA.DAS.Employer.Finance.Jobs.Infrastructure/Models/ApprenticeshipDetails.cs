@@ -6,4 +6,5 @@ public class ApprenticeshipDetails
     public string? LastName { get; set; }
     public string? NINumber { get; set; }
     public DateTime? StartDate { get; set; }
+    public long? CohortId { get; set; }
 }
