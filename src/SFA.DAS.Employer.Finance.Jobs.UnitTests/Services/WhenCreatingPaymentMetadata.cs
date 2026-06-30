@@ -71,9 +71,10 @@ public class WhenCreatingPaymentMetadata
                 [
                     new StandardResponse
                     {
-                        Id = 123,
+                        Id = "123",
                         Title = "Software developer",
-                        Level = 4
+                        Level = 4,
+                        LearningType = "Apprenticeship"
                     }
                 ]
             });
@@ -91,6 +92,8 @@ public class WhenCreatingPaymentMetadata
         result.ApprenticeshipCourseStartDate.Should().Be(startDate);
         result.ApprenticeshipCourseName.Should().Be("Software developer");
         result.ApprenticeshipCourseLevel.Should().Be(4);
+        result.CourseCode.Should().BeNull();
+        result.LearningType.Should().Be("Apprenticeship");
         result.CorrelationId.Should().Be(correlationId);
     }
 
@@ -139,6 +142,78 @@ public class WhenCreatingPaymentMetadata
         result.ApprenticeshipCourseName.Should().Be("Engineering framework");
         result.PathwayName.Should().Be("Mechanical pathway");
         result.ApprenticeshipCourseLevel.Should().Be(3);
+        result.LearningType.Should().Be("Apprenticeship");
+    }
+
+    [Test]
+    public async Task Then_Maps_CourseCode_Payment_Metadata_For_Apprenticeship_Unit()
+    {
+        var paymentId = Guid.NewGuid();
+        var correlationId = Guid.NewGuid();
+        var payment = CreatePayment(paymentId);
+        payment.CourseCode = "ST0001";
+
+        _outerApiClientMock
+            .Setup(client => client.GetProvider(10000494))
+            .ReturnsAsync(new ProviderDetails
+            {
+                Ukprn = 10000494,
+                Name = "Unit Provider"
+            });
+
+        _outerApiClientMock
+            .Setup(client => client.GetStandards())
+            .ReturnsAsync(new StandardsResponse
+            {
+                Standards =
+                [
+                    new StandardResponse
+                    {
+                        Id = "ST0001",
+                        Title = "Software development app unit",
+                        Level = 4,
+                        LearningType = "ApprenticeshipUnit"
+                    }
+                ]
+            });
+
+        var result = await _service.BuildPaymentMetadata(12345, payment, correlationId);
+
+        result.ProviderName.Should().Be("Unit Provider");
+        result.StandardCode.Should().BeNull();
+        result.FrameworkCode.Should().BeNull();
+        result.CourseCode.Should().Be("ST0001");
+        result.ApprenticeshipCourseName.Should().Be("Software development app unit");
+        result.ApprenticeshipCourseLevel.Should().Be(4);
+        result.LearningType.Should().Be("ApprenticeshipUnit");
+    }
+
+    [Test]
+    public async Task Then_Defaults_LearningType_When_No_Course_Codes_Are_Present()
+    {
+        var paymentId = Guid.NewGuid();
+        var correlationId = Guid.NewGuid();
+        var payment = CreatePayment(paymentId);
+
+        _outerApiClientMock
+            .Setup(client => client.GetProvider(10000494))
+            .ReturnsAsync(new ProviderDetails
+            {
+                Ukprn = 10000494,
+                Name = "No Course Provider"
+            });
+
+        var result = await _service.BuildPaymentMetadata(12345, payment, correlationId);
+
+        result.ProviderName.Should().Be("No Course Provider");
+        result.StandardCode.Should().BeNull();
+        result.FrameworkCode.Should().BeNull();
+        result.CourseCode.Should().BeNull();
+        result.ApprenticeshipCourseName.Should().BeNull();
+        result.ApprenticeshipCourseLevel.Should().BeNull();
+        result.LearningType.Should().Be("Apprenticeship");
+        _outerApiClientMock.Verify(client => client.GetStandards(), Times.Never);
+        _outerApiClientMock.Verify(client => client.GetFrameworks(), Times.Never);
     }
 
     [Test]
@@ -160,9 +235,10 @@ public class WhenCreatingPaymentMetadata
                 [
                     new StandardResponse
                     {
-                        Id = 123,
+                        Id = "123",
                         Title = "Software developer",
-                        Level = 4
+                        Level = 4,
+                        LearningType = "Apprenticeship"
                     }
                 ]
             });
@@ -184,6 +260,7 @@ public class WhenCreatingPaymentMetadata
                     && ((PaymentMetadataStaging)request.Data).PaymentId == paymentId
                     && ((PaymentMetadataStaging)request.Data).ProviderName == "Test Provider"
                     && ((PaymentMetadataStaging)request.Data).ApprenticeshipCourseName == "Software developer"
+                    && ((PaymentMetadataStaging)request.Data).LearningType == "Apprenticeship"
                     && ((PaymentMetadataStaging)request.Data).ApprenticeNINumber == "AB123456C")))
             .ReturnsAsync(new ApiResponse<PaymentMetadataStagingResponse>(
                 new PaymentMetadataStagingResponse { Upserted = true, MetadataId = 1 },
