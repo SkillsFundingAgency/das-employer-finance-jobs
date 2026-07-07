@@ -22,6 +22,7 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IProviderPaymentApiClient<ProviderEventsApiConfiguration>))]
     [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
     [TestCase(typeof(IPeriodEndService))]
+    [TestCase(typeof(IAccountService))]
     [TestCase(typeof(IAccountPaymentsImportService))]
     [TestCase(typeof(IRefreshPaymentDataCompletedEventPublisher))]
     public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
@@ -55,6 +56,7 @@ public class WhenAddingServicesToTheContainer
         services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
         services.AddScoped<IPeriodEndService, PeriodEndService>();
+        services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();
     }
