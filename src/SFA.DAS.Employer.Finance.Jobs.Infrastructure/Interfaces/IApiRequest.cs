@@ -9,7 +9,7 @@ public interface IApiRequest : IBaseApiRequest
     string GetUrl { get; }
 
     [JsonIgnore]
-    object Data { get; }
+    object? Data { get; }
 
 }
 
