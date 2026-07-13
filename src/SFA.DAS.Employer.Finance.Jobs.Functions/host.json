@@ -12,6 +12,11 @@
             "default": "Information",
             "Microsoft": "Warning",
             "Microsoft.Hosting.Lifetime": "Information",
+            "Microsoft.Azure.WebJobs": "Warning",
+            "Microsoft.DurableTask": "Warning",
+            "Azure": "Warning",
+            "Azure.Core": "Warning",
+            "Azure.Storage": "Warning",
             "SFA.DAS": "Information"
         }
     },
