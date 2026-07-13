@@ -107,6 +107,7 @@ public class ProcessPeriodEndOrchestrator(
         var totalPublished = 0;
         var page = 1;
         var maxConcurrency = maxConcurrentAccounts <= 0 ? 50 : maxConcurrentAccounts;
+        var targetAccountScheduled = false;
 
         while (true)
         {
@@ -133,7 +134,7 @@ public class ProcessPeriodEndOrchestrator(
 
             var accountsToProcess = targetAccountId.HasValue
                 ? accounts.Where(account => account.Id == targetAccountId.Value).ToList()
-                : accounts;
+                : accounts.ToList();
 
             if (targetAccountId.HasValue)
             {
@@ -190,6 +191,11 @@ public class ProcessPeriodEndOrchestrator(
 
                 activeAccountTasks.Add((account.Id, accountTask));
                 totalPublished++;
+
+                if (targetAccountId.HasValue && account.Id == targetAccountId.Value)
+                {
+                    targetAccountScheduled = true;
+                }
             }
 
             if (activeAccountTasks.Count > 0)
@@ -214,16 +220,6 @@ public class ProcessPeriodEndOrchestrator(
                 page,
                 totalPublished);
 
-            if (targetAccountId.HasValue && accountsToProcess.Count > 0)
-            {
-                logger.LogInformation(
-                    "[CorrelationId: {CorrelationId}] FanOutAccountImports completed restricted account import for AccountId {TargetAccountId} PeriodEnd {PeriodEndRef}",
-                    CorrelationId,
-                    targetAccountId.Value,
-                    periodEndRef);
-                break;
-            }
-
             if (accounts.Count < PageSize)
             {
                 logger.LogInformation(
@@ -236,6 +232,26 @@ public class ProcessPeriodEndOrchestrator(
             }
 
             page++;
+        }
+
+        if (targetAccountId.HasValue)
+        {
+            if (targetAccountScheduled)
+            {
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] FanOutAccountImports completed paged fetch for restricted AccountId {TargetAccountId} PeriodEnd {PeriodEndRef}. Target account was scheduled.",
+                    CorrelationId,
+                    targetAccountId.Value,
+                    periodEndRef);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "[CorrelationId: {CorrelationId}] FanOutAccountImports completed paged fetch for restricted AccountId {TargetAccountId} PeriodEnd {PeriodEndRef}. Target account was not found in any page.",
+                    CorrelationId,
+                    targetAccountId.Value,
+                    periodEndRef);
+            }
         }
 
         return totalPublished;

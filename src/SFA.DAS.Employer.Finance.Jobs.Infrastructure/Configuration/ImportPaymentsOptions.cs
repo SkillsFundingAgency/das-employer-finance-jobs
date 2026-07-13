@@ -16,6 +16,9 @@ public class ImportPaymentsOptions
     public int StaleInstanceTerminationTimeoutSeconds { get; set; } = DefaultStaleInstanceTerminationTimeoutSeconds;
     public bool AdminEndpointsEnabled { get; set; }
 
+    // TEMP: remove after APPMAN-2773 demo validation — set to null to process all accounts.
+    public long? TargetAccountId { get; set; } = 14331;
+
     public int GetMaxConcurrentAccounts() => GetMaxConcurrentAccountsOrDefault(MaxConcurrentAccounts);
 
     public int GetMaxConcurrentPeriodEnds() => GetMaxConcurrentPeriodEndsOrDefault(MaxConcurrentPeriodEnds);
