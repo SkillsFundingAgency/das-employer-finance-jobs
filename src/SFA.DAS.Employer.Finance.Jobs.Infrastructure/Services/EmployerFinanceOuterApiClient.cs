@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
+using System.Net;
 using System.Text.Json;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
@@ -46,16 +48,12 @@ public class EmployerFinanceOuterApiClient(
 
             var response = await client.SendAsync(httpRequestMessage).ConfigureAwait(false);
 
-            if (!response.IsSuccessStatusCode)
+            if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                logger.LogWarning(
-                    "Employer Finance Outer API returned {StatusCode} for {Url}. Error: {ErrorContent}",
-                    response.StatusCode,
-                    request.GetUrl,
-                    errorContent);
                 return default;
             }
+
+            await response.EnsureSuccessStatusCodeIncludeContentInException().ConfigureAwait(false);
 
             var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return string.IsNullOrWhiteSpace(json)

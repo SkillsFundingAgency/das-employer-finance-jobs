@@ -61,17 +61,7 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
             var request = new GetPaymentPeriodEndsRequest();
 
             var response = await providerPaymentApiClient.GetWithResponseCode<List<PaymentPeriodEnd>>(request);
-            if (response == null)
-            {
-                logger.LogWarning("[CorrelationId: {CorrelationId}] No response received from Provider Events API. Assuming no existing period ends.", correlationId);
-                return new List<PeriodEnd>();
-            }
-            if (response != null && response.StatusCode != System.Net.HttpStatusCode.OK)
-            {
-                logger.LogWarning("[CorrelationId: {CorrelationId}] Provider Events API returned {StatusCode} with error: {ErrorContent}. Assuming no existing period ends.", correlationId, response.StatusCode, response.ErrorContent);
-                return new List<PeriodEnd>();
-            }
-            var paymentPeriodEnds = response!.Body;
+            var paymentPeriodEnds = response.Body;
             logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from Provider Events API", correlationId, paymentPeriodEnds?.Count ?? 0);
 
             var periodEnds = paymentPeriodEnds?.ConvertAll(MapPaymentPeriodEnd);
@@ -107,20 +97,10 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
 
             var request = new GetFinancePeriodEndsRequest();
             var response = await financeApiClient.GetWithResponseCode<List<PeriodEnd>>(request);
-            if (response == null)
-            {
-                logger.LogWarning("[CorrelationId: {CorrelationId}] No response received from Finance API. Assuming no existing period ends.", correlationId);
-                return new List<PeriodEnd>();
-            }
-            if (response != null && response.StatusCode != System.Net.HttpStatusCode.OK)
-            {
-                logger.LogWarning("[CorrelationId: {CorrelationId}] Finance API returned {StatusCode} with error: {ErrorContent}. Assuming no existing period ends.", correlationId, response.StatusCode, response.ErrorContent);
-                return new List<PeriodEnd>();
-            }
-            var financePeriodEnds = response?.Body;
-            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from Finance API", correlationId, financePeriodEnds?.Count ?? 0);
+            var financePeriodEnds = response.Body ?? [];
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} period ends from Finance API", correlationId, financePeriodEnds.Count);
 
-            return financePeriodEnds ?? new List<PeriodEnd>();
+            return financePeriodEnds;
         }
         catch (Exception ex)
         {

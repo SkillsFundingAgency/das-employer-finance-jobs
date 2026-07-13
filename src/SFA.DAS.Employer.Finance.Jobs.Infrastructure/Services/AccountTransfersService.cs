@@ -75,23 +75,9 @@ public class AccountTransfersService(
             var request = new GetAccountTransfersRequest(periodEnd, accountId, page);
             var response = await providerPaymentApiClient.GetWithResponseCode<GetTransfersResponse>(request);
 
-            if (response == null)
-            {
-                return FailedGetAllTransfersResult("No response received from Provider Events API", correlationId);
-            }
-
-            if (response.StatusCode != HttpStatusCode.OK)
-            {
-                return FailedGetAllTransfersResult(
-                    $"Provider Events API returned {response.StatusCode} with error: {response.ErrorContent}",
-                    correlationId);
-            }
-
-            var transfersResponse = response.Body;
-            if (transfersResponse == null)
-            {
-                return FailedGetAllTransfersResult("Got null response body from Provider Events API.", correlationId);
-            }
+            var transfersResponse = response.Body
+                ?? throw new InvalidOperationException(
+                    $"Provider Events API returned {response.StatusCode} without a response body for ReceiverAccountId {accountId}, PeriodEnd {periodEnd}.");
 
             totalPages = transfersResponse.TotalNumberOfPages;
             transfers.AddRange(transfersResponse.Items ?? []);

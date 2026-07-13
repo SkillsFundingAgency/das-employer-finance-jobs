@@ -21,6 +21,11 @@ public static class LoggingExtensions
             builder.AddFilter<ApplicationInsightsLoggerProvider>("DurableTask", LogLevel.Warning);
             builder.AddFilter<ApplicationInsightsLoggerProvider>("SFA.DAS", LogLevel.Information);
 
+            // Functions worker mirrors user ILogger calls to Function.*.User; OpenTelemetry already exports
+            // the same messages with the real SFA.DAS category and structured properties.
+            builder.AddFilter<ApplicationInsightsLoggerProvider>((category, level) =>
+                level >= LogLevel.Warning || !category.EndsWith(".User", StringComparison.Ordinal));
+
             // General filters
             builder.AddFilter("Microsoft", LogLevel.Warning);
             builder.AddFilter("Azure", LogLevel.Warning);
@@ -33,7 +38,6 @@ public static class LoggingExtensions
             builder.AddFilter("SFA.DAS", LogLevel.Information);
 
             builder.SetMinimumLevel(LogLevel.Trace);
-            builder.AddConsole();
         });
 
         return services;
