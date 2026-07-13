@@ -15,7 +15,7 @@ public class ImportPaymentsTimer(
     private readonly ImportPaymentsOptions _options = importPaymentsOptions.Value;
 
     [Function("ImportPaymentsTimer")]
-    public async Task Run([TimerTrigger("0 0 * * * *", RunOnStartup = true)] TimerInfo timerInfo, [DurableClient] DurableTaskClient client)
+    public async Task Run([TimerTrigger("0 0 * * * *", RunOnStartup = false)] TimerInfo timerInfo, [DurableClient] DurableTaskClient client)
     {
         var correlationId = Guid.NewGuid().ToString();
 
