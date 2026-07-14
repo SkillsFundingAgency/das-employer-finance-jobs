@@ -22,8 +22,16 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
         var paymentPeriodEnds = await paymentPeriodEndsTask;
         var financePeriodEnds = await financePeriodEndsTask;
 
-        logger.LogInformation("[CorrelationId: {CorrelationId}] Retrieved {ProviderCount} period ends from Provider Events API and {FinanceCount} from Finance API",
-                                                 correlationId, paymentPeriodEnds.Count, financePeriodEnds.Count);
+        var providerPeriodEndIds = string.Join("|", paymentPeriodEnds.Select(p => p.PeriodEndId));
+        var financePeriodEndIds = string.Join("|", financePeriodEnds.Select(p => p.PeriodEndId));
+
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] Retrieved {ProviderCount} period ends from Provider Events API ({ProviderPeriodEnds}) and {FinanceCount} from Finance API ({FinancePeriodEnds})",
+            correlationId,
+            paymentPeriodEnds.Count,
+            providerPeriodEndIds,
+            financePeriodEnds.Count,
+            financePeriodEndIds);
 
 
         var newPeriodEnds = FilterNewPeriodEnds(paymentPeriodEnds, financePeriodEnds, correlationId);
