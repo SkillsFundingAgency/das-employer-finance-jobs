@@ -43,7 +43,9 @@ public static class ServiceRegistrationExtensions
 
         services.AddScoped<ICommitmentsApiClient, CommitmentsApiClient>();
 
-        services.AddScoped<IEmployerFinanceOuterApiClient, EmployerFinanceOuterApiClient>();
+        services.AddScoped<ICoursesApiClient, CoursesApiClient>();
+
+        services.AddScoped<IRoatpApiClient, RoatpApiClient>();
 
         services.AddScoped<IPaymentMetadataService, PaymentMetadataService>();
 

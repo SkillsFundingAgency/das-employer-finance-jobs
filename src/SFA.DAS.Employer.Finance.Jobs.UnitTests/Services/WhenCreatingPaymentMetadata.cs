@@ -17,7 +17,8 @@ public class WhenCreatingPaymentMetadata
 {
     private Mock<IFinanceApiClient<FinanceApiConfiguration>> _financeApiClientMock;
     private Mock<ICommitmentsApiClient> _commitmentsApiClientMock;
-    private Mock<IEmployerFinanceOuterApiClient> _outerApiClientMock;
+    private Mock<IRoatpApiClient> _roatpApiClientMock;
+    private Mock<ICoursesApiClient> _coursesApiClientMock;
     private Mock<ILogger<PaymentMetadataService>> _loggerMock;
     private PaymentMetadataService _service;
 
@@ -26,13 +27,15 @@ public class WhenCreatingPaymentMetadata
     {
         _financeApiClientMock = new Mock<IFinanceApiClient<FinanceApiConfiguration>>();
         _commitmentsApiClientMock = new Mock<ICommitmentsApiClient>();
-        _outerApiClientMock = new Mock<IEmployerFinanceOuterApiClient>();
+        _roatpApiClientMock = new Mock<IRoatpApiClient>();
+        _coursesApiClientMock = new Mock<ICoursesApiClient>();
         _loggerMock = new Mock<ILogger<PaymentMetadataService>>();
 
         _service = new PaymentMetadataService(
             _financeApiClientMock.Object,
             _commitmentsApiClientMock.Object,
-            _outerApiClientMock.Object,
+            _roatpApiClientMock.Object,
+            _coursesApiClientMock.Object,
             _loggerMock.Object);
     }
 
@@ -55,7 +58,7 @@ public class WhenCreatingPaymentMetadata
                 StartDate = startDate
             });
 
-        _outerApiClientMock
+        _roatpApiClientMock
             .Setup(client => client.GetProvider(10000494))
             .ReturnsAsync(new ProviderDetails
             {
@@ -63,7 +66,7 @@ public class WhenCreatingPaymentMetadata
                 Name = "Test Provider"
             });
 
-        _outerApiClientMock
+        _coursesApiClientMock
             .Setup(client => client.GetStandards())
             .ReturnsAsync(new StandardsResponse
             {
@@ -104,7 +107,7 @@ public class WhenCreatingPaymentMetadata
         payment.ProgrammeType = 20;
         payment.PathwayCode = 30;
 
-        _outerApiClientMock
+        _roatpApiClientMock
             .Setup(client => client.GetProvider(10000494))
             .ReturnsAsync(new ProviderDetails
             {
@@ -112,7 +115,7 @@ public class WhenCreatingPaymentMetadata
                 Name = "Framework Provider"
             });
 
-        _outerApiClientMock
+        _coursesApiClientMock
             .Setup(client => client.GetFrameworks())
             .ReturnsAsync(new FrameworksResponse
             {
@@ -148,11 +151,11 @@ public class WhenCreatingPaymentMetadata
         var payment = CreatePayment(paymentId);
         payment.StandardCode = 123;
 
-        _outerApiClientMock
+        _roatpApiClientMock
             .Setup(client => client.GetProvider(payment.Ukprn))
             .ReturnsAsync(new ProviderDetails { Ukprn = payment.Ukprn, Name = "Test Provider" });
 
-        _outerApiClientMock
+        _coursesApiClientMock
             .Setup(client => client.GetStandards())
             .ReturnsAsync(new StandardsResponse
             {

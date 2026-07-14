@@ -12,7 +12,8 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 public class PaymentMetadataService(
     IFinanceApiClient<FinanceApiConfiguration> financeApiClient,
     ICommitmentsApiClient commitmentsApiClient,
-    IEmployerFinanceOuterApiClient outerApiClient,
+    IRoatpApiClient roatpApiClient,
+    ICoursesApiClient coursesApiClient,
     ILogger<PaymentMetadataService> logger) : IPaymentMetadataService
 {
     private Task<StandardsResponse?>? _standardsTask;
@@ -93,7 +94,7 @@ public class PaymentMetadataService(
 
     public async Task<PaymentMetadataStaging> BuildPaymentMetadata(long accountId, Payment payment, Guid correlationId)
     {
-        var providerTask = outerApiClient.GetProvider(payment.Ukprn);
+        var providerTask = roatpApiClient.GetProvider(payment.Ukprn);
         var apprenticeshipTask = payment.ApprenticeshipId.HasValue
             ? commitmentsApiClient.GetApprenticeship(payment.ApprenticeshipId.Value)
             : Task.FromResult<ApprenticeshipDetails?>(null);
@@ -151,12 +152,12 @@ public class PaymentMetadataService(
 
     private Task<StandardsResponse?> GetStandards()
     {
-        return _standardsTask ??= outerApiClient.GetStandards();
+        return _standardsTask ??= coursesApiClient.GetStandards();
     }
 
     private Task<FrameworksResponse?> GetFrameworks()
     {
-        return _frameworksTask ??= outerApiClient.GetFrameworks();
+        return _frameworksTask ??= coursesApiClient.GetFrameworks();
     }
 
     private async Task<bool> PostPaymentMetadataToStaging(Guid paymentId, PaymentMetadataStaging metadata, string correlationId)
