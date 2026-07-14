@@ -23,20 +23,27 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
         var financePeriodEnds = await financePeriodEndsTask;
 
         var providerPeriodEndIds = string.Join("|", paymentPeriodEnds.Select(p => p.PeriodEndId));
-        var financePeriodEndIds = string.Join("|", financePeriodEnds.Select(p => p.PeriodEndId));
 
         logger.LogInformation(
-            "[CorrelationId: {CorrelationId}] Retrieved {ProviderCount} period ends from Provider Events API ({ProviderPeriodEnds}) and {FinanceCount} from Finance API ({FinancePeriodEnds})",
+            "[CorrelationId: {CorrelationId}] Retrieved {ProviderCount} period ends from Provider Events API: {ProviderPeriodEnds}",
             correlationId,
             paymentPeriodEnds.Count,
-            providerPeriodEndIds,
-            financePeriodEnds.Count,
-            financePeriodEndIds);
+            providerPeriodEndIds);
+
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] Retrieved {FinanceCount} period ends from Finance API",
+            correlationId,
+            financePeriodEnds.Count);
 
 
         var newPeriodEnds = FilterNewPeriodEnds(paymentPeriodEnds, financePeriodEnds, correlationId);
+        var newPeriodEndIds = string.Join("|", newPeriodEnds.Select(p => p.PeriodEndId));
 
-        logger.LogInformation("[CorrelationId: {CorrelationId}] Found {NewCount} new period ends to process", correlationId, newPeriodEnds.Count);
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] Found {NewCount} new period ends to process: {NewPeriodEnds}",
+            correlationId,
+            newPeriodEnds.Count,
+            newPeriodEndIds);
 
         return newPeriodEnds;
     }
@@ -122,7 +129,16 @@ public class PeriodEndService(IFinanceApiClient<FinanceApiConfiguration> finance
 
         var newPeriodEnds = paymentPeriodEnds.Where(p => !string.IsNullOrEmpty(p.PeriodEndId) && !existingPeriodEndIds.Contains(p.PeriodEndId)).ToList();
 
-        logger.LogInformation("[CorrelationId: {CorrelationId}] Filtered {NewCount} new period ends out of {TotalCount} provider period ends", correlationId, newPeriodEnds.Count, paymentPeriodEnds.Count);
+        var alreadyInFinance = paymentPeriodEnds
+            .Where(p => !string.IsNullOrEmpty(p.PeriodEndId) && existingPeriodEndIds.Contains(p.PeriodEndId))
+            .Select(p => p.PeriodEndId);
+
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] Filtered {NewCount} new period ends out of {TotalCount} provider period ends. Already in Finance: {AlreadyInFinancePeriodEnds}",
+            correlationId,
+            newPeriodEnds.Count,
+            paymentPeriodEnds.Count,
+            string.Join("|", alreadyInFinance));
 
         return newPeriodEnds;
     }
