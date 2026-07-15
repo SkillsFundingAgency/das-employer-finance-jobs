@@ -1,5 +1,3 @@
-using SFA.DAS.Provider.Events.Api.Types;
-
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 public class RefreshAccountTransfersInput
@@ -9,5 +7,5 @@ public class RefreshAccountTransfersInput
     public string PeriodEndRef { get; set; } = string.Empty;
     public string CorrelationId { get; set; } = string.Empty;
     public DateTime TriggeredAt { get; set; }
-    public IReadOnlyCollection<Payment> Payments { get; set; } = [];
+    public IReadOnlyCollection<TransferPaymentLookup> Payments { get; set; } = [];
 }

@@ -94,7 +94,7 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
             PeriodEndRef = input.PeriodEndRef,
             CorrelationId = correlationId,
             TriggeredAt = input.TriggeredAt,
-            Payments = importPaymentsResult.Payments ?? []
+            Payments = MapTransferPaymentLookups(importPaymentsResult.Payments)
         };
 
         var refreshAccountTransfersResult = await context.CallActivityAsync<RefreshAccountTransfersResult>(
@@ -227,5 +227,34 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
             result.PaymentsProcessed,
             result.TransfersProcessed);
         return result;
+    }
+
+    private static List<TransferPaymentLookup> MapTransferPaymentLookups(IEnumerable<SFA.DAS.Provider.Events.Api.Types.Payment>? payments)
+    {
+        if (payments == null)
+        {
+            return [];
+        }
+
+        var lookups = new List<TransferPaymentLookup>();
+
+        foreach (var payment in payments)
+        {
+            if (!Guid.TryParse(payment.Id, out var paymentId))
+            {
+                continue;
+            }
+
+            lookups.Add(new TransferPaymentLookup
+            {
+                PaymentId = paymentId,
+                EvidenceSubmittedOn = payment.EvidenceSubmittedOn,
+                CollectionPeriodMonth = payment.CollectionPeriod?.Month ?? 0,
+                CollectionPeriodYear = payment.CollectionPeriod?.Year ?? 0,
+                Ukprn = payment.Ukprn
+            });
+        }
+
+        return lookups;
     }
 }

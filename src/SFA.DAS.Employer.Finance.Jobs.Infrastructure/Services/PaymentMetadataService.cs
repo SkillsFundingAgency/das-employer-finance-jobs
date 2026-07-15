@@ -18,6 +18,8 @@ public class PaymentMetadataService(
 {
     private Task<StandardsResponse?>? _standardsTask;
     private Task<FrameworksResponse?>? _frameworksTask;
+    private Dictionary<int, StandardResponse>? _standardsById;
+    private Dictionary<(int FrameworkCode, int ProgType, int PathwayCode), FrameworkResponse>? _frameworksByKey;
 
     public async Task<CreatePaymentMetadataResult> CreatePaymentMetadata(CreatePaymentMetadataInput input, CancellationToken cancellationToken)
     {
@@ -33,6 +35,7 @@ public class PaymentMetadataService(
 
         var metadataCreated = 0;
         var failed = 0;
+        var providerByUkprn = new Dictionary<long, ProviderDetails?>();
 
         foreach (var payment in input.PaymentDetails)
         {
@@ -50,7 +53,7 @@ public class PaymentMetadataService(
 
             try
             {
-                var metadata = await BuildPaymentMetadata(input.AccountId, payment, correlationId);
+                var metadata = await BuildPaymentMetadata(input.AccountId, payment, correlationId, providerByUkprn);
                 var success = await PostPaymentMetadataToStaging(paymentId, metadata, input.CorrelationId);
 
                 if (success)
@@ -92,16 +95,27 @@ public class PaymentMetadataService(
         };
     }
 
-    public async Task<PaymentMetadataStaging> BuildPaymentMetadata(long accountId, Payment payment, Guid correlationId)
+    public Task<PaymentMetadataStaging> BuildPaymentMetadata(long accountId, Payment payment, Guid correlationId)
     {
-        var providerTask = roatpApiClient.GetProvider(payment.Ukprn);
+        return BuildPaymentMetadata(accountId, payment, correlationId, new Dictionary<long, ProviderDetails?>());
+    }
+
+    private async Task<PaymentMetadataStaging> BuildPaymentMetadata(
+        long accountId,
+        Payment payment,
+        Guid correlationId,
+        Dictionary<long, ProviderDetails?> providerByUkprn)
+    {
+        if (!providerByUkprn.TryGetValue(payment.Ukprn, out var provider))
+        {
+            provider = await roatpApiClient.GetProvider(payment.Ukprn);
+            providerByUkprn[payment.Ukprn] = provider;
+        }
+
         var apprenticeshipTask = payment.ApprenticeshipId.HasValue
             ? commitmentsApiClient.GetApprenticeship(payment.ApprenticeshipId.Value)
             : Task.FromResult<ApprenticeshipDetails?>(null);
 
-        await Task.WhenAll(providerTask, apprenticeshipTask);
-
-        var provider = await providerTask;
         var apprenticeship = await apprenticeshipTask;
 
         var metadata = new PaymentMetadataStaging
@@ -128,8 +142,8 @@ public class PaymentMetadataService(
     {
         if (payment.StandardCode is > 0)
         {
-            var standards = await GetStandards();
-            var standard = standards?.Standards.SingleOrDefault(s => s.Id == payment.StandardCode.Value);
+            var standardsById = await GetStandardsById();
+            standardsById.TryGetValue((int)payment.StandardCode.Value, out var standard);
 
             metadata.ApprenticeshipCourseName = standard?.Title;
             metadata.ApprenticeshipCourseLevel = standard?.Level;
@@ -138,16 +152,47 @@ public class PaymentMetadataService(
 
         if (payment.FrameworkCode is > 0 && payment.ProgrammeType.HasValue && payment.PathwayCode.HasValue)
         {
-            var frameworks = await GetFrameworks();
-            var framework = frameworks?.Frameworks.SingleOrDefault(f =>
-                f.FrameworkCode == payment.FrameworkCode.Value &&
-                f.ProgType == payment.ProgrammeType.Value &&
-                f.PathwayCode == payment.PathwayCode.Value);
+            var frameworksByKey = await GetFrameworksByKey();
+            frameworksByKey.TryGetValue(
+                (payment.FrameworkCode.Value, payment.ProgrammeType.Value, payment.PathwayCode.Value),
+                out var framework);
 
             metadata.ApprenticeshipCourseName = framework?.FrameworkName;
             metadata.ApprenticeshipCourseLevel = framework?.Level;
             metadata.PathwayName = framework?.PathwayName;
         }
+    }
+
+    private async Task<Dictionary<int, StandardResponse>> GetStandardsById()
+    {
+        if (_standardsById != null)
+        {
+            return _standardsById;
+        }
+
+        var standards = await GetStandards();
+        _standardsById = standards?.Standards
+            .GroupBy(standard => standard.Id)
+            .ToDictionary(group => group.Key, group => group.First())
+            ?? [];
+
+        return _standardsById;
+    }
+
+    private async Task<Dictionary<(int FrameworkCode, int ProgType, int PathwayCode), FrameworkResponse>> GetFrameworksByKey()
+    {
+        if (_frameworksByKey != null)
+        {
+            return _frameworksByKey;
+        }
+
+        var frameworks = await GetFrameworks();
+        _frameworksByKey = frameworks?.Frameworks
+            .GroupBy(framework => (framework.FrameworkCode, framework.ProgType, framework.PathwayCode))
+            .ToDictionary(group => group.Key, group => group.First())
+            ?? [];
+
+        return _frameworksByKey;
     }
 
     private Task<StandardsResponse?> GetStandards()

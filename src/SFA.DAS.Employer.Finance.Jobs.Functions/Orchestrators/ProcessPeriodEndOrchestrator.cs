@@ -220,6 +220,17 @@ public class ProcessPeriodEndOrchestrator(
                 page,
                 totalPublished);
 
+            if (targetAccountId.HasValue && targetAccountScheduled)
+            {
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] FanOutAccountImports found restricted AccountId {TargetAccountId} on page {Page}. Stopping further account paging for period end {PeriodEndRef}.",
+                    CorrelationId,
+                    targetAccountId.Value,
+                    page,
+                    periodEndRef);
+                break;
+            }
+
             if (accounts.Count < PageSize)
             {
                 logger.LogInformation(

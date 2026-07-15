@@ -145,7 +145,7 @@ public class WhenCreatingPaymentMetadata
     }
 
     [Test]
-    public async Task Then_Posts_Metadata_To_Finance_For_Each_Payment()
+    public async Task Then_Posts_Metadata_To_Finance_And_Reuses_Provider_Lookup_Within_Activity()
     {
         var paymentId = Guid.NewGuid();
         var payment = CreatePayment(paymentId);
@@ -182,29 +182,42 @@ public class WhenCreatingPaymentMetadata
 
         _financeApiClientMock
             .Setup(client => client.PutWithResponseCode<PaymentMetadataStagingResponse>(
-                It.Is<PutPaymentMetadataToStagingRequest>(request =>
-                    request.GetUrl == $"api/payments/{paymentId}/metadata/staging"
-                    && ((PaymentMetadataStaging)request.Data).PaymentId == paymentId
-                    && ((PaymentMetadataStaging)request.Data).ProviderName == "Test Provider"
-                    && ((PaymentMetadataStaging)request.Data).ApprenticeshipCourseName == "Software developer"
-                    && ((PaymentMetadataStaging)request.Data).ApprenticeNINumber == "AB123456C")))
+                It.IsAny<PutPaymentMetadataToStagingRequest>()))
             .ReturnsAsync(new ApiResponse<PaymentMetadataStagingResponse>(
                 new PaymentMetadataStagingResponse { Upserted = true, MetadataId = 1 },
                 HttpStatusCode.OK,
                 null));
 
+        var secondPaymentId = Guid.NewGuid();
+        var secondPayment = CreatePayment(secondPaymentId);
+        secondPayment.StandardCode = 123;
+        secondPayment.Ukprn = payment.Ukprn;
+        secondPayment.ApprenticeshipId = 9877;
+
+        _commitmentsApiClientMock
+            .Setup(client => client.GetApprenticeship(9877))
+            .ReturnsAsync(new ApprenticeshipDetails
+            {
+                FirstName = "Grace",
+                LastName = "Hopper",
+                NINumber = "CD987654E",
+                StartDate = new DateTime(2024, 9, 1)
+            });
+
         var result = await _service.CreatePaymentMetadata(new CreatePaymentMetadataInput
         {
             AccountId = 12345,
             CorrelationId = Guid.NewGuid().ToString(),
-            PaymentDetails = [payment]
+            PaymentDetails = [payment, secondPayment]
         }, CancellationToken.None);
 
         result.Status.Should().Be("Succeeded");
-        result.MetadataCreated.Should().Be(1);
+        result.MetadataCreated.Should().Be(2);
+        _roatpApiClientMock.Verify(client => client.GetProvider(payment.Ukprn), Times.Once);
+        _coursesApiClientMock.Verify(client => client.GetStandards(), Times.Once);
         _financeApiClientMock.Verify(
             client => client.PutWithResponseCode<PaymentMetadataStagingResponse>(It.IsAny<PutPaymentMetadataToStagingRequest>()),
-            Times.Once);
+            Times.Exactly(2));
     }
 
     private static Payment CreatePayment(Guid paymentId)

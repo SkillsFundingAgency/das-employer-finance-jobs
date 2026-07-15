@@ -119,7 +119,7 @@ public class WhenProcessingAccountOrchestratorRun
                     && transferInput.CorrelationId == input.CorrelationId
                     && transferInput.TriggeredAt == input.TriggeredAt
                     && transferInput.Payments.Count == 1
-                    && transferInput.Payments.Single().Id == payment.Id),
+                    && transferInput.Payments.Single().PaymentId.ToString() == payment.Id),
                 It.IsAny<TaskOptions>()),
             Times.Once);
         _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(

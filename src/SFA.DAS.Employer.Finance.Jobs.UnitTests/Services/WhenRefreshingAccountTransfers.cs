@@ -40,7 +40,7 @@ public class WhenRefreshingAccountTransfers
         var requiredPaymentId = Guid.NewGuid();
         var evidenceSubmittedOn = new DateTime(2025, 11, 18, 15, 22, 44, DateTimeKind.Utc);
         var input = CreateInput([
-            CreatePayment(requiredPaymentId, 10000494, evidenceSubmittedOn)
+            CreatePaymentLookup(requiredPaymentId, 10000494, evidenceSubmittedOn)
         ]);
         var transfer = CreateTransfer(98765, input.AccountId, requiredPaymentId);
         StageTransfersRequest capturedRequest = null;
@@ -106,8 +106,8 @@ public class WhenRefreshingAccountTransfers
         var alreadyStagedTransfer = CreateTransfer(1001, 12345, alreadyStagedPaymentId);
         var newTransfer = CreateTransfer(1002, 12345, newPaymentId);
         var input = CreateInput([
-            CreatePayment(alreadyStagedPaymentId, 10000494, new DateTime(2025, 11, 18, 12, 0, 0, DateTimeKind.Utc)),
-            CreatePayment(newPaymentId, 10000495, new DateTime(2025, 11, 18, 13, 0, 0, DateTimeKind.Utc))
+            CreatePaymentLookup(alreadyStagedPaymentId, 10000494, new DateTime(2025, 11, 18, 12, 0, 0, DateTimeKind.Utc)),
+            CreatePaymentLookup(newPaymentId, 10000495, new DateTime(2025, 11, 18, 13, 0, 0, DateTimeKind.Utc))
         ]);
         var postedTransferBatches = new List<List<long>>();
 
@@ -146,7 +146,7 @@ public class WhenRefreshingAccountTransfers
         var requiredPaymentId = Guid.NewGuid();
         var transfer = CreateTransfer(1001, 12345, requiredPaymentId);
         var duplicateTransfer = CreateTransfer(1001, 12345, requiredPaymentId);
-        var input = CreateInput([CreatePayment(requiredPaymentId, 10000494, DateTime.UtcNow)]);
+        var input = CreateInput([CreatePaymentLookup(requiredPaymentId, 10000494, DateTime.UtcNow)]);
         StageTransfersRequest capturedRequest = null;
 
         SetupProviderTransfers([transfer, duplicateTransfer]);
@@ -168,10 +168,47 @@ public class WhenRefreshingAccountTransfers
     }
 
     [Test]
+    public async Task Then_Chunks_Transfers_Into_Batches_Of_At_Most_1000()
+    {
+        var transfers = Enumerable.Range(1, 1001)
+            .Select(index => CreateTransfer(index, 12345, Guid.NewGuid()))
+            .ToList();
+        var input = CreateInput([]);
+        var postedBatchSizes = new List<int>();
+
+        SetupProviderTransfers(transfers);
+        _financeApiClientMock
+            .Setup(client => client.PostWithResponseCode<PostTransfersToStagingResponse>(
+                It.IsAny<PostTransfersToStagingRequest>()))
+            .Callback<IApiRequest>(request =>
+            {
+                var stageTransfersRequest = (StageTransfersRequest)request.Data;
+                postedBatchSizes.Add(stageTransfersRequest.Transfers.Count);
+            })
+            .ReturnsAsync((IApiRequest request) =>
+            {
+                var count = ((StageTransfersRequest)request.Data).Transfers.Count;
+                return new ApiResponse<PostTransfersToStagingResponse>(
+                    new PostTransfersToStagingResponse { InsertedCount = count },
+                    HttpStatusCode.Created,
+                    null);
+            });
+
+        var result = await _service.RefreshAccountTransfers(input);
+
+        result.Status.Should().Be("Succeeded");
+        result.TransfersProcessed.Should().Be(1001);
+        postedBatchSizes.Should().BeEquivalentTo([1000, 1]);
+        _financeApiClientMock.Verify(
+            client => client.PostWithResponseCode<PostTransfersToStagingResponse>(It.IsAny<PostTransfersToStagingRequest>()),
+            Times.Exactly(2));
+    }
+
+    [Test]
     public async Task Then_Returns_Failed_When_Finance_Api_Rejects_Staging()
     {
         var requiredPaymentId = Guid.NewGuid();
-        var input = CreateInput([CreatePayment(requiredPaymentId, 10000494, DateTime.UtcNow)]);
+        var input = CreateInput([CreatePaymentLookup(requiredPaymentId, 10000494, DateTime.UtcNow)]);
         var transfer = CreateTransfer(1001, input.AccountId, requiredPaymentId);
 
         SetupProviderTransfers([transfer]);
@@ -207,7 +244,7 @@ public class WhenRefreshingAccountTransfers
                 null));
     }
 
-    private static RefreshAccountTransfersInput CreateInput(IReadOnlyCollection<Payment> payments)
+    private static RefreshAccountTransfersInput CreateInput(IReadOnlyCollection<TransferPaymentLookup> payments)
     {
         return new RefreshAccountTransfersInput
         {
@@ -234,19 +271,15 @@ public class WhenRefreshingAccountTransfers
         };
     }
 
-    private static Payment CreatePayment(Guid paymentId, long ukprn, DateTime evidenceSubmittedOn)
+    private static TransferPaymentLookup CreatePaymentLookup(Guid paymentId, long ukprn, DateTime evidenceSubmittedOn)
     {
-        return new Payment
+        return new TransferPaymentLookup
         {
-            Id = paymentId.ToString(),
+            PaymentId = paymentId,
             Ukprn = ukprn,
             EvidenceSubmittedOn = evidenceSubmittedOn,
-            CollectionPeriod = new NamedCalendarPeriod
-            {
-                Id = "2526-R03",
-                Month = 10,
-                Year = 2025
-            }
+            CollectionPeriodMonth = 10,
+            CollectionPeriodYear = 2025
         };
     }
 }
