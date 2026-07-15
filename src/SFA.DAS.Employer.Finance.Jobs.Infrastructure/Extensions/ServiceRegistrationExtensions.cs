@@ -35,13 +35,17 @@ public static class ServiceRegistrationExtensions
 
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
 
+        services.AddScoped<IAccountTransfersService, AccountTransfersService>();
+
         services.AddScoped<IRefreshPaymentDataService, RefreshPaymentDataService>();
 
         services.AddScoped<IPaymentTransactionLinesService, PaymentTransactionLinesService>();
 
         services.AddScoped<ICommitmentsApiClient, CommitmentsApiClient>();
 
-        services.AddScoped<IEmployerFinanceOuterApiClient, EmployerFinanceOuterApiClient>();
+        services.AddScoped<ICoursesApiClient, CoursesApiClient>();
+
+        services.AddScoped<IRoatpApiClient, RoatpApiClient>();
 
         services.AddScoped<IPaymentMetadataService, PaymentMetadataService>();
 
