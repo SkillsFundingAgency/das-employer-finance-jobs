@@ -22,8 +22,11 @@ public static class AddConfigurationOptionsExtension
         services.Configure<CommitmentsApiConfiguration>(configuration.GetSection(nameof(CommitmentsApiConfiguration)));
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<CommitmentsApiConfiguration>>().Value);
 
-        services.Configure<EmployerFinanceOuterApiConfiguration>(configuration.GetSection(nameof(EmployerFinanceOuterApiConfiguration)));
-        services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<EmployerFinanceOuterApiConfiguration>>().Value);
+        services.Configure<CoursesApiConfiguration>(configuration.GetSection(nameof(CoursesApiConfiguration)));
+        services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<CoursesApiConfiguration>>().Value);
+
+        services.Configure<RoatpApiConfiguration>(configuration.GetSection(nameof(RoatpApiConfiguration)));
+        services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<RoatpApiConfiguration>>().Value);
 
         services.Configure<ImportPaymentsOptions>(configuration.GetSection(nameof(ImportPaymentsOptions)));
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<ImportPaymentsOptions>>().Value);

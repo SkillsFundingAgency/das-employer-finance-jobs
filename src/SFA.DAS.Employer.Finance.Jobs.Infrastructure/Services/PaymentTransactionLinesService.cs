@@ -227,20 +227,10 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services
                 var request = new GetExistinTransactionLinesRequest(hashedAccountId, periodEnd);
 
                 var response = await financeApiClient.GetWithResponseCode<List<PaymentTransactionLine>>(request);
-                if (response == null)
-                {
-                    logger.LogWarning("[CorrelationId: {CorrelationId}] No response received from Finance API. Assuming no existing transactions for AccountId:{accountId}, PeriodEnd: {periodEnd}", correlationId, accountId, periodEnd);
-                    return new List<PaymentTransactionLine>();
-                }
-                if (response != null && response.StatusCode != System.Net.HttpStatusCode.OK)
-                {
-                    logger.LogWarning("[CorrelationId: {CorrelationId}] Finance API returned {StatusCode} with error: {ErrorContent}. Assuming no existing transactions for AccountId:{accountId}, PeriodEnd: {periodEnd}", correlationId, response.StatusCode, response.ErrorContent, accountId, periodEnd);
-                    return new List<PaymentTransactionLine>();
-                }
-                var transactionLines = response?.Body;
-                logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} existing transactions from Finance API", correlationId, transactionLines?.Count ?? 0);
+                var transactionLines = response.Body ?? [];
+                logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} existing transactions from Finance API", correlationId, transactionLines.Count);
 
-                return transactionLines ?? new List<PaymentTransactionLine>();
+                return transactionLines;
             }
             catch (Exception ex)
             {
