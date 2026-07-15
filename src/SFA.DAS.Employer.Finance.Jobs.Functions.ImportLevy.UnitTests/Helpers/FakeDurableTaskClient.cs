@@ -75,12 +75,12 @@ public class FakeDurableTaskClient : DurableTaskClient
         return Task.FromResult<OrchestrationMetadata?>(new OrchestrationMetadata(Guid.NewGuid().ToString(), instanceId));
     }
 
-    public override Task<OrchestrationMetadata> GetInstancesAsync(
+    public override Task<OrchestrationMetadata?> GetInstancesAsync(
         string instanceId,
         bool getInputsAndOutputs = false,
         CancellationToken cancellation = default)
     {
-        return Task.FromResult(new OrchestrationMetadata(Guid.NewGuid().ToString(), instanceId));
+        return Task.FromResult<OrchestrationMetadata?>(new OrchestrationMetadata(Guid.NewGuid().ToString(), instanceId));
     }
 
     public override AsyncPageable<OrchestrationMetadata> GetAllInstancesAsync(OrchestrationQuery? filter = null)
@@ -100,6 +100,7 @@ public class FakeDurableTaskClient : DurableTaskClient
 
     public override ValueTask DisposeAsync()
     {
+        GC.SuppressFinalize(this);
         return ValueTask.CompletedTask;
     }
 }

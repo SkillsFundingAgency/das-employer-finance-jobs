@@ -29,4 +29,43 @@ public class AccountService(IFinanceApiClient<FinanceApiConfiguration> financeAp
             throw;
         }
     }
+
+    public async Task<List<PayeScheme>> GetPayeSchemesAsync(GetAccountPayeSchemesRequest request)
+    {
+        try
+        {
+            logger.LogInformation(
+                "Calling Finance API to get PAYE schemes for account {AccountId} from source {Source}",
+                request.AccountId,
+                request.Source);
+
+            var schemes = await financeApiClient.Get<List<FinanceApiPayeScheme>>(request);
+            var payeSchemes = schemes?
+                .Where(scheme => !string.IsNullOrWhiteSpace(scheme.EmpRef))
+                .Select(scheme => new PayeScheme
+                {
+                    Reference = scheme.EmpRef,
+                    Name = scheme.Name ?? string.Empty
+                })
+                .ToList() ?? [];
+
+            logger.LogInformation(
+                "Finance API returned {Count} PAYE schemes for account {AccountId}",
+                payeSchemes.Count,
+                request.AccountId);
+
+            return payeSchemes;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Error getting PAYE schemes from Finance API for account {AccountId}: {ErrorMessage}",
+                request.AccountId,
+                ex.Message);
+            throw new InvalidOperationException(
+                $"Failed to get PAYE schemes for account {request.AccountId}.",
+                ex);
+        }
+    }
 }
