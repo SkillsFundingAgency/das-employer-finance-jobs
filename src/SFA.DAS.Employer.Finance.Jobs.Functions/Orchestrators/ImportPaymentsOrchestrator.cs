@@ -17,8 +17,17 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
         var correlationId = input?.CorrelationId ?? context.NewGuid().ToString();
         var maxConcurrentAccounts = ImportPaymentsOptions.GetMaxConcurrentAccountsOrDefault(input?.MaxConcurrentAccounts);
         var maxConcurrentPeriodEnds = ImportPaymentsOptions.GetMaxConcurrentPeriodEndsOrDefault(input?.MaxConcurrentPeriodEnds);
+        var targetAccountId = input?.TargetAccountId;
 
         logger.LogInformation("[CorrelationId: {CorrelationId}] ImportPaymentsOrchestrator started", correlationId);
+
+        if (targetAccountId.HasValue)
+        {
+            logger.LogInformation(
+                "[CorrelationId: {CorrelationId}] ImportPaymentsOrchestrator is restricted to AccountId {TargetAccountId}",
+                correlationId,
+                targetAccountId.Value);
+        }
 
         var result = new ImportPaymentsResult
         {
@@ -40,7 +49,7 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
                 result.CreatedPeriodEndsCount = createdPeriodEnds.Count;
                 result.FailedPeriodEndsCount = newPeriodEnds.Count - createdPeriodEnds.Count;
 
-                await ProcessPeriodEndAccountsInParallel(context, createdPeriodEnds, correlationId, maxConcurrentAccounts, maxConcurrentPeriodEnds);
+                await ProcessPeriodEndAccountsInParallel(context, createdPeriodEnds, correlationId, maxConcurrentAccounts, maxConcurrentPeriodEnds, targetAccountId);
             }
             else
             {
@@ -119,7 +128,8 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
         IReadOnlyCollection<PeriodEnd> periodEnds,
         string correlationId,
         int maxConcurrentAccounts,
-        int maxConcurrentPeriodEnds)
+        int maxConcurrentPeriodEnds,
+        long? targetAccountId)
     {
         var activePeriodEndTasks = new List<Task<PeriodEndResult>>();
         var periodEndsScheduled = 0;
@@ -141,7 +151,8 @@ public class ImportPaymentsOrchestrator(ILogger<ImportPaymentsOrchestrator> logg
                 {
                     CorrelationId = correlationId,
                     PeriodEnd = periodEnd,
-                    MaxConcurrentAccounts = maxConcurrentAccounts
+                    MaxConcurrentAccounts = maxConcurrentAccounts,
+                    TargetAccountId = targetAccountId
                 },
                 new SubOrchestrationOptions { InstanceId = instanceId }));
 

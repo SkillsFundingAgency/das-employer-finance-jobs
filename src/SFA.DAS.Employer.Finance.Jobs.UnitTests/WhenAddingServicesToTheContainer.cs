@@ -25,6 +25,7 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IAccountService))]
     [TestCase(typeof(IAccountPaymentsImportService))]
     [TestCase(typeof(IRefreshPaymentDataCompletedEventPublisher))]
+    [TestCase(typeof(IAccountTransfersService))]
     public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
     {
         var serviceCollection = new ServiceCollection();
@@ -59,6 +60,7 @@ public class WhenAddingServicesToTheContainer
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();
+        services.AddScoped<IAccountTransfersService, AccountTransfersService>();
     }
     private static IConfigurationRoot GenerateConfiguration()
     {

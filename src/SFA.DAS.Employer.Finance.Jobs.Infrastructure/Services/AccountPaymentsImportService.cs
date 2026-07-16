@@ -44,36 +44,15 @@ public class AccountPaymentsImportService(
         {
             var request = new GetAccountPaymentsRequest(periodEnd, accountId, index);
             var response = await providerPaymentApiClient.GetWithResponseCode<GetPaymentsResponse>(request);
-            if (response == null)
-            {
-                logger.LogWarning("[CorrelationId: {CorrelationId}] No response received from Provider Events API for PeriodEnd:{periodEnd} AccountId: {accountId}. Assuming no payments.", correlationId, periodEnd, accountId);
-                status = "Failed";
-                message = "No response received from Provider Events API";
-                continue;
-            }
-            if (response != null && response.StatusCode != System.Net.HttpStatusCode.OK)
-            {
-                logger.LogWarning("[CorrelationId: {CorrelationId}] Provider Events API returned {StatusCode} with error: {ErrorContent}. Assuming no payments.", correlationId, response.StatusCode, response.ErrorContent);
-                status = "Failed";
-                message = "No response received from Provider Events API";
-                continue;
-            }
-            var paymentsResponse = response?.Body;
 
+            var paymentsResponse = response.Body;
             if (paymentsResponse == null)
             {
-                logger.LogWarning("[CorrelationId: {CorrelationId}] Got null response body from Provider Events API for PeriodEnd:{periodEnd} AccountId: {accountId}. Assuming no payments.", correlationId, periodEnd, accountId);
-                status = "Failed";
-                message = "Got null response body from Provider Events API.";
-                continue;
+                throw new InvalidOperationException(
+                    $"Provider Events API returned {response.StatusCode} without a response body for PeriodEnd:{periodEnd} AccountId:{accountId}.");
             }
 
-            var payments = paymentsResponse.Items.ToList();
-            if (payments == null)
-            {
-                continue;
-            }
-
+            var payments = paymentsResponse.Items?.ToList() ?? [];
             totalPages = paymentsResponse.TotalNumberOfPages;
             allPayments.AddRange(payments);
             logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved payments page {Index} of {TotalPages} for AccountId = {EmployerAccountId}, PeriodEnd={PeriodEnd}",
@@ -96,38 +75,11 @@ public class AccountPaymentsImportService(
             var request = new GetExistingPaymentIdsRequest(accountId);
 
             var response = await financeApiClient.GetWithResponseCode<GetAccountPaymentIdsResponse>(request);
-            if (response == null)
-            {
-                logger.LogWarning("[CorrelationId: {CorrelationId}] No response received from Finance API. Assuming no existing payment ids for AccountId:{accountId}", correlationId, accountId);
-                return new AccountExistingPaymentIdsImportResult
-                {
-                    PaymentIds = new List<string>(),
-                    Status = "Failed",
-                    Message = "No response received from Finance API"
-                };
-            }
-            if (response != null && response.StatusCode != System.Net.HttpStatusCode.OK)
-            {
-                logger.LogWarning("[CorrelationId: {CorrelationId}] Finance API returned {StatusCode} with error: {ErrorContent}. Assuming no existing payment ids for AccountId:{accountId}", correlationId, response.StatusCode, response.ErrorContent, accountId);
-                return new AccountExistingPaymentIdsImportResult
-                {
-                    PaymentIds = new List<string>(),
-                    Status = "Failed",
-                    Message = $"Finance API returned {response.StatusCode} with error: {response.ErrorContent}"
-                };
-            }
-            var paymentIdsResponse = response?.Body;
-            if (paymentIdsResponse == null)
-            {
-                logger.LogWarning("[CorrelationId: {CorrelationId}] Received null response body from Finance API. Assuming no existing payment ids for AccountId:{accountId}", correlationId, accountId);
-                return new AccountExistingPaymentIdsImportResult
-                {
-                    PaymentIds = new List<string>(),
-                    Status = "Failed",
-                    Message = "Got null response body from Finance API."
-                };
-            }
-            var paymentIds = paymentIdsResponse?.PaymentIds ?? new List<string>();
+            var paymentIdsResponse = response.Body
+                ?? throw new InvalidOperationException(
+                    $"Finance API returned {response.StatusCode} without a response body for AccountId:{accountId}.");
+
+            var paymentIds = paymentIdsResponse.PaymentIds ?? [];
             logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} existing payment ids from Finance API", correlationId, paymentIds?.Count ?? 0);
 
             return new AccountExistingPaymentIdsImportResult
