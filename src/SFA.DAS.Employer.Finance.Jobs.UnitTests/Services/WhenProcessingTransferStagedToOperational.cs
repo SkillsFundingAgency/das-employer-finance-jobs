@@ -74,7 +74,7 @@ public class WhenProcessingTransferStagedToOperational
         result.Status.Should().Be("Succeeded");
         result.TransfersProcessed.Should().Be(3);
         postedRequest.Should().BeOfType<PostTransferStagedToOperationalRequest>();
-        postedRequest.GetUrl.Should().Be("api/transfers/staged-to-operational");
+        postedRequest.GetUrl.Should().Be("api/staging/staged-to-operational");
         postedRequest.Data.Should().BeOfType<TransferStagedToOperationalRequest>();
         var requestModel = (TransferStagedToOperationalRequest)postedRequest.Data;
         requestModel.AccountId.Should().Be(12345);
