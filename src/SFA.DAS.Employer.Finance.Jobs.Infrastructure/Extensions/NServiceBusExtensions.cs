@@ -14,6 +14,8 @@ public static class NServiceBusExtensions
     {
         var endpointConfiguration = new EndpointConfiguration(endpointName);
 
+        endpointConfiguration.AssemblyScanner().ScanFileSystemAssemblies = false;
+
         endpointConfiguration.UseSerialization<NewtonsoftJsonSerializer>();
         endpointConfiguration.SendOnly();
         endpointConfiguration.SendFailedMessagesTo($"{endpointName}-errors");
