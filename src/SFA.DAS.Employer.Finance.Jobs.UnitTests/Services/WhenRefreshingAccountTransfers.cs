@@ -73,6 +73,12 @@ public class WhenRefreshingAccountTransfers
         stagedTransfer.CollectionPeriodYear.Should().Be(2025);
         stagedTransfer.Ukprn.Should().Be(10000494);
         stagedTransfer.CourseName.Should().BeEmpty();
+        stagedTransfer.SenderAccountName.Should().BeEmpty();
+        stagedTransfer.ApprenticeshipId.Should().Be(transfer.CommitmentId);
+        stagedTransfer.Type.Should().Be(transfer.Type.ToString());
+        stagedTransfer.RequiredPaymentId.Should().Be(transfer.RequiredPaymentId);
+        stagedTransfer.CourseLevel.Should().BeNull();
+        stagedTransfer.LearningType.Should().BeNull();
         stagedTransfer.CreatedBy.Should().Be("EmployerFinanceJobs");
         stagedTransfer.CorrelationId.Should().Be(input.CorrelationId);
         _providerPaymentApiClientMock.Verify(client => client.GetWithResponseCode<GetTransfersResponse>(
@@ -267,6 +273,7 @@ public class WhenRefreshingAccountTransfers
             RequiredPaymentId = requiredPaymentId,
             Amount = 123.45m,
             CommitmentId = 991122,
+            Type = SFA.DAS.Provider.Events.Api.Types.TransferType.Levy,
             CollectionPeriodName = "2526-R03"
         };
     }

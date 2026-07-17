@@ -124,6 +124,7 @@ public class AccountTransfersService(
                 {
                     TransferId = transfer.TransferId,
                     SenderAccountId = transfer.SenderAccountId,
+                    SenderAccountName = string.Empty,
                     ReceiverAccountId = transfer.ReceiverAccountId,
                     ReceiverAccountName = receiverAccountName ?? string.Empty,
                     Amount = transfer.Amount,
@@ -133,6 +134,11 @@ public class AccountTransfersService(
                     CollectionPeriodYear = payment?.CollectionPeriodYear ?? 0,
                     Ukprn = payment?.Ukprn ?? 0,
                     CourseName = string.Empty,
+                    CourseLevel = null,
+                    LearningType = null,
+                    ApprenticeshipId = transfer.CommitmentId,
+                    Type = transfer.Type.ToString(),
+                    RequiredPaymentId = transfer.RequiredPaymentId,
                     CreatedBy = CreatedBy,
                     CorrelationId = correlationId
                 };
