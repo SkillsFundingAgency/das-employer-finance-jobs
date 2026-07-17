@@ -7,15 +7,16 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 public static class NServiceBusExtensions
 {
-    public const string EndpointName = "SFA.DAS.EmployerFinance.Jobs.Functions";
+    public const string PaymentsEndpointName = "SFA.DAS.EmployerFinance.Jobs.Payments";
+    public const string LevyEndpointName = "SFA.DAS.EmployerFinance.Jobs.Levy";
 
-    public static void ConfigureNServiceBusForSend(this IServiceCollection services, IConfiguration configuration)
+    public static void ConfigureNServiceBusForSend(this IServiceCollection services, IConfiguration configuration, string endpointName)
     {
-        var endpointConfiguration = new EndpointConfiguration(EndpointName);
+        var endpointConfiguration = new EndpointConfiguration(endpointName);
 
         endpointConfiguration.UseSerialization<NewtonsoftJsonSerializer>();
         endpointConfiguration.SendOnly();
-        endpointConfiguration.SendFailedMessagesTo($"{EndpointName}-errors");
+        endpointConfiguration.SendFailedMessagesTo($"{endpointName}-errors");
         endpointConfiguration.EnableInstallers();
         endpointConfiguration.Conventions().SetMessageConventions();
         endpointConfiguration.UseTransport(BuildTransport(configuration));

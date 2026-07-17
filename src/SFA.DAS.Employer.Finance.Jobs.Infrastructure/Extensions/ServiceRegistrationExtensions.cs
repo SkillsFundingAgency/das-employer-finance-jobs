@@ -16,12 +16,12 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 [ExcludeFromCodeCoverage]
 public static class ServiceRegistrationExtensions
 {
-    public static void AddServiceRegistration(this IServiceCollection services, IConfiguration configuration)
+    public static void AddServiceRegistration(this IServiceCollection services, IConfiguration configuration, string nServiceBusEndpointName)
     {
 
         services.AddHttpClient();
 
-        services.ConfigureNServiceBusForSend(configuration);
+        services.ConfigureNServiceBusForSend(configuration, nServiceBusEndpointName);
 
         services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
 
