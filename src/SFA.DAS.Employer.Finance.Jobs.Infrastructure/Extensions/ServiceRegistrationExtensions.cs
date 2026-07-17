@@ -45,6 +45,8 @@ public static class ServiceRegistrationExtensions
 
         services.AddScoped<IPaymentTransactionLinesService, PaymentTransactionLinesService>();
 
+        services.AddScoped<ITransferStagedToOperationalService, TransferStagedToOperationalService>();
+
         services.AddScoped<ICommitmentsApiClient, CommitmentsApiClient>();
 
         services.AddScoped<ICoursesApiClient, CoursesApiClient>();

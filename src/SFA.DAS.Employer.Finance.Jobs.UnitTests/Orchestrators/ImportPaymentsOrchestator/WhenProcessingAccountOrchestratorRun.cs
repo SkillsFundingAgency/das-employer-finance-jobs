@@ -22,6 +22,7 @@ public class WhenProcessingAccountOrchestratorRun
         _contextMock = new Mock<TaskOrchestrationContext>();
         _orchestrator = new ProcessAccountOrchestrator(_loggerMock.Object);
         SetupRefreshPaymentDataCompletedEventPublished();
+        SetupTransferStagedToOperationalSkipped();
     }
 
     [Test]
@@ -150,6 +151,14 @@ public class WhenProcessingAccountOrchestratorRun
                     && metadataInput.CorrelationId == input.CorrelationId
                     && metadataInput.PaymentDetails.Count == 1
                     && metadataInput.PaymentDetails.Single().Id == payment.Id),
+                It.IsAny<TaskOptions>()),
+            Times.Once);
+        _contextMock.Verify(context => context.CallActivityAsync<TransferStagedToOperationalResult>(
+                It.Is<TaskName>(name => name.Name == nameof(TransferStagedToOperationalActivities.TransferStagedToOperationalActivity)),
+                It.Is<TransferStagedToOperationalInput>(transferInput =>
+                    transferInput.AccountId == input.AccountId
+                    && transferInput.PeriodEndRef == input.PeriodEndRef
+                    && transferInput.CorrelationId == input.CorrelationId),
                 It.IsAny<TaskOptions>()),
             Times.Once);
     }
@@ -506,6 +515,20 @@ public class WhenProcessingAccountOrchestratorRun
             {
                 Status = "Succeeded",
                 Message = "ok"
+            });
+    }
+
+    private void SetupTransferStagedToOperationalSkipped()
+    {
+        _contextMock.Setup(context => context.CallActivityAsync<TransferStagedToOperationalResult>(
+                It.Is<TaskName>(name => name.Name == nameof(TransferStagedToOperationalActivities.TransferStagedToOperationalActivity)),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new TransferStagedToOperationalResult
+            {
+                TransfersProcessed = 0,
+                Status = "Skipped",
+                Message = "Transfer staged-to-operational processing is disabled."
             });
     }
 }

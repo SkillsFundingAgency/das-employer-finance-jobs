@@ -11,7 +11,12 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
     [Function(nameof(ProcessAccountOrchestrator))]
     public async Task<AccountProcessingResult> RunOrchestrator([OrchestrationTrigger] TaskOrchestrationContext context)
     {
-        var input = context.GetInput<ProcessAccountInput>() ?? throw new ArgumentNullException("input");
+        var input = context.GetInput<ProcessAccountInput>();
+        if (input == null)
+        {
+            throw new ArgumentNullException(nameof(input));
+        }
+
         var correlationId = input.CorrelationId ?? context.NewGuid().ToString();
         var idempotencyKey = input.IdempotencyKey ?? $"{input.AccountId}_{input.PeriodEndRef}";
 
@@ -242,6 +247,26 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
                 refreshPaymentsResult.Status);
         }
 
+        var transferStagedToOperationalInput = new TransferStagedToOperationalInput
+        {
+            AccountId = input.AccountId,
+            PeriodEndRef = input.PeriodEndRef,
+            CorrelationId = correlationId
+        };
+
+        var transferStagedToOperationalResult = await context.CallActivityAsync<TransferStagedToOperationalResult>(
+            nameof(TransferStagedToOperationalActivities.TransferStagedToOperationalActivity),
+            transferStagedToOperationalInput,
+            new TaskOptions(retryPolicy));
+
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, received TransferStagedToOperationalActivity result for AccountId {AccountId} PeriodEnd {PeriodEndRef}. Status: {Status}. Message: {Message}",
+            correlationId,
+            input.AccountId,
+            input.PeriodEndRef,
+            transferStagedToOperationalResult.Status,
+            transferStagedToOperationalResult.Message);
+
         var result = new AccountProcessingResult
         {
             AccountId = input.AccountId,
@@ -250,7 +275,8 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
                       && refreshPaymentsResult.Status == "Succeeded"
                       && refreshAccountTransfersResult.Status == "Succeeded"
                       && paymentMetadataResult.Status == "Succeeded"
-                      && paymentTransactionLinesResult.Status == "Succeeded",
+                      && paymentTransactionLinesResult.Status == "Succeeded"
+                      && transferStagedToOperationalResult.Status != "Failed",
             PaymentsProcessed = refreshPaymentsResult.PaymentsCreated,
             TransfersProcessed = refreshAccountTransfersResult.TransfersProcessed
         };
