@@ -87,6 +87,47 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
             refreshPaymentsResult.PaymentDetails?.Count ?? 0,
             refreshPaymentsResult.Message);
 
+        if (refreshPaymentsResult.Status == "Succeeded")
+        {
+            var publishRefreshPaymentDataCompletedEventInput = new PublishRefreshPaymentDataCompletedEventInput
+            {
+                AccountId = input.AccountId,
+                PeriodEnd = input.PeriodEndRef,
+                PaymentsProcessed = refreshPaymentsResult.PaymentsCreated > 0,
+                CorrelationId = correlationId
+            };
+
+            try
+            {
+                var publishRefreshPaymentDataCompletedEventResult = await context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
+                    nameof(RefreshPaymentDataCompletedEventActivities.PublishRefreshPaymentDataCompletedEventActivity),
+                    publishRefreshPaymentDataCompletedEventInput,
+                    new TaskOptions(retryPolicy));
+
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, received PublishRefreshPaymentDataCompletedEventActivity result with Status: {Status} Message: {Message}",
+                    correlationId,
+                    publishRefreshPaymentDataCompletedEventResult.Status,
+                    publishRefreshPaymentDataCompletedEventResult.Message);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, PublishRefreshPaymentDataCompletedEventActivity failed for AccountId {AccountId} PeriodEnd {PeriodEndRef}. Continuing account payment processing.",
+                    correlationId,
+                    input.AccountId,
+                    input.PeriodEndRef);
+            }
+        }
+        else
+        {
+            logger.LogInformation(
+                "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, RefreshPaymentDataCompletedEvent is not published because RefreshPaymentDataActivity returned Status: {RefreshPaymentDataStatus}.",
+                correlationId,
+                refreshPaymentsResult.Status);
+        }
+
         var refreshAccountTransfersInput = new RefreshAccountTransfersInput
         {
             AccountId = input.AccountId,
