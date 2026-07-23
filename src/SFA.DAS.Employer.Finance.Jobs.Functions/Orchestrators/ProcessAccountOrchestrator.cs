@@ -12,13 +12,13 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
     public async Task<AccountProcessingResult> RunOrchestrator([OrchestrationTrigger] TaskOrchestrationContext context)
     {
         var input = context.GetInput<ProcessAccountInput>();
-        var correlationId = input?.CorrelationId ?? context.NewGuid().ToString();
-        var idempotencyKey = input?.IdempotencyKey ?? $"{input?.AccountId}_{input?.PeriodEndRef}";
-
         if (input == null)
         {
             throw new ArgumentNullException(nameof(input));
         }
+
+        var correlationId = input.CorrelationId ?? context.NewGuid().ToString();
+        var idempotencyKey = input.IdempotencyKey ?? $"{input.AccountId}_{input.PeriodEndRef}";
 
         logger.LogInformation(
             "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator started for AccountId {AccountId} PeriodEnd {PeriodEndRef}",
@@ -86,6 +86,71 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
             refreshPaymentsResult.PaymentsCreated,
             refreshPaymentsResult.PaymentDetails?.Count ?? 0,
             refreshPaymentsResult.Message);
+
+        if (refreshPaymentsResult.Status == "Succeeded")
+        {
+            var publishRefreshPaymentDataCompletedEventInput = new PublishRefreshPaymentDataCompletedEventInput
+            {
+                AccountId = input.AccountId,
+                PeriodEnd = input.PeriodEndRef,
+                PaymentsProcessed = refreshPaymentsResult.PaymentsCreated > 0,
+                CorrelationId = correlationId
+            };
+
+            try
+            {
+                var publishRefreshPaymentDataCompletedEventResult = await context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
+                    nameof(RefreshPaymentDataCompletedEventActivities.PublishRefreshPaymentDataCompletedEventActivity),
+                    publishRefreshPaymentDataCompletedEventInput,
+                    new TaskOptions(retryPolicy));
+
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, received PublishRefreshPaymentDataCompletedEventActivity result with Status: {Status} Message: {Message}",
+                    correlationId,
+                    publishRefreshPaymentDataCompletedEventResult.Status,
+                    publishRefreshPaymentDataCompletedEventResult.Message);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, PublishRefreshPaymentDataCompletedEventActivity failed for AccountId {AccountId} PeriodEnd {PeriodEndRef}. Continuing account payment processing.",
+                    correlationId,
+                    input.AccountId,
+                    input.PeriodEndRef);
+            }
+        }
+        else
+        {
+            logger.LogInformation(
+                "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, RefreshPaymentDataCompletedEvent is not published because RefreshPaymentDataActivity returned Status: {RefreshPaymentDataStatus}.",
+                correlationId,
+                refreshPaymentsResult.Status);
+        }
+
+        var refreshAccountTransfersInput = new RefreshAccountTransfersInput
+        {
+            AccountId = input.AccountId,
+            AccountName = input.AccountName,
+            PeriodEndRef = input.PeriodEndRef,
+            CorrelationId = correlationId,
+            TriggeredAt = input.TriggeredAt,
+            Payments = MapTransferPaymentLookups(importPaymentsResult.Payments)
+        };
+
+        var refreshAccountTransfersResult = await context.CallActivityAsync<RefreshAccountTransfersResult>(
+                                    nameof(AccountTransferActivities.RefreshAccountTransfersActivity),
+                                    refreshAccountTransfersInput,
+                                    new TaskOptions(retryPolicy));
+
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, received RefreshAccountTransfersActivity result for AccountId {AccountId} PeriodEnd {PeriodEndRef}. Status: {Status}. TransfersProcessed: {TransfersProcessed}. Message: {Message}",
+            correlationId,
+            input.AccountId,
+            input.PeriodEndRef,
+            refreshAccountTransfersResult.Status,
+            refreshAccountTransfersResult.TransfersProcessed,
+            refreshAccountTransfersResult.Message);
        
         var paymentMetadataResult = new CreatePaymentMetadataResult
         {
@@ -177,29 +242,81 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
             logger.LogInformation(
                 "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, CreatePaymentTransactionLinesActivity is not started because staging did not produce payment details for AccountId {AccountId} PeriodEnd {PeriodEndRef}. RefreshPaymentDataStatus: {RefreshPaymentDataStatus}",
                 correlationId,
-                input?.AccountId,
-                input?.PeriodEndRef,
+                input.AccountId,
+                input.PeriodEndRef,
                 refreshPaymentsResult.Status);
         }
 
+        var transferStagedToOperationalInput = new TransferStagedToOperationalInput
+        {
+            AccountId = input.AccountId,
+            PeriodEndRef = input.PeriodEndRef,
+            CorrelationId = correlationId
+        };
+
+        var transferStagedToOperationalResult = await context.CallActivityAsync<TransferStagedToOperationalResult>(
+            nameof(TransferStagedToOperationalActivities.TransferStagedToOperationalActivity),
+            transferStagedToOperationalInput,
+            new TaskOptions(retryPolicy));
+
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator, received TransferStagedToOperationalActivity result for AccountId {AccountId} PeriodEnd {PeriodEndRef}. Status: {Status}. Message: {Message}",
+            correlationId,
+            input.AccountId,
+            input.PeriodEndRef,
+            transferStagedToOperationalResult.Status,
+            transferStagedToOperationalResult.Message);
+
         var result = new AccountProcessingResult
         {
-            AccountId = input?.AccountId ?? 0,
+            AccountId = input.AccountId,
             Success = importPaymentsResult.Status == "Succeeded"
                       && importExistingPaymentIdsResult.Status == "Succeeded"
                       && refreshPaymentsResult.Status == "Succeeded"
+                      && refreshAccountTransfersResult.Status == "Succeeded"
                       && paymentMetadataResult.Status == "Succeeded"
-                      && paymentTransactionLinesResult.Status == "Succeeded",
+                      && paymentTransactionLinesResult.Status == "Succeeded"
+                      && transferStagedToOperationalResult.Status != "Failed",
             PaymentsProcessed = refreshPaymentsResult.PaymentsCreated,
-            TransfersProcessed = 0
+            TransfersProcessed = refreshAccountTransfersResult.TransfersProcessed
         };
 
         logger.LogInformation(
-            "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator completed for AccountId {AccountId} PeriodEnd {PeriodEndRef}. PaymentsProcessed: {PaymentsProcessed}",
+            "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator completed for AccountId {AccountId} PeriodEnd {PeriodEndRef}. PaymentsProcessed: {PaymentsProcessed}. TransfersProcessed: {TransfersProcessed}",
             correlationId,
-            input?.AccountId,
-            input?.PeriodEndRef,
-            result.PaymentsProcessed);
+            input.AccountId,
+            input.PeriodEndRef,
+            result.PaymentsProcessed,
+            result.TransfersProcessed);
         return result;
+    }
+
+    private static List<TransferPaymentLookup> MapTransferPaymentLookups(IEnumerable<SFA.DAS.Provider.Events.Api.Types.Payment>? payments)
+    {
+        if (payments == null)
+        {
+            return [];
+        }
+
+        var lookups = new List<TransferPaymentLookup>();
+
+        foreach (var payment in payments)
+        {
+            if (!Guid.TryParse(payment.Id, out var paymentId))
+            {
+                continue;
+            }
+
+            lookups.Add(new TransferPaymentLookup
+            {
+                PaymentId = paymentId,
+                EvidenceSubmittedOn = payment.EvidenceSubmittedOn,
+                CollectionPeriodMonth = payment.CollectionPeriod?.Month ?? 0,
+                CollectionPeriodYear = payment.CollectionPeriod?.Year ?? 0,
+                Ukprn = payment.Ukprn
+            });
+        }
+
+        return lookups;
     }
 }
