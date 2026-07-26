@@ -6,6 +6,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Provider.Events.Api.Types;
+using LearningType = SFA.DAS.Provider.Events.Api.Types.LearningType;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 
@@ -18,7 +19,7 @@ public class PaymentMetadataService(
 {
     private Task<StandardsResponse?>? _standardsTask;
     private Task<FrameworksResponse?>? _frameworksTask;
-    private Dictionary<int, StandardResponse>? _standardsById;
+    private Dictionary<string, StandardResponse>? _standardsById;
     private Dictionary<(int FrameworkCode, int ProgType, int PathwayCode), FrameworkResponse>? _frameworksByKey;
 
     public async Task<CreatePaymentMetadataResult> CreatePaymentMetadata(CreatePaymentMetadataInput input, CancellationToken cancellationToken)
@@ -127,6 +128,7 @@ public class PaymentMetadataService(
             FrameworkCode = payment.FrameworkCode,
             ProgrammeType = payment.ProgrammeType,
             PathwayCode = payment.PathwayCode,
+            CourseCode = payment.CourseCode,
             ApprenticeName = BuildApprenticeName(apprenticeship),
             ApprenticeNINumber = apprenticeship?.NINumber,
             ApprenticeshipCourseStartDate = apprenticeship?.StartDate,
@@ -142,11 +144,8 @@ public class PaymentMetadataService(
     {
         if (payment.StandardCode is > 0)
         {
-            var standardsById = await GetStandardsById();
-            standardsById.TryGetValue((int)payment.StandardCode.Value, out var standard);
-
-            metadata.ApprenticeshipCourseName = standard?.Title;
-            metadata.ApprenticeshipCourseLevel = standard?.Level;
+            var standard = await GetStandard(payment.StandardCode.Value.ToString());
+            AddStandardDetails(metadata, standard);
             return;
         }
 
@@ -160,10 +159,22 @@ public class PaymentMetadataService(
             metadata.ApprenticeshipCourseName = framework?.FrameworkName;
             metadata.ApprenticeshipCourseLevel = framework?.Level;
             metadata.PathwayName = framework?.PathwayName;
+            return;
         }
+
+        if (!string.IsNullOrEmpty(payment.CourseCode))
+        {
+            var standard = await GetStandard(payment.CourseCode);
+            AddStandardDetails(metadata, standard);
+            return;
+        }
+
+        logger.LogWarning(
+            "No framework code, standard code or course code set on payment. Cannot get course details. PaymentId: {PaymentId}",
+            payment.Id);
     }
 
-    private async Task<Dictionary<int, StandardResponse>> GetStandardsById()
+    private async Task<Dictionary<string, StandardResponse>> GetStandardsById()
     {
         if (_standardsById != null)
         {
@@ -172,9 +183,10 @@ public class PaymentMetadataService(
 
         var standards = await GetStandards();
         _standardsById = standards?.Standards
-            .GroupBy(standard => standard.Id)
-            .ToDictionary(group => group.Key, group => group.First())
-            ?? [];
+            .Where(standard => !string.IsNullOrWhiteSpace(standard.Id))
+            .GroupBy(standard => standard.Id!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase)
+            ?? new Dictionary<string, StandardResponse>(StringComparer.OrdinalIgnoreCase);
 
         return _standardsById;
     }
@@ -203,6 +215,22 @@ public class PaymentMetadataService(
     private Task<FrameworksResponse?> GetFrameworks()
     {
         return _frameworksTask ??= coursesApiClient.GetFrameworks();
+    }
+
+    private async Task<StandardResponse?> GetStandard(string standardId)
+    {
+        var standardsById = await GetStandardsById();
+        standardsById.TryGetValue(standardId, out var standard);
+        return standard;
+    }
+
+    private static void AddStandardDetails(PaymentMetadataStaging metadata, StandardResponse? standard)
+    {
+        metadata.ApprenticeshipCourseName = standard?.Title;
+        metadata.ApprenticeshipCourseLevel = standard?.Level;
+        metadata.LearningType = Enum.TryParse(standard?.LearningType, out LearningType learningType)
+            ? learningType.ToString()
+            : LearningType.Apprenticeship.ToString();
     }
 
     private async Task<bool> PostPaymentMetadataToStaging(Guid paymentId, PaymentMetadataStaging metadata, string correlationId)

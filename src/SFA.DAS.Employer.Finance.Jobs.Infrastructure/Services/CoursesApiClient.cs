@@ -52,14 +52,14 @@ public class CoursesApiClient(
 
     private static StandardResponse? MapStandard(CourseApiItem course)
     {
-        if (!int.TryParse(course.LarsCode, out var larsCode))
+        if (string.IsNullOrWhiteSpace(course.LarsCode))
         {
             return null;
         }
 
         return new StandardResponse
         {
-            Id = larsCode,
+            Id = course.LarsCode.Trim(),
             Title = course.Title,
             Level = course.Level,
             LearningType = course.LearningType
