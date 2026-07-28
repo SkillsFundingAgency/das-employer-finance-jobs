@@ -132,6 +132,7 @@ public class PaymentMetadataService(
             ApprenticeName = BuildApprenticeName(apprenticeship),
             ApprenticeNINumber = apprenticeship?.NINumber,
             ApprenticeshipCourseStartDate = apprenticeship?.StartDate,
+            CohortId = apprenticeship?.CohortId,
             CorrelationId = correlationId
         };
 
