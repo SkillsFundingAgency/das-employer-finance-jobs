@@ -33,4 +33,28 @@ public class WhenBuildingGetApiRequestUrls
         // Assert
         request.GetUrl.Should().Be("api/payments?page=2&periodId=2526-R03&employerAccountId=14331");
     }
+
+    [Test]
+    public void Then_GetCoursesSearchUrl_Is_Correct()
+    {
+        var request = new GetCoursesSearchRequest();
+
+        request.GetUrl.Should().Be("api/courses/search?filter=Active&orderby=Score");
+    }
+
+    [Test]
+    public void Then_GetCoursesFrameworksUrl_Is_Correct()
+    {
+        var request = new GetCoursesFrameworksRequest();
+
+        request.GetUrl.Should().Be("api/courses/frameworks");
+    }
+
+    [Test]
+    public void Then_GetRoatpProviderUrl_Is_Correct()
+    {
+        var request = new GetRoatpProviderRequest(10012345);
+
+        request.GetUrl.Should().Be("api/providers/10012345");
+    }
 }

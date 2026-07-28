@@ -38,4 +38,12 @@ public class WhenUsingImportPaymentsOptions
         options.GetActiveInstanceInactivityThreshold().Should().Be(TimeSpan.FromMinutes(ImportPaymentsOptions.DefaultActiveInstanceInactivityThresholdMinutes));
         options.GetStaleInstanceTerminationTimeout().Should().Be(TimeSpan.FromSeconds(ImportPaymentsOptions.DefaultStaleInstanceTerminationTimeoutSeconds));
     }
+
+    [Test]
+    public void Then_Transfer_Staged_To_Operational_Processing_Defaults_To_Disabled()
+    {
+        var options = new ImportPaymentsOptions();
+
+        options.TransferStagedToOperationalProcessingEnabled.Should().BeFalse();
+    }
 }

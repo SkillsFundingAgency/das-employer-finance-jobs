@@ -21,6 +21,8 @@ public class WhenProcessingAccountOrchestratorRun
         _loggerMock = new Mock<ILogger<ProcessAccountOrchestrator>>();
         _contextMock = new Mock<TaskOrchestrationContext>();
         _orchestrator = new ProcessAccountOrchestrator(_loggerMock.Object);
+        SetupRefreshPaymentDataCompletedEventPublished();
+        SetupTransferStagedToOperationalSkipped();
     }
 
     [Test]
@@ -30,9 +32,11 @@ public class WhenProcessingAccountOrchestratorRun
         var input = new ProcessAccountInput
         {
             AccountId = 12345,
+            AccountName = "Receiver Account",
             PeriodEndRef = "2024-01",
             CorrelationId = "correlation-id",
-            IdempotencyKey = "idempotency-key"
+            IdempotencyKey = "idempotency-key",
+            TriggeredAt = new DateTime(2025, 11, 18, 10, 0, 0, DateTimeKind.Utc)
         };
 
         _contextMock.Setup(context => context.GetInput<ProcessAccountInput>())
@@ -63,7 +67,18 @@ public class WhenProcessingAccountOrchestratorRun
                 It.IsAny<TaskOptions>()))
             .ReturnsAsync(new RefreshPaymentDataActivityResult
             {
+                PaymentsCreated = 1,
                 PaymentDetails = [payment],
+                Status = "Succeeded",
+                Message = "ok"
+            });
+        _contextMock.Setup(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new RefreshAccountTransfersResult
+            {
+                TransfersProcessed = 2,
                 Status = "Succeeded",
                 Message = "ok"
             });
@@ -92,9 +107,31 @@ public class WhenProcessingAccountOrchestratorRun
         var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
 
         result.Success.Should().BeTrue();
+        result.TransfersProcessed.Should().Be(2);
         _contextMock.Verify(context => context.CallActivityAsync<RefreshPaymentDataActivityResult>(
                 It.IsAny<TaskName>(),
                 It.Is<RefreshPaymentDataInput>(refreshInput => refreshInput.AccountId == input.AccountId),
+                It.IsAny<TaskOptions>()),
+            Times.Once);
+        _contextMock.Verify(context => context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
+                It.Is<TaskName>(name => name.Name == nameof(RefreshPaymentDataCompletedEventActivities.PublishRefreshPaymentDataCompletedEventActivity)),
+                It.Is<PublishRefreshPaymentDataCompletedEventInput>(publishInput =>
+                    publishInput.AccountId == input.AccountId
+                    && publishInput.PeriodEnd == input.PeriodEndRef
+                    && publishInput.CorrelationId == input.CorrelationId
+                    && publishInput.PaymentsProcessed),
+                It.IsAny<TaskOptions>()),
+            Times.Once);
+        _contextMock.Verify(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
+                It.Is<TaskName>(name => name.Name == nameof(AccountTransferActivities.RefreshAccountTransfersActivity)),
+                It.Is<RefreshAccountTransfersInput>(transferInput =>
+                    transferInput.AccountId == input.AccountId
+                    && transferInput.AccountName == input.AccountName
+                    && transferInput.PeriodEndRef == input.PeriodEndRef
+                    && transferInput.CorrelationId == input.CorrelationId
+                    && transferInput.TriggeredAt == input.TriggeredAt
+                    && transferInput.Payments.Count == 1
+                    && transferInput.Payments.Single().PaymentId.ToString() == payment.Id),
                 It.IsAny<TaskOptions>()),
             Times.Once);
         _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
@@ -114,6 +151,14 @@ public class WhenProcessingAccountOrchestratorRun
                     && metadataInput.CorrelationId == input.CorrelationId
                     && metadataInput.PaymentDetails.Count == 1
                     && metadataInput.PaymentDetails.Single().Id == payment.Id),
+                It.IsAny<TaskOptions>()),
+            Times.Once);
+        _contextMock.Verify(context => context.CallActivityAsync<TransferStagedToOperationalResult>(
+                It.Is<TaskName>(name => name.Name == nameof(TransferStagedToOperationalActivities.TransferStagedToOperationalActivity)),
+                It.Is<TransferStagedToOperationalInput>(transferInput =>
+                    transferInput.AccountId == input.AccountId
+                    && transferInput.PeriodEndRef == input.PeriodEndRef
+                    && transferInput.CorrelationId == input.CorrelationId),
                 It.IsAny<TaskOptions>()),
             Times.Once);
     }
@@ -161,10 +206,29 @@ public class WhenProcessingAccountOrchestratorRun
                 Status = "Succeeded",
                 Message = "No new payments"
             });
+        _contextMock.Setup(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new RefreshAccountTransfersResult
+            {
+                TransfersProcessed = 0,
+                Status = "Succeeded",
+                Message = "No transfers"
+            });
 
         var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
 
         result.Success.Should().BeTrue();
+        _contextMock.Verify(context => context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
+                It.Is<TaskName>(name => name.Name == nameof(RefreshPaymentDataCompletedEventActivities.PublishRefreshPaymentDataCompletedEventActivity)),
+                It.Is<PublishRefreshPaymentDataCompletedEventInput>(publishInput =>
+                    publishInput.AccountId == input.AccountId
+                    && publishInput.PeriodEnd == input.PeriodEndRef
+                    && publishInput.CorrelationId == input.CorrelationId
+                    && !publishInput.PaymentsProcessed),
+                It.IsAny<TaskOptions>()),
+            Times.Once);
         _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
                 It.IsAny<TaskName>(),
                 It.IsAny<object>(),
@@ -219,6 +283,64 @@ public class WhenProcessingAccountOrchestratorRun
                     && transactionInput.PaymentDetails.Count == 1
                     && transactionInput.PaymentDetails.Single().Id == payment.Id),
                 It.IsAny<TaskOptions>()),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task Then_Continues_Account_Processing_When_Refresh_Payment_Data_Completed_Event_Publishing_Fails()
+    {
+        var payment = new Payment { Id = Guid.NewGuid().ToString() };
+        var input = new ProcessAccountInput
+        {
+            AccountId = 12345,
+            PeriodEndRef = "2024-01",
+            CorrelationId = "correlation-id",
+            IdempotencyKey = "idempotency-key"
+        };
+
+        SetupPaymentsStaged(input, payment);
+        _contextMock.Setup(context => context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
+                It.Is<TaskName>(name => name.Name == nameof(RefreshPaymentDataCompletedEventActivities.PublishRefreshPaymentDataCompletedEventActivity)),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ThrowsAsync(new InvalidOperationException("Service Bus publish failed"));
+        _contextMock.Setup(context => context.CallActivityAsync<CreatePaymentMetadataResult>(
+                It.Is<TaskName>(name => name.Name == nameof(PaymentMetadataActivities.CreatePaymentMetadataActivity)),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new CreatePaymentMetadataResult
+            {
+                MetadataCreated = 1,
+                Status = "Succeeded",
+                Message = "ok"
+            });
+        _contextMock.Setup(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
+                It.Is<TaskName>(name => name.Name == nameof(PaymentTransactionLineActivities.CreatePaymentTransactionLinesActivity)),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new CreatePaymentTransactionLinesResult
+            {
+                TransactionsCreated = 1,
+                Transactions = [],
+                Status = "Succeeded",
+                Message = "ok"
+            });
+
+        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
+
+        result.Success.Should().BeTrue();
+        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
+                It.Is<TaskName>(name => name.Name == nameof(PaymentTransactionLineActivities.CreatePaymentTransactionLinesActivity)),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Once);
+        _loggerMock.Verify(
+            logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("PublishRefreshPaymentDataCompletedEventActivity failed")),
+                It.Is<InvalidOperationException>(exception => exception.Message == "Service Bus publish failed"),
+                It.IsAny<Func<It.IsAnyType, Exception, string>>()),
             Times.Once);
     }
 
@@ -305,10 +427,25 @@ public class WhenProcessingAccountOrchestratorRun
                 Status = "Failed",
                 Message = "Finance API returned BadRequest"
             });
+        _contextMock.Setup(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new RefreshAccountTransfersResult
+            {
+                TransfersProcessed = 0,
+                Status = "Succeeded",
+                Message = "No transfers"
+            });
 
         var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
 
         result.Success.Should().BeFalse();
+        _contextMock.Verify(context => context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
         _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
                 It.IsAny<TaskName>(),
                 It.IsAny<object>(),
@@ -351,9 +488,47 @@ public class WhenProcessingAccountOrchestratorRun
                 It.IsAny<TaskOptions>()))
             .ReturnsAsync(new RefreshPaymentDataActivityResult
             {
+                PaymentsCreated = 1,
                 PaymentDetails = [payment],
                 Status = "Succeeded",
                 Message = "ok"
+            });
+        _contextMock.Setup(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new RefreshAccountTransfersResult
+            {
+                TransfersProcessed = 0,
+                Status = "Succeeded",
+                Message = "No transfers"
+            });
+    }
+
+    private void SetupRefreshPaymentDataCompletedEventPublished()
+    {
+        _contextMock.Setup(context => context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
+                It.Is<TaskName>(name => name.Name == nameof(RefreshPaymentDataCompletedEventActivities.PublishRefreshPaymentDataCompletedEventActivity)),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new PublishRefreshPaymentDataCompletedEventResult
+            {
+                Status = "Succeeded",
+                Message = "ok"
+            });
+    }
+
+    private void SetupTransferStagedToOperationalSkipped()
+    {
+        _contextMock.Setup(context => context.CallActivityAsync<TransferStagedToOperationalResult>(
+                It.Is<TaskName>(name => name.Name == nameof(TransferStagedToOperationalActivities.TransferStagedToOperationalActivity)),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new TransferStagedToOperationalResult
+            {
+                TransfersProcessed = 0,
+                Status = "Skipped",
+                Message = "Transfer staged-to-operational processing is disabled."
             });
     }
 }

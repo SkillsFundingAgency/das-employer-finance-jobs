@@ -29,4 +29,25 @@ public class PaymentTransactionLineActivities(
 
         return result;
     }
+
+    [Function(nameof(CreateTransferTransactionLinesActivity))]
+    public async Task<CreateTransferTransactionLinesResult> CreateTransferTransactionLinesActivity([ActivityTrigger] CreateTransferTransactionLinesInput input)
+    {
+        if (input == null)
+        {
+            throw new ArgumentNullException(nameof(input));
+        }
+
+        logger.LogInformation("[CorrelationId: {CorrelationId}] CreateTransferTransactionLinesActivity starting.", input.CorrelationId);
+
+        var result = await paymentTransactionLinesService.CreateTransferTransactionLines(input);
+
+        logger.LogInformation("[CorrelationId: {CorrelationId}] CreateTransferTransactionLinesActivity completed for PeriodEnd: {PeriodEnd} Status: {Status} Message: {Message}",
+            input.CorrelationId,
+            input.PeriodEnd,
+            result.Status,
+            result.Message);
+
+        return result;
+    }
 }

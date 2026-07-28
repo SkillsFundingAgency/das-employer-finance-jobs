@@ -10,6 +10,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Encoding;
 using SFA.DAS.Provider.Events.Api.Types;
+using FinanceJobsAccountTransfer = SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models.AccountTransfer;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Services;
 
@@ -291,6 +292,141 @@ public class WhenCreatingPaymentTransactionLines
         exception.Message.Should().Contain("AccountId is mandatory");
     }
 
+    [Test]
+    public async Task Then_Creates_Sender_And_Receiver_Transfer_Transaction_Lines_For_A_Single_Sender()
+    {
+        const string periodEnd = "2526-R03";
+        const long senderAccountId = 12345;
+        const long receiverAccountId = 67890;
+        const string senderAccountName = "Sender Account";
+        const string receiverAccountName = "Receiver Account";
+        TransactionLineStagingRequest capturedRequest = null;
+        var input = new CreateTransferTransactionLinesInput
+        {
+            PeriodEnd = periodEnd,
+            CorrelationId = "correlation-id",
+            Transfers =
+            [
+                CreateTransfer(senderAccountId, senderAccountName, receiverAccountId, receiverAccountName, periodEnd, 100m),
+                CreateTransfer(senderAccountId, senderAccountName, receiverAccountId, receiverAccountName, periodEnd, 200m)
+            ]
+        };
+
+        _financeApiClientMock
+            .Setup(client => client.PostWithResponseCode<PostTransactionLinesToStagingResponse>(
+                It.IsAny<PostTransactionLinesToStagingRequest>()))
+            .Callback<IApiRequest>(request => capturedRequest = (TransactionLineStagingRequest)request.Data)
+            .ReturnsAsync(new ApiResponse<PostTransactionLinesToStagingResponse>(
+                new PostTransactionLinesToStagingResponse { InsertedCount = 2 },
+                System.Net.HttpStatusCode.Created,
+                null));
+
+        var result = await _service.CreateTransferTransactionLines(input);
+
+        result.Status.Should().Be("Succeeded");
+        result.TransactionsCreated.Should().Be(2);
+        capturedRequest.Should().NotBeNull();
+        capturedRequest!.TransactionLines.Should().HaveCount(2);
+
+        var senderLine = capturedRequest.TransactionLines.Single(line => line.AccountId == senderAccountId);
+        senderLine.TransactionType.Should().Be(4);
+        senderLine.Amount.Should().Be(-300m);
+        senderLine.PeriodEnd.Should().Be(periodEnd);
+        senderLine.TransferSenderAccountId.Should().Be(senderAccountId);
+        senderLine.TransferSenderAccountName.Should().Be(senderAccountName);
+        senderLine.TransferReceiverAccountId.Should().Be(receiverAccountId);
+        senderLine.TransferReceiverAccountName.Should().Be(receiverAccountName);
+
+        var receiverLine = capturedRequest.TransactionLines.Single(line => line.AccountId == receiverAccountId);
+        receiverLine.TransactionType.Should().Be(4);
+        receiverLine.Amount.Should().Be(300m);
+        receiverLine.TransferSenderAccountId.Should().Be(senderAccountId);
+        receiverLine.TransferSenderAccountName.Should().Be(senderAccountName);
+        receiverLine.TransferReceiverAccountId.Should().Be(receiverAccountId);
+        receiverLine.TransferReceiverAccountName.Should().Be(receiverAccountName);
+
+        _financeApiClientMock.Verify(
+            client => client.GetWithResponseCode<List<PaymentTransactionLine>>(It.IsAny<GetExistinTransactionLinesRequest>()),
+            Times.Never);
+    }
+
+    [Test]
+    public async Task Then_Creates_Transfer_Transaction_Line_Pairs_For_Multiple_Senders()
+    {
+        const string periodEnd = "2526-R03";
+        const long receiverAccountId = 67890;
+        TransactionLineStagingRequest capturedRequest = null;
+        var input = new CreateTransferTransactionLinesInput
+        {
+            PeriodEnd = periodEnd,
+            CorrelationId = "correlation-id",
+            Transfers =
+            [
+                CreateTransfer(10001, "Sender One", receiverAccountId, "Receiver Account", periodEnd, 100m),
+                CreateTransfer(10001, "Sender One", receiverAccountId, "Receiver Account", periodEnd, 200m),
+                CreateTransfer(10002, "Sender Two", receiverAccountId, "Receiver Account", periodEnd, 400m)
+            ]
+        };
+
+        _financeApiClientMock
+            .Setup(client => client.PostWithResponseCode<PostTransactionLinesToStagingResponse>(
+                It.IsAny<PostTransactionLinesToStagingRequest>()))
+            .Callback<IApiRequest>(request => capturedRequest = (TransactionLineStagingRequest)request.Data)
+            .ReturnsAsync(new ApiResponse<PostTransactionLinesToStagingResponse>(
+                new PostTransactionLinesToStagingResponse { InsertedCount = 4 },
+                System.Net.HttpStatusCode.Created,
+                null));
+
+        var result = await _service.CreateTransferTransactionLines(input);
+
+        result.Status.Should().Be("Succeeded");
+        result.TransactionsCreated.Should().Be(4);
+        capturedRequest.Should().NotBeNull();
+        capturedRequest!.TransactionLines.Should().HaveCount(4);
+        capturedRequest.TransactionLines.Should().OnlyContain(line => line.TransactionType == 4);
+
+        capturedRequest.TransactionLines.Should().Contain(line =>
+            line.AccountId == 10001
+            && line.Amount == -300m
+            && line.TransferSenderAccountId == 10001
+            && line.TransferReceiverAccountId == receiverAccountId);
+        capturedRequest.TransactionLines.Should().Contain(line =>
+            line.AccountId == receiverAccountId
+            && line.Amount == 300m
+            && line.TransferSenderAccountId == 10001
+            && line.TransferReceiverAccountId == receiverAccountId);
+        capturedRequest.TransactionLines.Should().Contain(line =>
+            line.AccountId == 10002
+            && line.Amount == -400m
+            && line.TransferSenderAccountId == 10002
+            && line.TransferReceiverAccountId == receiverAccountId);
+        capturedRequest.TransactionLines.Should().Contain(line =>
+            line.AccountId == receiverAccountId
+            && line.Amount == 400m
+            && line.TransferSenderAccountId == 10002
+            && line.TransferReceiverAccountId == receiverAccountId);
+    }
+
+    [Test]
+    public async Task Then_Does_Not_Post_Transfer_Transaction_Lines_When_There_Are_No_Transfers()
+    {
+        var input = new CreateTransferTransactionLinesInput
+        {
+            PeriodEnd = "2526-R03",
+            CorrelationId = "correlation-id",
+            Transfers = []
+        };
+
+        var result = await _service.CreateTransferTransactionLines(input);
+
+        result.Status.Should().Be("Succeeded");
+        result.TransactionsCreated.Should().Be(0);
+        result.Transactions.Should().BeEmpty();
+        _financeApiClientMock.Verify(
+            client => client.PostWithResponseCode<PostTransactionLinesToStagingResponse>(It.IsAny<PostTransactionLinesToStagingRequest>()),
+            Times.Never);
+    }
+
     private static Payment CreatePayment(string paymentId, long accountId, long ukprn, decimal amount, DateTime evidenceSubmittedOn)
     {
         return new Payment
@@ -307,6 +443,25 @@ public class WhenCreatingPaymentTransactionLines
                 Month = 1,
                 Year = 2024
             }
+        };
+    }
+
+    private static FinanceJobsAccountTransfer CreateTransfer(
+        long senderAccountId,
+        string senderAccountName,
+        long receiverAccountId,
+        string receiverAccountName,
+        string periodEnd,
+        decimal amount)
+    {
+        return new FinanceJobsAccountTransfer
+        {
+            SenderAccountId = senderAccountId,
+            SenderAccountName = senderAccountName,
+            ReceiverAccountId = receiverAccountId,
+            ReceiverAccountName = receiverAccountName,
+            PeriodEnd = periodEnd,
+            Amount = amount
         };
     }
 

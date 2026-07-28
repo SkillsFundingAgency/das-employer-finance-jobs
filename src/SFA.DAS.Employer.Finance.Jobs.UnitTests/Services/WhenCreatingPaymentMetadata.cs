@@ -17,7 +17,8 @@ public class WhenCreatingPaymentMetadata
 {
     private Mock<IFinanceApiClient<FinanceApiConfiguration>> _financeApiClientMock;
     private Mock<ICommitmentsApiClient> _commitmentsApiClientMock;
-    private Mock<IEmployerFinanceOuterApiClient> _outerApiClientMock;
+    private Mock<IRoatpApiClient> _roatpApiClientMock;
+    private Mock<ICoursesApiClient> _coursesApiClientMock;
     private Mock<ILogger<PaymentMetadataService>> _loggerMock;
     private PaymentMetadataService _service;
 
@@ -26,13 +27,15 @@ public class WhenCreatingPaymentMetadata
     {
         _financeApiClientMock = new Mock<IFinanceApiClient<FinanceApiConfiguration>>();
         _commitmentsApiClientMock = new Mock<ICommitmentsApiClient>();
-        _outerApiClientMock = new Mock<IEmployerFinanceOuterApiClient>();
+        _roatpApiClientMock = new Mock<IRoatpApiClient>();
+        _coursesApiClientMock = new Mock<ICoursesApiClient>();
         _loggerMock = new Mock<ILogger<PaymentMetadataService>>();
 
         _service = new PaymentMetadataService(
             _financeApiClientMock.Object,
             _commitmentsApiClientMock.Object,
-            _outerApiClientMock.Object,
+            _roatpApiClientMock.Object,
+            _coursesApiClientMock.Object,
             _loggerMock.Object);
     }
 
@@ -57,7 +60,7 @@ public class WhenCreatingPaymentMetadata
                 CohortId = cohortId
             });
 
-        _outerApiClientMock
+        _roatpApiClientMock
             .Setup(client => client.GetProvider(10000494))
             .ReturnsAsync(new ProviderDetails
             {
@@ -65,7 +68,7 @@ public class WhenCreatingPaymentMetadata
                 Name = "Test Provider"
             });
 
-        _outerApiClientMock
+        _coursesApiClientMock
             .Setup(client => client.GetStandards())
             .ReturnsAsync(new StandardsResponse
             {
@@ -110,7 +113,7 @@ public class WhenCreatingPaymentMetadata
         payment.ProgrammeType = 20;
         payment.PathwayCode = 30;
 
-        _outerApiClientMock
+        _roatpApiClientMock
             .Setup(client => client.GetProvider(10000494))
             .ReturnsAsync(new ProviderDetails
             {
@@ -118,7 +121,7 @@ public class WhenCreatingPaymentMetadata
                 Name = "Framework Provider"
             });
 
-        _outerApiClientMock
+        _coursesApiClientMock
             .Setup(client => client.GetFrameworks())
             .ReturnsAsync(new FrameworksResponse
             {
@@ -150,18 +153,89 @@ public class WhenCreatingPaymentMetadata
     }
 
     [Test]
-    public async Task Then_Posts_Metadata_To_Finance_For_Each_Payment()
+    public async Task Then_Maps_CourseCode_Payment_Metadata_For_Apprenticeship_Unit()
+    {
+        var paymentId = Guid.NewGuid();
+        var correlationId = Guid.NewGuid();
+        var payment = CreatePayment(paymentId);
+        payment.CourseCode = "ST0001";
+
+        _roatpApiClientMock
+            .Setup(client => client.GetProvider(10000494))
+            .ReturnsAsync(new ProviderDetails
+            {
+                Ukprn = 10000494,
+                Name = "Unit Provider"
+            });
+
+        _coursesApiClientMock
+            .Setup(client => client.GetStandards())
+            .ReturnsAsync(new StandardsResponse
+            {
+                Standards =
+                [
+                    new StandardResponse
+                    {
+                        Id = "ST0001",
+                        Title = "Software development app unit",
+                        Level = 4,
+                        LearningType = "ApprenticeshipUnit"
+                    }
+                ]
+            });
+
+        var result = await _service.BuildPaymentMetadata(12345, payment, correlationId);
+
+        result.ProviderName.Should().Be("Unit Provider");
+        result.StandardCode.Should().BeNull();
+        result.FrameworkCode.Should().BeNull();
+        result.CourseCode.Should().Be("ST0001");
+        result.ApprenticeshipCourseName.Should().Be("Software development app unit");
+        result.ApprenticeshipCourseLevel.Should().Be(4);
+        result.LearningType.Should().Be("ApprenticeshipUnit");
+    }
+
+    [Test]
+    public async Task Then_Defaults_LearningType_When_No_Course_Codes_Are_Present()
+    {
+        var paymentId = Guid.NewGuid();
+        var correlationId = Guid.NewGuid();
+        var payment = CreatePayment(paymentId);
+
+        _roatpApiClientMock
+            .Setup(client => client.GetProvider(10000494))
+            .ReturnsAsync(new ProviderDetails
+            {
+                Ukprn = 10000494,
+                Name = "No Course Provider"
+            });
+
+        var result = await _service.BuildPaymentMetadata(12345, payment, correlationId);
+
+        result.ProviderName.Should().Be("No Course Provider");
+        result.StandardCode.Should().BeNull();
+        result.FrameworkCode.Should().BeNull();
+        result.CourseCode.Should().BeNull();
+        result.ApprenticeshipCourseName.Should().BeNull();
+        result.ApprenticeshipCourseLevel.Should().BeNull();
+        result.LearningType.Should().Be("Apprenticeship");
+        _coursesApiClientMock.Verify(client => client.GetStandards(), Times.Never);
+        _coursesApiClientMock.Verify(client => client.GetFrameworks(), Times.Never);
+    }
+
+    [Test]
+    public async Task Then_Posts_Metadata_To_Finance_And_Reuses_Provider_Lookup_Within_Activity()
     {
         var paymentId = Guid.NewGuid();
         const long cohortId = 98765;
         var payment = CreatePayment(paymentId);
         payment.StandardCode = 123;
 
-        _outerApiClientMock
+        _roatpApiClientMock
             .Setup(client => client.GetProvider(payment.Ukprn))
             .ReturnsAsync(new ProviderDetails { Ukprn = payment.Ukprn, Name = "Test Provider" });
 
-        _outerApiClientMock
+        _coursesApiClientMock
             .Setup(client => client.GetStandards())
             .ReturnsAsync(new StandardsResponse
             {
@@ -190,6 +264,44 @@ public class WhenCreatingPaymentMetadata
 
         _financeApiClientMock
             .Setup(client => client.PutWithResponseCode<PaymentMetadataStagingResponse>(
+                It.IsAny<PutPaymentMetadataToStagingRequest>()))
+            .ReturnsAsync(new ApiResponse<PaymentMetadataStagingResponse>(
+                new PaymentMetadataStagingResponse { Upserted = true, MetadataId = 1 },
+                HttpStatusCode.OK,
+                null));
+
+        var secondPaymentId = Guid.NewGuid();
+        var secondPayment = CreatePayment(secondPaymentId);
+        secondPayment.StandardCode = 123;
+        secondPayment.Ukprn = payment.Ukprn;
+        secondPayment.ApprenticeshipId = 9877;
+
+        _commitmentsApiClientMock
+            .Setup(client => client.GetApprenticeship(9877))
+            .ReturnsAsync(new ApprenticeshipDetails
+            {
+                FirstName = "Grace",
+                LastName = "Hopper",
+                NINumber = "CD987654E",
+                StartDate = new DateTime(2024, 9, 1)
+            });
+
+        var result = await _service.CreatePaymentMetadata(new CreatePaymentMetadataInput
+        {
+            AccountId = 12345,
+            CorrelationId = Guid.NewGuid().ToString(),
+            PaymentDetails = [payment, secondPayment]
+        }, CancellationToken.None);
+
+        result.Status.Should().Be("Succeeded");
+        result.MetadataCreated.Should().Be(2);
+        _roatpApiClientMock.Verify(client => client.GetProvider(payment.Ukprn), Times.Once);
+        _coursesApiClientMock.Verify(client => client.GetStandards(), Times.Once);
+        _financeApiClientMock.Verify(
+            client => client.PutWithResponseCode<PaymentMetadataStagingResponse>(It.IsAny<PutPaymentMetadataToStagingRequest>()),
+            Times.Exactly(2));
+        _financeApiClientMock.Verify(
+            client => client.PutWithResponseCode<PaymentMetadataStagingResponse>(
                 It.Is<PutPaymentMetadataToStagingRequest>(request =>
                     request.GetUrl == $"api/payments/{paymentId}/metadata/staging"
                     && ((PaymentMetadataStaging)request.Data).PaymentId == paymentId
@@ -198,23 +310,7 @@ public class WhenCreatingPaymentMetadata
                     && ((PaymentMetadataStaging)request.Data).LearningType == "Apprenticeship"
                     && ((PaymentMetadataStaging)request.Data).CourseCode == null
                     && ((PaymentMetadataStaging)request.Data).CohortId == cohortId
-                    && ((PaymentMetadataStaging)request.Data).ApprenticeNINumber == "AB123456C")))
-            .ReturnsAsync(new ApiResponse<PaymentMetadataStagingResponse>(
-                new PaymentMetadataStagingResponse { Upserted = true, MetadataId = 1 },
-                HttpStatusCode.OK,
-                null));
-
-        var result = await _service.CreatePaymentMetadata(new CreatePaymentMetadataInput
-        {
-            AccountId = 12345,
-            CorrelationId = Guid.NewGuid().ToString(),
-            PaymentDetails = [payment]
-        }, CancellationToken.None);
-
-        result.Status.Should().Be("Succeeded");
-        result.MetadataCreated.Should().Be(1);
-        _financeApiClientMock.Verify(
-            client => client.PutWithResponseCode<PaymentMetadataStagingResponse>(It.IsAny<PutPaymentMetadataToStagingRequest>()),
+                    && ((PaymentMetadataStaging)request.Data).ApprenticeNINumber == "AB123456C")),
             Times.Once);
     }
 
@@ -226,11 +322,11 @@ public class WhenCreatingPaymentMetadata
         var payment = CreatePayment(paymentId);
         payment.CourseCode = "ST0001";
 
-        _outerApiClientMock
+        _roatpApiClientMock
             .Setup(client => client.GetProvider(payment.Ukprn))
             .ReturnsAsync(new ProviderDetails { Ukprn = payment.Ukprn, Name = "Unit Provider" });
 
-        _outerApiClientMock
+        _coursesApiClientMock
             .Setup(client => client.GetStandards())
             .ReturnsAsync(new StandardsResponse
             {
@@ -289,7 +385,7 @@ public class WhenCreatingPaymentMetadata
         var paymentId = Guid.NewGuid();
         var payment = CreatePayment(paymentId);
 
-        _outerApiClientMock
+        _roatpApiClientMock
             .Setup(client => client.GetProvider(payment.Ukprn))
             .ReturnsAsync(new ProviderDetails { Ukprn = payment.Ukprn, Name = "No Course Provider" });
 
@@ -327,8 +423,8 @@ public class WhenCreatingPaymentMetadata
 
         result.Status.Should().Be("Succeeded");
         result.MetadataCreated.Should().Be(1);
-        _outerApiClientMock.Verify(client => client.GetStandards(), Times.Never);
-        _outerApiClientMock.Verify(client => client.GetFrameworks(), Times.Never);
+        _coursesApiClientMock.Verify(client => client.GetStandards(), Times.Never);
+        _coursesApiClientMock.Verify(client => client.GetFrameworks(), Times.Never);
     }
 
     [Test]
@@ -339,11 +435,11 @@ public class WhenCreatingPaymentMetadata
         var failedPayment = CreatePayment(Guid.NewGuid());
         failedPayment.StandardCode = 123;
 
-        _outerApiClientMock
+        _roatpApiClientMock
             .Setup(client => client.GetProvider(It.IsAny<long>()))
             .ReturnsAsync((long ukprn) => new ProviderDetails { Ukprn = ukprn, Name = "Test Provider" });
 
-        _outerApiClientMock
+        _coursesApiClientMock
             .Setup(client => client.GetStandards())
             .ReturnsAsync(new StandardsResponse
             {
@@ -398,7 +494,7 @@ public class WhenCreatingPaymentMetadata
     {
         var payment = CreatePayment(Guid.NewGuid());
 
-        _outerApiClientMock
+        _roatpApiClientMock
             .Setup(client => client.GetProvider(payment.Ukprn))
             .ReturnsAsync(new ProviderDetails { Ukprn = payment.Ukprn, Name = "Test Provider" });
 
