@@ -15,7 +15,7 @@ public class ImportPaymentsTimer(
     private readonly ImportPaymentsOptions _options = importPaymentsOptions.Value;
 
     [Function("ImportPaymentsTimer")]
-    public async Task Run([TimerTrigger("0 0 * * * *", RunOnStartup = true)] TimerInfo timerInfo, [DurableClient] DurableTaskClient client)
+    public async Task Run([TimerTrigger("0 0 * * * *", RunOnStartup = false)] TimerInfo timerInfo, [DurableClient] DurableTaskClient client)
     {
         var correlationId = Guid.NewGuid().ToString();
 
@@ -48,7 +48,8 @@ public class ImportPaymentsTimer(
                     CorrelationId = correlationId,
                     TriggeredAt = DateTime.UtcNow,
                     MaxConcurrentAccounts = maxConcurrentAccounts,
-                    MaxConcurrentPeriodEnds = maxConcurrentPeriodEnds
+                    MaxConcurrentPeriodEnds = maxConcurrentPeriodEnds,
+                    TargetAccountId = _options.TargetAccountId
                 },
                 new StartOrchestrationOptions
                 {
@@ -61,6 +62,14 @@ public class ImportPaymentsTimer(
                 correlationId,
                 maxConcurrentAccounts,
                 maxConcurrentPeriodEnds);
+
+            if (_options.TargetAccountId.HasValue)
+            {
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] ImportPayments is temporarily restricted to AccountId {TargetAccountId}",
+                    correlationId,
+                    _options.TargetAccountId.Value);
+            }
         }
         catch (Exception ex)
         {
@@ -185,4 +194,5 @@ public class ImportPaymentsOrchestratorInput
     public DateTime TriggeredAt { get; set; }
     public int MaxConcurrentAccounts { get; set; }
     public int MaxConcurrentPeriodEnds { get; set; }
+    public long? TargetAccountId { get; set; }
 }
