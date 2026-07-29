@@ -488,6 +488,10 @@
                                     "value": "[parameters('sharedStorageAccountConnectionString')]"
                                 },
                                 {
+                                    "name": "AzureWebJobsServiceBus__fullyQualifiedNamespace",
+                                    "value": "[parameters('sharedServiceBusFqdn')]"
+                                },
+                                {
                                     "name": "LoggingRedisConnectionString",
                                     "value": "[parameters('loggingRedisConnectionString')]"
                                 },
@@ -522,6 +526,33 @@
             "dependsOn": [
                 "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]",
                 "[concat(variables('importLevyFunctionAppName'), '-app-insights-', parameters('utcValue'))]"
+            ]
+        },
+        {
+            "apiVersion": "2021-04-01",
+            "name": "[concat('role-assignment-', variables('importLevyFunctionAppName'), '-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[parameters('sharedEnvResourceGroup')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'role-assignments/role-assignment-service-bus.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "principalId": {
+                        "value": "[reference(concat(variables('importLevyFunctionAppName'), '-', parameters('utcValue'))).outputs.managedServiceIdentityId.value]"
+                    },
+                    "assignmentType": {
+                        "value": "ServiceBusOwner"
+                    },
+                    "resourceName": {
+                        "value": "[parameters('sharedServiceBusName')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('importLevyFunctionAppName'), '-', parameters('utcValue'))]"
             ]
         },
         {
