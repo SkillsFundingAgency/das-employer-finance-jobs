@@ -142,8 +142,6 @@ stages:
   - group: DevTest Management Resources
   - group: DEMO DevTest Shared Resources
   - group: DEMO das-employer-finance-jobs
-  - name: importLevyTimerDisabled
-    value: false
   jobs:
   - template: pipeline-templates/job/deploy.yml
     parameters:
