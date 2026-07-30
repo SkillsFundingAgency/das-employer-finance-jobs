@@ -18,15 +18,6 @@ public class InternalApiClient<T> : ApiClient<T>, IInternalApiClient<T> where T 
 
     protected override async Task AddAuthenticationHeader(HttpRequestMessage httpRequestMessage)
     {
-        //var isLocal =
-        //    Environment.GetEnvironmentVariable("AZURE_FUNCTIONS_ENVIRONMENT")
-        //        ?.Equals("Development", StringComparison.OrdinalIgnoreCase) == true;
-
-        //if (isLocal)
-        //{
-        //    return;
-        //}
-
         if (!string.IsNullOrEmpty(Configuration.Identifier))
         {
             var accessToken =
@@ -36,14 +27,4 @@ public class InternalApiClient<T> : ApiClient<T>, IInternalApiClient<T> where T 
                 new AuthenticationHeaderValue("Bearer", accessToken);
         }
     }
-
-
-    //protected override async Task AddAuthenticationHeader(HttpRequestMessage httpRequestMessage)
-    //{
-    //    if (!string.IsNullOrEmpty(Configuration.Identifier))
-    //    {
-    //        var accessToken = await _azureClientCredentialHelper.GetAccessTokenAsync(Configuration.Identifier);
-    //        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-    //    }
-    //}
 }
