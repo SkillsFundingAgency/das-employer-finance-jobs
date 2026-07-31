@@ -4,4 +4,5 @@ public class PayeScheme
 {
     public string Reference { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public DateTime? LastSubmissionDate { get; set; }
 }

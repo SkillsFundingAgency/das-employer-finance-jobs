@@ -1,5 +1,6 @@
-﻿using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
+
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 
