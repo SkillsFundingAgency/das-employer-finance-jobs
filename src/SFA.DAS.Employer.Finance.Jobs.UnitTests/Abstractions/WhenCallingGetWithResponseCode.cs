@@ -1,13 +1,13 @@
-using AutoFixture.NUnit4;
-using Moq.Protected;
-using SFA.DAS.Api.Common.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
+using AutoFixture.NUnit3;
+using Moq.Protected;
+using SFA.DAS.Api.Common.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Abstractions;
 public class WhenCallingGetWithResponseCode
@@ -22,7 +22,7 @@ public class WhenCallingGetWithResponseCode
         config.Url = "https://test.local";
         var response = new HttpResponseMessage
         {
-            Content = new StringContent("\"test\"", Encoding.UTF8, "application/json"),
+            Content = new StringContent("\"test\"", System.Text.Encoding.UTF8, "application/json"),
             StatusCode = HttpStatusCode.OK
         };
         var getTestRequest = new GetTestRequest(id);
@@ -152,17 +152,15 @@ public class WhenCallingGetWithResponseCode
         var actual = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, configuration, Mock.Of<IAzureClientCredentialHelper>());
 
         //Act
-        var actualResult = await actual.GetWithResponseCode<string>(getTestRequest);
+        var act = () => actual.GetWithResponseCode<string>(getTestRequest);
 
         //Assert
-        Assert.That(actualResult, Is.Not.Null);
-        actualResult.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
-        actualResult.Body.Should().BeNull();
-        actualResult.ErrorContent.Should().Be(responseContent);
+        await act.Should().ThrowAsync<HttpRequestContentException>()
+            .Where(ex => ex.StatusCode == HttpStatusCode.TooManyRequests);
     }
 
     [Test, AutoData]
-    public async Task Then_If_Returns_Not_Found_Result_Returns_Default_Body(int id, string authToken, TestInternalApiConfiguration config)
+    public async Task Then_If_Returns_Not_Found_Result_Throws(int id, string authToken, TestInternalApiConfiguration config)
     {
         //Arrange
         var azureClientCredentialHelper = new Mock<IAzureClientCredentialHelper>();
@@ -170,7 +168,7 @@ public class WhenCallingGetWithResponseCode
         config.Url = "https://test.local";
         var response = new HttpResponseMessage
         {
-            Content = new StringContent("", Encoding.UTF8, "text/plain"),
+            Content = new StringContent("", System.Text.Encoding.UTF8, "text/plain"),
             StatusCode = HttpStatusCode.NotFound
         };
         var getTestRequest = new GetTestRequestNoVersion(id);
@@ -182,12 +180,11 @@ public class WhenCallingGetWithResponseCode
         var actualClient = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, config, azureClientCredentialHelper.Object);
 
         //Act
-        var actualResult = await actualClient.GetWithResponseCode<string>(getTestRequest);
+        var act = () => actualClient.GetWithResponseCode<string>(getTestRequest);
 
         //Assert
-        actualResult.Should().NotBeNull();
-        actualResult.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        actualResult.Body.Should().BeNull();
+        await act.Should().ThrowAsync<HttpRequestContentException>()
+            .Where(ex => ex.StatusCode == HttpStatusCode.NotFound);
     }
 
     [Test, AutoData]
@@ -200,7 +197,7 @@ public class WhenCallingGetWithResponseCode
         config.Identifier = "";
         var response = new HttpResponseMessage
         {
-            Content = new StringContent(responseContent, Encoding.UTF8, "text/plain"),
+            Content = new StringContent(responseContent, System.Text.Encoding.UTF8, "text/plain"),
             StatusCode = HttpStatusCode.TooManyRequests
         };
         var getTestRequest = new GetTestRequestNoVersion(id);
@@ -212,12 +209,11 @@ public class WhenCallingGetWithResponseCode
         var actualClient = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, config, azureClientCredentialHelper.Object);
 
         //Act
-        var actualResult = await actualClient.GetWithResponseCode<string>(getTestRequest);
+        var act = () => actualClient.GetWithResponseCode<string>(getTestRequest);
 
         //Assert
-        actualResult.Should().NotBeNull();
-        actualResult.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
-        actualResult.Body.Should().BeNull();
+        await act.Should().ThrowAsync<HttpRequestContentException>()
+            .Where(ex => ex.StatusCode == HttpStatusCode.TooManyRequests);
     }
     private class GetTestRequest : IApiRequest
     {

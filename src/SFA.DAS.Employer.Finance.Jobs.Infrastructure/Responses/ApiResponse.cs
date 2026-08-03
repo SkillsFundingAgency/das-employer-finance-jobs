@@ -2,7 +2,7 @@
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 public class ApiResponse<TResponse>
-{  
+{
     public TResponse Body { get; }
     public HttpStatusCode StatusCode { get; }
     public string ErrorContent { get; }

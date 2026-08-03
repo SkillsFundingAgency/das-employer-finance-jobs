@@ -2,9 +2,11 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Extensions;
 
+[ExcludeFromCodeCoverage]
 public static class LoggingExtensions
 {
     public static IServiceCollection AddDasLogging(this IServiceCollection services)

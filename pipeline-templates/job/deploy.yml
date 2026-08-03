@@ -19,15 +19,6 @@ jobs:
             EnvironmentId: $(Environment.Id)
             PipelineName: $(Build.DefinitionName)
             RunId: $(Build.BuildId)
-        - template: azure-pipelines-templates/deploy/step/set-backendaccessrestrictions-variable.yml@das-platform-building-blocks
-          parameters:
-            ServiceConnection: ${{ parameters.ServiceConnection }}
-            SharedEnvResourceGroup: $(SharedEnvResourceGroup)
-            SharedEnvVirtualNetworkName : $(SharedEnvVirtualNetworkName)
-            BackEndAccessRestrictionsExcludedSubnets: $(BackEndAccessRestrictionsExcludedSubnets)
-            ResourceEnvironmentName: $(ResourceEnvironmentName)
-            UnrestrictedEnvironments: $(UnrestrictedEnvironments)
-            UptimeMonitoringAccessRestrictions: $(UptimeMonitoringAccessRestrictions)
         - template: azure-pipelines-templates/deploy/step/arm-deploy.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.ServiceConnection }}
@@ -51,14 +42,27 @@ jobs:
             TargetFileName: '*.schema.json'
             TableName: Configuration
             Version: '2.0'
+            ConfigurationSecrets:
+              HmrcClientSecret: $(HmrcClientSecret)
         - template: azure-pipelines-templates/deploy/step/app-role-assignments.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.AppRoleAssignmentsServiceConnection }}
-            ResourceName: $(FunctionAppName)
+            ResourceName: $(ImportPaymentsFunctionAppName)
             Tenant: $(Tenant)
             IsMultiRepoCheckout: true
         - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.ServiceConnection }}
-            FunctionAppName: $(FunctionAppName)
+            FunctionAppName: $(ImportPaymentsFunctionAppName)
             DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/SFA.DAS.Employer.Finance.Jobs.Functions/${{ parameters.SolutionBaseName }}.Functions.zip
+        - template: azure-pipelines-templates/deploy/step/app-role-assignments.yml@das-platform-building-blocks
+          parameters:
+            ServiceConnection: ${{ parameters.AppRoleAssignmentsServiceConnection }}
+            ResourceName: $(ImportLevyFunctionAppName)
+            Tenant: $(Tenant)
+            IsMultiRepoCheckout: true
+        - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
+          parameters:
+            ServiceConnection: ${{ parameters.ServiceConnection }}
+            FunctionAppName: $(ImportLevyFunctionAppName)
+            DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.zip
