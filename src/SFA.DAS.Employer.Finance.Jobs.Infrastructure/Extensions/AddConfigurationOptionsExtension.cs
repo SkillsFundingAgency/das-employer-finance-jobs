@@ -19,6 +19,9 @@ public static class AddConfigurationOptionsExtension
         services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<ProviderEventsApiConfiguration>>().Value);
 
+        services.Configure<HmrcConfiguration>(configuration.GetSection(ConfigurationKeys.Hmrc));
+        services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<HmrcConfiguration>>().Value);
+
         services.Configure<CommitmentsApiConfiguration>(configuration.GetSection(nameof(CommitmentsApiConfiguration)));
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<CommitmentsApiConfiguration>>().Value);
 
