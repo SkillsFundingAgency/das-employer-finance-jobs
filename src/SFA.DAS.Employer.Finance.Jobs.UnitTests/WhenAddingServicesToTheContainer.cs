@@ -32,6 +32,7 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IHmrcTokenProvider))]
     [TestCase(typeof(IPeriodEndService))]
     [TestCase(typeof(IEnglishFractionsService))]
+    [TestCase(typeof(IEnglishFractionsPersistenceService))]
     [TestCase(typeof(IAccountService))]
     [TestCase(typeof(IAccountPaymentsImportService))]
     [TestCase(typeof(IRefreshPaymentDataCompletedEventPublisher))]
@@ -88,6 +89,7 @@ public class WhenAddingServicesToTheContainer
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
         services.AddScoped<IPeriodEndService, PeriodEndService>();
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
+        services.AddScoped<IEnglishFractionsPersistenceService, EnglishFractionsPersistenceService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();

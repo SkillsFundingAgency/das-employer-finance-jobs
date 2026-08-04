@@ -53,6 +53,7 @@ public static class ServiceRegistrationExtensions
         services.AddScoped<IPeriodEndService, PeriodEndService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
+        services.AddScoped<IEnglishFractionsPersistenceService, EnglishFractionsPersistenceService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         services.AddScoped<IAccountTransfersService, AccountTransfersService>();
         services.AddScoped<IRefreshPaymentDataService, RefreshPaymentDataService>();
