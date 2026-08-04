@@ -1,6 +1,5 @@
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 var host = new HostBuilder()
@@ -21,7 +20,7 @@ var host = new HostBuilder()
         services.AddDasLogging();
         services.AddDasDataProtection(configuration);
         services.AddConfigurationOptions(configuration);
-        services.AddServiceRegistration(configuration);
-    })    
+        services.AddServiceRegistration(configuration, NServiceBusExtensions.PaymentsEndpointName);
+    })
     .Build();
-     await host.RunAsync();
+await host.RunAsync();

@@ -11,7 +11,7 @@ public class ImportLevyTimer(ILogger<ImportLevyTimer> logger)
 {
     [Function("ImportLevyTimer")]
     public async Task Run(
-        [TimerTrigger("0 0 * * * *", RunOnStartup = true)] TimerInfo timerInfo,
+        [TimerTrigger("0 0 13 23 * *", RunOnStartup = false)] TimerInfo timerInfo,
         [DurableClient] DurableTaskClient client)
     {
         var correlationId = Guid.NewGuid().ToString();
@@ -61,7 +61,9 @@ public class ImportLevyTimer(ILogger<ImportLevyTimer> logger)
                 "[CorrelationId: {CorrelationId}] Error starting ImportLevyOrchestrator: {ErrorMessage}",
                 correlationId,
                 ex.Message);
-            throw;
+            throw new InvalidOperationException(
+                $"[CorrelationId: {correlationId}] Failed to start ImportLevyOrchestrator.",
+                ex);
         }
     }
 }

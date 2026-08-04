@@ -1,7 +1,6 @@
-﻿namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces
+﻿namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
+
+public interface IApiConfiguration
 {
-    public interface IApiConfiguration
-    {
-        string Url { get; set; }
-    }
+    string Url { get; set; }
 }
