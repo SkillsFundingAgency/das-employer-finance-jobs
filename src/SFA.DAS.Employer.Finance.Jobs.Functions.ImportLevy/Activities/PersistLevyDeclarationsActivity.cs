@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Models;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Services;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
@@ -23,11 +24,14 @@ public class PersistLevyDeclarationsActivity(
         if (input.Declarations.Count == 0)
         {
             logger.LogInformation(
-                "[CorrelationId: {CorrelationId}] No levy declarations to persist for AccountId {AccountId} EmpRef {EmpRef}. SourceCount {SourceCount}, Duplicate {DuplicateCount}, Existing {ExistingCount}, Future {FutureCount}, PreLevy {PreLevyCount}",
+                "[CorrelationId: {CorrelationId}] No levy declarations to persist for AccountId {AccountId} EmpRef {EmpRef}. DeclarationsSubmitted {DeclarationsSubmitted}, DeclarationsPersisted {DeclarationsPersisted}, DeclarationsSkipped {DeclarationsSkipped}, TransactionsCreated {TransactionsCreated}. Duplicate {DuplicateCount}, Existing {ExistingCount}, Future {FutureCount}, PreLevy {PreLevyCount}",
                 input.CorrelationId,
                 input.AccountId,
                 input.EmpRef,
+                0,
+                0,
                 input.SourceDeclarationCount,
+                0,
                 input.DuplicateDeclarationCount,
                 input.ExistingDeclarationCount,
                 input.FutureDeclarationCount,
@@ -55,18 +59,27 @@ public class PersistLevyDeclarationsActivity(
             input.EmpRef,
             true);
 
-        var response = await retryService.ExecuteAsync(
-            () => PostLevyDeclarations(input, request),
-            input.CorrelationId,
-            "Finance API POST /api/levy-declarations");
-
-        if (response == null || !IsSuccess(response.StatusCode))
+        ApiResponse<PersistLevyDeclarationsResponse> response;
+        try
         {
-            throw new InvalidOperationException(
-                $"[CorrelationId: {input.CorrelationId}] Finance API failed to persist levy declarations for AccountId {input.AccountId} EmpRef {input.EmpRef}. StatusCode: {response?.StatusCode}. Error: {response?.ErrorContent}");
+            response = await retryService.ExecuteAsync(
+                () => PostLevyDeclarations(input, request),
+                input.CorrelationId,
+                "Finance API POST /api/levy-declarations",
+                IsTransientException);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "[CorrelationId: {CorrelationId}] Failed to persist levy declarations for AccountId {AccountId} EmpRef {EmpRef}",
+                input.CorrelationId,
+                input.AccountId,
+                input.EmpRef);
+            throw;
         }
 
-        var body = response.Body ?? new PersistLevyDeclarationsResponse();
+        var body = response.Body!;
 
         logger.LogInformation(
             "[CorrelationId: {CorrelationId}] Persisted levy declarations for AccountId {AccountId} EmpRef {EmpRef}. DeclarationsSubmitted {DeclarationsSubmitted}, DeclarationsPersisted {DeclarationsPersisted}, DeclarationsSkipped {DeclarationsSkipped}, TransactionsCreated {TransactionsCreated}",
@@ -98,32 +111,38 @@ public class PersistLevyDeclarationsActivity(
     {
         var response = await financeApi.PostWithResponseCode<PersistLevyDeclarationsResponse>(request);
 
-        if (response != null && IsTransient(response.StatusCode))
+        if (response == null)
         {
             throw new InvalidOperationException(
-                $"[CorrelationId: {input.CorrelationId}] Transient Finance API failure persisting levy declarations for AccountId {input.AccountId} EmpRef {input.EmpRef}. StatusCode: {response.StatusCode}. Error: {response.ErrorContent}");
+                $"[CorrelationId: {input.CorrelationId}] Finance API returned no response while persisting levy declarations for AccountId {input.AccountId} EmpRef {input.EmpRef}.");
         }
 
-        return response!;
+        if (!IsSuccess(response.StatusCode))
+        {
+            throw new HttpRequestContentException(
+                $"Finance API failed to persist levy declarations for AccountId {input.AccountId} EmpRef {input.EmpRef}. StatusCode: {response.StatusCode}",
+                response.StatusCode,
+                response.ErrorContent);
+        }
+
+        if (response.Body == null)
+        {
+            throw new InvalidOperationException(
+                $"[CorrelationId: {input.CorrelationId}] Finance API returned a successful response without result metrics for AccountId {input.AccountId} EmpRef {input.EmpRef}.");
+        }
+
+        return response;
     }
 
     private static PersistLevyDeclarationRequestData CreateRequestData(NormalizeLevyDeclarationsResult input)
     {
         return new PersistLevyDeclarationRequestData
         {
+            CorrelationId = input.CorrelationId,
             AccountId = input.AccountId,
-            GenerateTransactions = true,
-            EmployerLevyData =
-            [
-                new PersistEmployerLevyData
-                {
-                    EmpRef = input.EmpRef,
-                    Declarations = new PersistLevyDeclarations
-                    {
-                        Declarations = input.Declarations
-                    }
-                }
-            ]
+            EmpRef = input.EmpRef,
+            Declarations = input.Declarations,
+            GenerateTransactions = true
         };
     }
 
@@ -140,5 +159,19 @@ public class PersistLevyDeclarationsActivity(
             or HttpStatusCode.BadGateway
             or HttpStatusCode.ServiceUnavailable
             or HttpStatusCode.GatewayTimeout;
+    }
+
+    private static bool IsTransientException(Exception exception)
+    {
+        return exception switch
+        {
+            HttpRequestContentException contentException => IsTransient(contentException.StatusCode),
+            HttpRequestException requestException when requestException.StatusCode.HasValue =>
+                IsTransient(requestException.StatusCode.Value),
+            HttpRequestException => true,
+            TimeoutException => true,
+            TaskCanceledException => true,
+            _ => false
+        };
     }
 }

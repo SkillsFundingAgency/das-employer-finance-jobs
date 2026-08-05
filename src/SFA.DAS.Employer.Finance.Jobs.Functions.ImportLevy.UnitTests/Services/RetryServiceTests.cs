@@ -84,4 +84,48 @@ public class RetryServiceTests
         _retryDelay.Verify(x => x.DelayAsync(TimeSpan.FromSeconds(2)), Times.Once);
         _retryDelay.Verify(x => x.DelayAsync(TimeSpan.FromSeconds(4)), Times.Once);
     }
+
+    [Test]
+    public async Task ExecuteAsync_DoesNotRetry_WhenPredicateRejectsException()
+    {
+        var attempts = 0;
+
+        Func<Task> act = async () => await _retryService.ExecuteAsync<string>(
+            () =>
+            {
+                attempts++;
+                throw new InvalidOperationException("permanent failure");
+            },
+            "corr-123",
+            "Finance API",
+            _ => false);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("permanent failure");
+
+        attempts.Should().Be(1);
+        _retryDelay.Verify(x => x.DelayAsync(It.IsAny<TimeSpan>()), Times.Never);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_Retries_WhenPredicateAcceptsException()
+    {
+        var attempts = 0;
+
+        var result = await _retryService.ExecuteAsync(
+            () =>
+            {
+                attempts++;
+                return attempts == 1
+                    ? throw new InvalidOperationException("temporary failure")
+                    : Task.FromResult("success");
+            },
+            "corr-123",
+            "Finance API",
+            _ => true);
+
+        result.Should().Be("success");
+        attempts.Should().Be(2);
+        _retryDelay.Verify(x => x.DelayAsync(TimeSpan.FromSeconds(2)), Times.Once);
+    }
 }
