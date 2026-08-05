@@ -1,5 +1,6 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 
@@ -7,6 +8,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
 
 public class GetLevyAccountsActivity(
     IAccountService accountService,
+    IRetryService retryService,
     ILogger<GetLevyAccountsActivity> logger)
 {
     public const int DefaultPageSize = 10000;
@@ -33,14 +35,10 @@ public class GetLevyAccountsActivity(
                 CorrelationId = requestCorrelationId
             };
 
-            var pageAccounts = await ActivityExecutionHelper.RetryAsync(
+            var pageAccounts = await retryService.ExecuteAsync(
                 () => accountService.GetAccountsAsync(request),
-                logger,
                 correlationId,
-                "[CorrelationId: {CorrelationId}] [Retry {Attempt}] Temporary error calling Finance API, retrying...",
-                ex => new InvalidOperationException(
-                    $"[CorrelationId: {correlationId}] Failed to retrieve levy accounts page {pageNumber} after 3 attempts.",
-                    ex)) ?? [];
+                "Finance API") ?? [];
 
             var pageAccountIds = pageAccounts
                 .Select(account => account.Id)

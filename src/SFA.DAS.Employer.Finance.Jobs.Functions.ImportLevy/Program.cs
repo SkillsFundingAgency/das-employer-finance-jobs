@@ -1,5 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Extensions;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Services;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
@@ -14,6 +16,9 @@ var host = new HostBuilder()
             services,
             configuration,
             SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions.NServiceBusExtensions.LevyEndpointName);
+        services.AddScoped<ILevyDeclarationNormalizer, LevyDeclarationNormalizer>();
+        services.AddScoped<IRetryDelay, RetryDelay>();
+        services.AddScoped<IRetryService, RetryService>();
     })
     .Build();
 

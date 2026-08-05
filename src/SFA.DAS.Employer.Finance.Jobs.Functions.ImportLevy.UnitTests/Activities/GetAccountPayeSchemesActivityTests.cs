@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
@@ -12,6 +13,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.UnitTests.Activitie
 public class GetAccountPayeSchemesActivityTests
 {
     private Mock<IAccountService> _accountService = null!;
+    private Mock<IRetryService> _retryService = null!;
     private Mock<ILogger<GetAccountPayeSchemesActivity>> _logger = null!;
     private GetAccountPayeSchemesActivity _activity = null!;
 
@@ -19,8 +21,20 @@ public class GetAccountPayeSchemesActivityTests
     public void SetUp()
     {
         _accountService = new Mock<IAccountService>();
+        _retryService = new Mock<IRetryService>();
         _logger = new Mock<ILogger<GetAccountPayeSchemesActivity>>();
-        _activity = new GetAccountPayeSchemesActivity(_accountService.Object, _logger.Object);
+        _retryService
+            .Setup(x => x.ExecuteAsync(
+                It.IsAny<Func<Task<List<PayeScheme>>>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<int>()))
+            .Returns((Func<Task<List<PayeScheme>>> action, string _, string _, int _) => action());
+
+        _activity = new GetAccountPayeSchemesActivity(
+            _accountService.Object,
+            _retryService.Object,
+            _logger.Object);
     }
 
     [Test]
@@ -69,7 +83,7 @@ public class GetAccountPayeSchemesActivityTests
     }
 
     [Test]
-    public async Task Run_Retries_And_Succeeds_After_Transient_Failure()
+    public async Task Run_Uses_Retry_Service()
     {
         var input = new GetAccountPayeSchemesActivityInput
         {
@@ -78,16 +92,19 @@ public class GetAccountPayeSchemesActivityTests
         };
 
         _accountService
-            .SetupSequence(x => x.GetPayeSchemesAsync(It.IsAny<GetAccountPayeSchemesRequest>()))
-            .ThrowsAsync(new Exception("temporary failure"))
+            .Setup(x => x.GetPayeSchemesAsync(It.IsAny<GetAccountPayeSchemesRequest>()))
             .ReturnsAsync(new List<PayeScheme> { new() { Reference = "123/AB456" } });
 
         var result = await _activity.Run(input);
 
         result.Should().ContainSingle(x => x.Reference == "123/AB456");
-        _accountService.Verify(
-            x => x.GetPayeSchemesAsync(It.Is<GetAccountPayeSchemesRequest>(r => r.AccountId == 77)),
-            Times.Exactly(2));
+        _retryService.Verify(
+            x => x.ExecuteAsync(
+                It.IsAny<Func<Task<List<PayeScheme>>>>(),
+                "corr-789",
+                "Finance API",
+                RetryService.DefaultRetries),
+            Times.Once);
     }
 
     [Test]
@@ -114,7 +131,7 @@ public class GetAccountPayeSchemesActivityTests
     }
 
     [Test]
-    public void Run_Throws_When_All_Retries_Are_Exhausted()
+    public void Run_Throws_When_Retry_Service_Throws()
     {
         var input = new GetAccountPayeSchemesActivityInput
         {
@@ -122,16 +139,16 @@ public class GetAccountPayeSchemesActivityTests
             AccountId = 444
         };
 
-        _accountService
-            .Setup(x => x.GetPayeSchemesAsync(It.IsAny<GetAccountPayeSchemesRequest>()))
+        _retryService
+            .Setup(x => x.ExecuteAsync(
+                It.IsAny<Func<Task<List<PayeScheme>>>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<int>()))
             .ThrowsAsync(new Exception("still failing"));
 
         Func<Task> act = async () => await _activity.Run(input);
 
         act.Should().ThrowAsync<Exception>().Wait();
-
-        _accountService.Verify(
-            x => x.GetPayeSchemesAsync(It.Is<GetAccountPayeSchemesRequest>(r => r.AccountId == 444)),
-            Times.Exactly(3));
     }
 }

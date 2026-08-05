@@ -1,5 +1,6 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
@@ -7,6 +8,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
 
 public class GetAccountPayeSchemesActivity(
     IAccountService accountService,
+    IRetryService retryService,
     ILogger<GetAccountPayeSchemesActivity> logger)
 {
     [Function("GetAccountPayeSchemesActivity")]
@@ -25,14 +27,10 @@ public class GetAccountPayeSchemesActivity(
             CorrelationId = ActivityExecutionHelper.ParseCorrelationIdOrNew(input.CorrelationId)
         };
 
-        var payeSchemes = await ActivityExecutionHelper.RetryAsync(
+        var payeSchemes = await retryService.ExecuteAsync(
             () => accountService.GetPayeSchemesAsync(request),
-            logger,
             input.CorrelationId,
-            "[CorrelationId: {CorrelationId}] [Retry {Attempt}] Temporary error retrieving PAYE schemes, retrying...",
-            ex => new InvalidOperationException(
-                $"[CorrelationId: {input.CorrelationId}] Failed to retrieve PAYE schemes for account {input.AccountId} after 3 attempts.",
-                ex)) ?? [];
+            "Finance API") ?? [];
 
         logger.LogInformation(
             "[CorrelationId: {CorrelationId}] Retrieved {Count} PAYE schemes for account {AccountId}",
