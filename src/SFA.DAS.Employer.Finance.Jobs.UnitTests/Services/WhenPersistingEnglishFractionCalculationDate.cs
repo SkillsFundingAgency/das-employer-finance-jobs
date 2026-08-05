@@ -34,10 +34,11 @@ public class WhenPersistingEnglishFractionCalculationDate
         var input = CreateInput("corr-123", true, new DateTime(2026, 4, 14, 15, 30, 0));
 
         _financeApiClient
-            .Setup(x => x.Post(
-                "api/english-fraction-calculation-date",
-                It.Is<PersistEnglishFractionCalculationDateRequestData>(request => request.DateCalculated == new DateTime(2026, 4, 14))))
-            .Returns(Task.CompletedTask);
+            .Setup(x => x.Post<object>(
+                It.Is<PersistEnglishFractionCalculationDateRequest>(request =>
+                    request.GetUrl == "api/english-fraction-calculation-date" &&
+                    ((PersistEnglishFractionCalculationDateRequestData)request.Data).DateCalculated == new DateTime(2026, 4, 14))))
+            .ReturnsAsync(new object());
 
         var result = await _service.PersistCalculationDateAsync(input);
 
@@ -62,7 +63,7 @@ public class WhenPersistingEnglishFractionCalculationDate
         result.UpdateRequired.Should().BeFalse();
 
         _financeApiClient.Verify(
-            x => x.Post(It.IsAny<string>(), It.IsAny<PersistEnglishFractionCalculationDateRequestData>()),
+            x => x.Post<object>(It.IsAny<PersistEnglishFractionCalculationDateRequest>()),
             Times.Never);
         _logger.VerifyLogContains(LogLevel.Information, "Skipping English fraction calculation date persistence");
     }
@@ -73,8 +74,8 @@ public class WhenPersistingEnglishFractionCalculationDate
         var input = CreateInput("corr-123", true, new DateTime(2026, 4, 14, 8, 0, 0));
 
         _financeApiClient
-            .Setup(x => x.Post("api/english-fraction-calculation-date", It.IsAny<PersistEnglishFractionCalculationDateRequestData>()))
-            .Returns(Task.CompletedTask);
+            .Setup(x => x.Post<object>(It.IsAny<PersistEnglishFractionCalculationDateRequest>()))
+            .ReturnsAsync(new object());
 
         var firstResult = await _service.PersistCalculationDateAsync(input);
         var secondResult = await _service.PersistCalculationDateAsync(input);
@@ -85,7 +86,7 @@ public class WhenPersistingEnglishFractionCalculationDate
         secondResult.AlreadyPersistedForRunDate.Should().BeTrue();
 
         _financeApiClient.Verify(
-            x => x.Post("api/english-fraction-calculation-date", It.IsAny<PersistEnglishFractionCalculationDateRequestData>()),
+            x => x.Post<object>(It.IsAny<PersistEnglishFractionCalculationDateRequest>()),
             Times.Once);
     }
 
@@ -96,14 +97,14 @@ public class WhenPersistingEnglishFractionCalculationDate
         var secondInput = CreateInput("corr-123", true, new DateTime(2026, 4, 15));
 
         _financeApiClient
-            .Setup(x => x.Post("api/english-fraction-calculation-date", It.IsAny<PersistEnglishFractionCalculationDateRequestData>()))
-            .Returns(Task.CompletedTask);
+            .Setup(x => x.Post<object>(It.IsAny<PersistEnglishFractionCalculationDateRequest>()))
+            .ReturnsAsync(new object());
 
         await _service.PersistCalculationDateAsync(firstInput);
         await _service.PersistCalculationDateAsync(secondInput);
 
         _financeApiClient.Verify(
-            x => x.Post("api/english-fraction-calculation-date", It.IsAny<PersistEnglishFractionCalculationDateRequestData>()),
+            x => x.Post<object>(It.IsAny<PersistEnglishFractionCalculationDateRequest>()),
             Times.Exactly(2));
     }
 
@@ -113,9 +114,9 @@ public class WhenPersistingEnglishFractionCalculationDate
         var input = CreateInput("corr-123", true, new DateTime(2026, 4, 14));
 
         _financeApiClient
-            .SetupSequence(x => x.Post("api/english-fraction-calculation-date", It.IsAny<PersistEnglishFractionCalculationDateRequestData>()))
+            .SetupSequence(x => x.Post<object>(It.IsAny<PersistEnglishFractionCalculationDateRequest>()))
             .ThrowsAsync(new InvalidOperationException("Finance API error"))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(new object());
 
         var firstAttempt = async () => await _service.PersistCalculationDateAsync(input);
         await firstAttempt.Should().ThrowAsync<InvalidOperationException>();
@@ -124,7 +125,7 @@ public class WhenPersistingEnglishFractionCalculationDate
 
         secondResult.Persisted.Should().BeTrue();
         _financeApiClient.Verify(
-            x => x.Post("api/english-fraction-calculation-date", It.IsAny<PersistEnglishFractionCalculationDateRequestData>()),
+            x => x.Post<object>(It.IsAny<PersistEnglishFractionCalculationDateRequest>()),
             Times.Exactly(2));
     }
 

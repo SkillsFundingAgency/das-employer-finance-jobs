@@ -1,10 +1,9 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
+
+public interface IBaseApiRequest
 {
-    public interface IBaseApiRequest
-    {
-        [JsonIgnore]
-        string Version => "1.0";
-    }
+    [JsonIgnore]
+    string Version => "1.0";
 }
