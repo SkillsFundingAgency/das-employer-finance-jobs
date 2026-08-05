@@ -14,6 +14,24 @@ public class RetryService(
         string operationName,
         int retries = DefaultRetries)
     {
+        return await ExecuteAsync(action, correlationId, operationName, _ => true, retries);
+    }
+
+    public async Task<T> ExecuteAsync<T>(
+        Func<Task<T>> action,
+        string correlationId,
+        string operationName,
+        Func<Exception, bool> shouldRetry,
+        int retries = DefaultRetries)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(shouldRetry);
+
+        if (retries < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(retries), "At least one attempt is required.");
+        }
+
         var delay = TimeSpan.FromSeconds(2);
 
         for (var attempt = 1; attempt <= retries; attempt++)
@@ -22,8 +40,13 @@ public class RetryService(
             {
                 return await action();
             }
-            catch (Exception ex) when (attempt < retries)
+            catch (Exception ex)
             {
+                if (attempt >= retries || !shouldRetry(ex))
+                {
+                    throw;
+                }
+
                 logger.LogWarning(
                     ex,
                     "[CorrelationId: {CorrelationId}] [Retry {Attempt}] Temporary error calling {OperationName}, retrying...",
@@ -36,6 +59,6 @@ public class RetryService(
             }
         }
 
-        return await action();
+        throw new InvalidOperationException("Retry execution ended without a result.");
     }
 }
