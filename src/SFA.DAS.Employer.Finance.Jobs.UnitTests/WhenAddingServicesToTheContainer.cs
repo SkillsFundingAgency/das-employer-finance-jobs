@@ -30,8 +30,11 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IHmrcClient))]
     [TestCase(typeof(IHmrcRequestThrottle))]
     [TestCase(typeof(IHmrcTokenProvider))]
+    [TestCase(typeof(IEnglishFractionCalculationDateWriteTracker))]
     [TestCase(typeof(IPeriodEndService))]
     [TestCase(typeof(IEnglishFractionsService))]
+    [TestCase(typeof(IEnglishFractionsPersistenceService))]
+    [TestCase(typeof(IEnglishFractionCalculationDatePersistenceService))]
     [TestCase(typeof(IAccountService))]
     [TestCase(typeof(IAccountPaymentsImportService))]
     [TestCase(typeof(IRefreshPaymentDataCompletedEventPublisher))]
@@ -71,6 +74,7 @@ public class WhenAddingServicesToTheContainer
         services.AddSingleton<IHmrcClock, HmrcClock>();
         services.AddSingleton<IHmrcRequestThrottle, HmrcRequestThrottle>();
         services.AddSingleton<IHmrcTokenProvider, HmrcTokenProvider>();
+        services.AddSingleton<IEnglishFractionCalculationDateWriteTracker, EnglishFractionCalculationDateWriteTracker>();
         services.AddSingleton<IApprenticeshipLevyApiClient>(provider =>
         {
             var client = new HttpClient
@@ -88,6 +92,8 @@ public class WhenAddingServicesToTheContainer
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
         services.AddScoped<IPeriodEndService, PeriodEndService>();
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
+        services.AddScoped<IEnglishFractionsPersistenceService, EnglishFractionsPersistenceService>();
+        services.AddScoped<IEnglishFractionCalculationDatePersistenceService, EnglishFractionCalculationDatePersistenceService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();
