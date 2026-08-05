@@ -27,7 +27,7 @@ public class WhenCreatingPeriodEnd
     public async Task Then_Posts_To_Finance_Api_And_Returns_Created_Period_End()
     {
         // Arrange
-        var correlationId = Guid.NewGuid();
+        var correlationId = Guid.NewGuid().ToString();
         var input = new PeriodEnd
         {
             PeriodEndId = "PE-202401",
@@ -63,7 +63,7 @@ public class WhenCreatingPeriodEnd
     public async Task And_Finance_Api_Throws_Then_Throws_Exception()
     {
         // Arrange
-        var correlationId = Guid.NewGuid();
+        var correlationId = Guid.NewGuid().ToString();
         var input = new PeriodEnd { PeriodEndId = "PE-ERR" };
         var expectedException = new InvalidOperationException("Finance API Error");
 

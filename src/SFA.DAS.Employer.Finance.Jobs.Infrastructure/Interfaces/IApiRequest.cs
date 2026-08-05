@@ -1,5 +1,5 @@
-﻿using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 
@@ -12,4 +12,3 @@ public interface IApiRequest : IBaseApiRequest
     object? Data { get; }
 
 }
-

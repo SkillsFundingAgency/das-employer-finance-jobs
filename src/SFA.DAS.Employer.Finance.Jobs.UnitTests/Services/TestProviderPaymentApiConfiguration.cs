@@ -1,10 +1,9 @@
 ﻿using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
+
+public class TestProviderPaymentApiConfiguration : IInternalApiConfiguration
 {
-    public class TestProviderPaymentApiConfiguration : IInternalApiConfiguration
-    {
-        public string Url { get; set; } 
-        public string Identifier { get; set; } 
-    }
+    public string Url { get; set; } 
+    public string Identifier { get; set; } 
 }

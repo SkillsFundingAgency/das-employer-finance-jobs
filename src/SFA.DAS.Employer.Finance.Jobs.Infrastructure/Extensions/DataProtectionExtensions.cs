@@ -16,9 +16,9 @@ public static class DataProtectionExtensions
         {
             return services;
         }
-        
+
         var redis = ConnectionMultiplexer.Connect($"{redisConnectionString},{dataProtectionKeysDatabase}");
-        
+
         services.AddDataProtection()
             .SetApplicationName("das-employer-finance-jobs")
             .PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys");

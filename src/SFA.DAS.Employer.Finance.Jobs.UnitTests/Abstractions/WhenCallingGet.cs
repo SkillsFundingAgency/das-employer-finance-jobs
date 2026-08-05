@@ -4,9 +4,10 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
-using AutoFixture.NUnit3;
+using AutoFixture.NUnit4;
 using Moq.Protected;
 using SFA.DAS.Api.Common.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 
@@ -64,7 +65,7 @@ public class WhenCallingGet
         var testObject = JsonSerializer.Serialize(new TestResponse { MyResponse = responseValue });
         var response = new HttpResponseMessage
         {
-            Content = new StringContent(testObject, Encoding.UTF8, "application/json"),
+            Content = new StringContent(testObject, System.Text.Encoding.UTF8, "application/json"),
             StatusCode = HttpStatusCode.OK
         };
         var getTestRequest = new GetTestRequest(id);
@@ -83,7 +84,7 @@ public class WhenCallingGet
         result.MyResponse.Should().Be(responseValue);
     }
     [Test, AutoData]
-    public async Task Then_If_Returns_Not_Found_Result_Returns_Default(int id,
+    public async Task Then_If_Returns_Not_Found_Result_Throws(int id,
            TestInternalApiConfiguration config)
     {
         //Arrange
@@ -104,10 +105,11 @@ public class WhenCallingGet
         var actual = new InternalApiClient<TestInternalApiConfiguration>(clientFactory.Object, configuration, Mock.Of<IAzureClientCredentialHelper>());
 
         //Act
-        var actualResult = await actual.Get<string>(getTestRequest);
+        var act = () => actual.Get<string>(getTestRequest);
 
         //Assert
-        Assert.That(actualResult, Is.Null);
+        await act.Should().ThrowAsync<HttpRequestContentException>()
+            .Where(ex => ex.StatusCode == HttpStatusCode.NotFound);
     }
 
     private class GetTestRequestNoVersion : IApiRequest
