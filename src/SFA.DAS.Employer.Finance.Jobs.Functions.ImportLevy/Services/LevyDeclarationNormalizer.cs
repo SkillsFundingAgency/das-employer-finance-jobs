@@ -27,7 +27,7 @@ public class LevyDeclarationNormalizer(ILogger<LevyDeclarationNormalizer> logger
 
         declarations = FilterDuplicateHmrcDeclarations(input, declarations, out var duplicateDeclarationCount);
         declarations = FilterExistingDeclarations(input, declarations, out var existingDeclarationCount);
-        declarations = FilterPreLevyDeclarations(input, declarations, out var preLevyDeclarationCount);
+        declarations = FilterPreLevyDeclarations(declarations, out var preLevyDeclarationCount);
         declarations = FilterFutureDeclarations(input, declarations, out var futureDeclarationCount);
 
         ProcessNoPaymentForPeriodDeclarations(declarations);
@@ -115,7 +115,6 @@ public class LevyDeclarationNormalizer(ILogger<LevyDeclarationNormalizer> logger
     }
 
     private static List<NormalizedLevyDeclaration> FilterPreLevyDeclarations(
-        NormalizeLevyDeclarationsInput input,
         List<NormalizedLevyDeclaration> declarations,
         out int preLevyDeclarationCount)
     {

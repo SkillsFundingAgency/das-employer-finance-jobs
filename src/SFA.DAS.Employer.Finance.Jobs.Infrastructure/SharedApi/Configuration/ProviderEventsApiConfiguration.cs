@@ -1,12 +1,12 @@
-﻿using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration
+
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
+
+[ExcludeFromCodeCoverage]
+public class ProviderEventsApiConfiguration : IInternalApiConfiguration
 {
-    [ExcludeFromCodeCoverage]
-    public class ProviderEventsApiConfiguration : IInternalApiConfiguration
-    {
-        public string Url { get; set; } 
-        public string Identifier { get; set; } 
-    }
+    public string Url { get; set; }
+    public string Identifier { get; set; }
 }

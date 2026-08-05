@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
@@ -27,7 +28,7 @@ public class WhenGettingAccounts
     public async Task Then_Returns_Accounts_From_Finance_Api()
     {
         // Arrange
-        var request = new GetAccountsRequest { Page = 1, PageSize = 10000, CorrelationId = Guid.NewGuid() };
+        var request = new GetAccountsRequest { Page = 1, PageSize = 10000, CorrelationId = Guid.NewGuid().ToString() };
         var expectedAccounts = new List<Accounts>
         {
             new() { Id = 1, Name = "Account 1" },
@@ -52,7 +53,7 @@ public class WhenGettingAccounts
     public async Task And_Response_Is_Null_Then_Returns_Empty_List()
     {
         // Arrange
-        var request = new GetAccountsRequest { Page = 1, PageSize = 10000, CorrelationId = Guid.NewGuid() };
+        var request = new GetAccountsRequest { Page = 1, PageSize = 10000, CorrelationId = Guid.NewGuid().ToString() };
 
         _mockFinanceApiClient
             .Setup(x => x.Get<FinanceApiGetAccountsResponse>(It.IsAny<GetAccountsRequest>()))
@@ -70,7 +71,7 @@ public class WhenGettingAccounts
     public async Task And_Response_Accounts_Is_Null_Then_Returns_Empty_List()
     {
         // Arrange
-        var request = new GetAccountsRequest { Page = 1, PageSize = 10000, CorrelationId = Guid.NewGuid() };
+        var request = new GetAccountsRequest { Page = 1, PageSize = 10000, CorrelationId = Guid.NewGuid().ToString() };
         var response = new FinanceApiGetAccountsResponse { Accounts = null };
 
         _mockFinanceApiClient
@@ -89,7 +90,7 @@ public class WhenGettingAccounts
     public async Task And_Finance_Api_Throws_Then_Throws_Exception()
     {
         // Arrange
-        var request = new GetAccountsRequest { Page = 1, PageSize = 10000, CorrelationId = Guid.NewGuid() };
+        var request = new GetAccountsRequest { Page = 1, PageSize = 10000, CorrelationId = Guid.NewGuid().ToString() };
         var expectedException = new InvalidOperationException("Finance API Error");
 
         _mockFinanceApiClient
@@ -105,7 +106,7 @@ public class WhenGettingAccounts
     public async Task Then_Calls_Finance_Api_With_Correct_Page_And_PageSize()
     {
         // Arrange
-        var request = new GetAccountsRequest { Page = 3, PageSize = 5000, CorrelationId = Guid.NewGuid() };
+        var request = new GetAccountsRequest { Page = 3, PageSize = 5000, CorrelationId = Guid.NewGuid().ToString() };
         var response = new FinanceApiGetAccountsResponse { Accounts = new List<Accounts>() };
 
         _mockFinanceApiClient

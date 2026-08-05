@@ -2,5 +2,6 @@
 
 public class LastSubmissionDateResult
 {
-    public DateTime? LastSumissionDate { get; set; }
+    public string EmpRef { get; set; }
+    public DateTime? LastSubmissionDate { get; set; }
 }

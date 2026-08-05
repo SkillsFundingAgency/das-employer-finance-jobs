@@ -113,9 +113,13 @@ public class WhenGettingNewPeriodEnds
             new PeriodEnd { PeriodEndId = "PE-001" }
         };
 
-        _mockProviderPaymentApiClient.Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ReturnsAsync(paymentPeriodEnds);
+        _mockProviderPaymentApiClient
+            .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
+            .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>(paymentPeriodEnds, System.Net.HttpStatusCode.OK, null));
 
-        _mockFinanceApiClient.Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ReturnsAsync(financePeriodEnds);
+        _mockFinanceApiClient
+            .Setup(x => x.GetWithResponseCode<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()))
+            .ReturnsAsync(new ApiResponse<List<PeriodEnd>>(financePeriodEnds, System.Net.HttpStatusCode.OK, null));
 
         // Act
         var result = await _periodEndService.GetNewPeriodEndsAsync(correlationId);
@@ -131,9 +135,13 @@ public class WhenGettingNewPeriodEnds
         // Arrange
         var correlationId = Guid.NewGuid().ToString();
 
-        _mockProviderPaymentApiClient.Setup(x => x.Get<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>())).ReturnsAsync(new List<PaymentPeriodEnd>());
+        _mockProviderPaymentApiClient
+            .Setup(x => x.GetWithResponseCode<List<PaymentPeriodEnd>>(It.IsAny<GetPaymentPeriodEndsRequest>()))
+            .ReturnsAsync(new ApiResponse<List<PaymentPeriodEnd>>([], System.Net.HttpStatusCode.OK, null));
 
-        _mockFinanceApiClient.Setup(x => x.Get<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>())).ReturnsAsync(new List<PeriodEnd>());
+        _mockFinanceApiClient
+            .Setup(x => x.GetWithResponseCode<List<PeriodEnd>>(It.IsAny<GetFinancePeriodEndsRequest>()))
+            .ReturnsAsync(new ApiResponse<List<PeriodEnd>>([], System.Net.HttpStatusCode.OK, null));
 
         // Act
         var result = await _periodEndService.GetNewPeriodEndsAsync(correlationId);
@@ -227,8 +235,8 @@ public class WhenGettingNewPeriodEnds
         periodEnd.PeriodEndId.Should().Be("PE-001");
         periodEnd.CalendarPeriodYear.Should().Be(2024);
         periodEnd.CalendarPeriodMonth.Should().Be(3);
-        periodEnd.AccountDataValidAt.Should().Be(commitmentDataValidAt);
-        periodEnd.CommitmentDataValidAt.Should().Be(accountDataValidAt);
+        periodEnd.AccountDataValidAt.Should().Be(accountDataValidAt);
+        periodEnd.CommitmentDataValidAt.Should().Be(commitmentDataValidAt);
         periodEnd.CompletionDateTime.Should().Be(completionDateTime);
         periodEnd.PaymentsForPeriod.Should().Be("test-link");
     }

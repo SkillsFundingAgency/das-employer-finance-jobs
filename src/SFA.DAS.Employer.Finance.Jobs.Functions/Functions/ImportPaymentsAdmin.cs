@@ -1,26 +1,33 @@
-using System.Net;
-using System.Text;
-using System.Text.Json;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
+using System.Net;
+using System.Text;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions;
 
 public class ImportPaymentsAdmin(
-    ILogger<ImportPaymentsAdmin> logger)
+    ILogger<ImportPaymentsAdmin> logger,
+    IOptions<ImportPaymentsOptions> importPaymentsOptions)
 {
-    private const int MaxConcurrentAccounts = 50;
+    private readonly ImportPaymentsOptions _options = importPaymentsOptions.Value;
 
     [Function("ImportPaymentsAdmin_StartPeriodEnd")]
     public async Task<HttpResponseData> StartPeriodEnd(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "admin/imports/period-end")] HttpRequestData request,
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "imports/admin/period-end")] HttpRequestData request,
         [DurableClient] DurableTaskClient client)
     {
+        if (IsAdminEndpointDisabled())
+        {
+            return await CreateDisabledResponse(request);
+        }
+
         var payload = await request.ReadFromJsonAsync<StartPeriodEndImportRequest>();
         if (payload?.PeriodEnd == null)
         {
@@ -35,45 +42,57 @@ public class ImportPaymentsAdmin(
             return await request.CreateErrorResponse(HttpStatusCode.BadRequest, "PeriodEndId is required.");
         }
 
-        var maxConcurrent = payload.MaxConcurrentAccounts
-                           ?? MaxConcurrentAccounts;
+        var maxConcurrent = ImportPaymentsOptions.GetMaxConcurrentAccountsOrDefault(payload.MaxConcurrentAccounts);
+        var correlationId = Guid.NewGuid().ToString();
 
-        var instanceId = $"ProcessPeriodEnd-{periodEndRef}";
+        var instanceId = $"ProcessPeriodEnd-PeriodEnd-{periodEndRef}-Correlation-{correlationId}";
         var newInstanceId = await client.ScheduleNewOrchestrationInstanceAsync(
             nameof(ProcessPeriodEndOrchestrator),
-            new ProcessPeriodEndOrchestratorInput
-            {
-                PeriodEnd = payload.PeriodEnd,
-                MaxConcurrentAccounts = maxConcurrent
-            },
+                new ProcessPeriodEndOrchestratorInput
+                {
+                    CorrelationId = correlationId,
+                    PeriodEnd = payload.PeriodEnd,
+                    MaxConcurrentAccounts = maxConcurrent,
+                    TargetAccountId = payload.TargetAccountId
+                },
             new StartOrchestrationOptions { InstanceId = instanceId });
 
-        logger.LogInformation("Started ProcessPeriodEndOrchestrator instance {InstanceId} for period end {PeriodEndRef}", newInstanceId, periodEndRef);
+        logger.LogInformation(
+            "[CorrelationId: {CorrelationId}] Started ProcessPeriodEndOrchestrator instance {InstanceId} for period end {PeriodEndRef}",
+            correlationId,
+            newInstanceId,
+            periodEndRef);
 
         var response = request.CreateResponse(HttpStatusCode.Accepted);
-        await response.WriteAsJsonAsync(new { instanceId = newInstanceId });
+        await response.WriteAsJsonAsync(new { instanceId = newInstanceId, correlationId });
         return response;
     }
 
     [Function("ImportPaymentsAdmin_StartAccount")]
     public async Task<HttpResponseData> StartAccount(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "admin/imports/account")] HttpRequestData request,
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "imports/admin/account")] HttpRequestData request,
         [DurableClient] DurableTaskClient client)
     {
+        if (IsAdminEndpointDisabled())
+        {
+            return await CreateDisabledResponse(request);
+        }
+
         var payload = await request.ReadFromJsonAsync<StartAccountImportRequest>();
         if (payload == null || payload.AccountId <= 0 || string.IsNullOrWhiteSpace(payload.PeriodEndRef))
         {
             return await request.CreateErrorResponse(HttpStatusCode.BadRequest, "AccountId and PeriodEndRef are required.");
         }
 
+        var correlationId = Guid.NewGuid().ToString();
         var idempotencyKey = payload.IdempotencyKey ?? DeterministicGuid($"ImportAccountPayments-{payload.PeriodEndRef}-{payload.AccountId}");
-        var instanceId = $"ProcessAccount-{payload.PeriodEndRef}-{payload.AccountId}";
+        var instanceId = $"ProcessAccount-PeriodEnd-{payload.PeriodEndRef}-Account-{payload.AccountId}-Correlation-{correlationId}";
 
         var input = new ProcessAccountInput
         {
             AccountId = payload.AccountId,
             PeriodEndRef = payload.PeriodEndRef,
-            CorrelationId = Guid.NewGuid().ToString(),
+            CorrelationId = correlationId,
             IdempotencyKey = idempotencyKey.ToString(),
             TriggeredAt = DateTime.UtcNow
         };
@@ -89,16 +108,21 @@ public class ImportPaymentsAdmin(
             payload.PeriodEndRef);
 
         var response = request.CreateResponse(HttpStatusCode.Accepted);
-        await response.WriteAsJsonAsync(new { instanceId = newInstanceId, idempotencyKey });
+        await response.WriteAsJsonAsync(new { instanceId = newInstanceId, correlationId, idempotencyKey });
         return response;
     }
 
     [Function("ImportPaymentsAdmin_Status")]
     public async Task<HttpResponseData> GetStatus(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "admin/imports/status/{instanceId}")] HttpRequestData request,
+        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "imports/admin/status/{instanceId}")] HttpRequestData request,
         string instanceId,
         [DurableClient] DurableTaskClient client)
     {
+        if (IsAdminEndpointDisabled())
+        {
+            return await CreateDisabledResponse(request);
+        }
+
         if (string.IsNullOrWhiteSpace(instanceId))
         {
             return await request.CreateErrorResponse(HttpStatusCode.BadRequest, "instanceId is required.");
@@ -115,10 +139,18 @@ public class ImportPaymentsAdmin(
         return response;
     }
 
+    private bool IsAdminEndpointDisabled() => !_options.AdminEndpointsEnabled;
+
+    private async Task<HttpResponseData> CreateDisabledResponse(HttpRequestData request)
+    {
+        logger.LogWarning("Import payments admin endpoint rejected because ImportPaymentsOptions.AdminEndpointsEnabled is false.");
+        return await request.CreateErrorResponse(HttpStatusCode.Forbidden, "Import payments admin endpoints are disabled.");
+    }
+
     private static Guid DeterministicGuid(string input)
     {
         using var provider = System.Security.Cryptography.MD5.Create();
-        var hash = provider.ComputeHash(Encoding.UTF8.GetBytes(input));
+        var hash = provider.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
         return new Guid(hash);
     }
 
@@ -126,6 +158,7 @@ public class ImportPaymentsAdmin(
     {
         public PeriodEnd PeriodEnd { get; set; }
         public int? MaxConcurrentAccounts { get; set; }
+        public long? TargetAccountId { get; set; }
     }
 
     private class StartAccountImportRequest

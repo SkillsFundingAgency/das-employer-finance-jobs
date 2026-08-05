@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Services;
@@ -5,7 +6,6 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-using System.Net;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
 
@@ -30,11 +30,17 @@ public class GetLevyDeclarationLastSubmissionDateActivity(
 
         if (response == null || response.StatusCode != HttpStatusCode.OK)
         {
+            logger.LogError(
+                "[CorrelationId: {CorrelationId}] Finance API returned {StatusCode} when retrieving last levy submission date for EmpRef {EmpRef}",
+                request.CorrelationId,
+                response?.StatusCode,
+                request.EmpRef);
+
             throw new InvalidOperationException(
                 $"[CorrelationId: {request.CorrelationId}] Failed to retrieve last levy submission date for EmpRef {request.EmpRef}");
         }
 
-        var lastSubmissionDate = response.Body?.LastSumissionDate;
+        var lastSubmissionDate = response.Body?.LastSubmissionDate;
 
         logger.LogInformation(
             "[CorrelationId: {CorrelationId}] Retrieved last levy submission date {LastSubmissionDate} for EmpRef {EmpRef}",
@@ -44,7 +50,7 @@ public class GetLevyDeclarationLastSubmissionDateActivity(
 
         return new PayeScheme
         {
-            EmpRef = request.EmpRef,
+            Reference = request.EmpRef,
             LastSubmissionDate = lastSubmissionDate
         };
     }

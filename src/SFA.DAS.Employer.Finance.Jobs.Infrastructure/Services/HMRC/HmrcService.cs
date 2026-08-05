@@ -1,4 +1,5 @@
-﻿using HMRC.ESFA.Levy.Api.Client;
+﻿using System.Net;
+using HMRC.ESFA.Levy.Api.Client;
 using HMRC.ESFA.Levy.Api.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -7,7 +8,7 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Exceptions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.HMRC;
 using SFA.DAS.TokenService.Api.Client;
-using System.Net;
+
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services.HMRC;
 

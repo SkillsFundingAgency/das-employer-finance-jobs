@@ -1,6 +1,6 @@
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
+namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 
 public class GetAccountsRequest : IApiRequest
 {
@@ -11,5 +11,5 @@ public class GetAccountsRequest : IApiRequest
 
     public object? Data { get; set; }
 
-    public Guid CorrelationId { get; set; }
+    public string CorrelationId { get; set; }
 }
