@@ -70,7 +70,7 @@ public class EnglishFractionCalculationDatePersistenceService(
                 input.CorrelationId,
                 calculationDate);
 
-            await financeApiClient.Post(request.GetUrl, (PersistEnglishFractionCalculationDateRequestData)request.Data);
+            await financeApiClient.Post<object>(request);
             writeTracker.MarkWriteSucceeded(input.CorrelationId, calculationDate);
 
             logger.LogInformation(
