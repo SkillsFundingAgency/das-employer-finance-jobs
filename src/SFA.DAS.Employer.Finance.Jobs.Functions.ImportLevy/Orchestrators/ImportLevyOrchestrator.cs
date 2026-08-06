@@ -16,7 +16,6 @@ public class ImportLevyOrchestrator(
 {
     private readonly int _maxConcurrentHmrcActivities = Math.Max(1, processingOptions.Value.MaxConcurrentHmrcActivities);
     private const int MaxActivityAttempts = 3;
-    private const string GovernmentGatewaySource = "government-gateway";
     private static readonly TaskOptions ActivityRetryOptions = TaskOptions.FromRetryPolicy(new RetryPolicy(MaxActivityAttempts, TimeSpan.FromSeconds(5)));
 
     [Function("ImportLevyOrchestrator")]
@@ -57,27 +56,30 @@ public class ImportLevyOrchestrator(
 
             var payeSchemesByAccount = await Task.WhenAll(payeSchemeTasks);
             var payeWorkItems = payeSchemesByAccount
-                .SelectMany(x => x.PayeSchemes.Select(paye => new PayeWorkItem(x.AccountId, paye.EmpRef)))
+                .SelectMany(x => x.PayeSchemes.Select(paye => new PayeWorkItem(x.AccountId, paye.Reference)))
                 .ToList();
+            result.TotalPayeSchemesCount = payeWorkItems.Count;
+            result.AccountsWithoutPayeSchemesCount = payeSchemesByAccount.Count(x => x.PayeSchemes.Count == 0);
             result.RunSummary.PayeDiscovered = payeWorkItems.Count;
 
             replaySafeLogger.LogInformation(
-                "[CorrelationId: {CorrelationId}] Retrieved {PayeSchemeCount} total PAYE schemes across {AccountCount} accounts; now retriving last submision dates",
+                "[CorrelationId: {CorrelationId}] Retrieved {PayeSchemeCount} total PAYE schemes across {AccountCount} accounts; now retrieving last submission dates",
                 correlationId,
                 payeWorkItems.Count,
                 accountIds.Count);
 
-            var submissionDateTasks = new List<Task<PayeWorkItem>>(payeWorkItems.Count);
+            var submissionDateTasks = new List<Task<PayeWorkItem?>>(payeWorkItems.Count);
             foreach (var workItem in payeWorkItems)
             {
                 submissionDateTasks.Add(GetPayeWorkItemWithSubmissionDate(workItem));
             }
 
             var payeSchemesWithSubmissionDate = (await Task.WhenAll(submissionDateTasks))
-                .Where(x => !string.IsNullOrWhiteSpace(x.EmpRef))
+                .Where(x => x is not null)
+                .Select(x => x!)
                 .ToList();
             result.PayeSchemes = payeSchemesWithSubmissionDate
-                .Select(x => new PayeScheme { EmpRef = x.EmpRef, LastSubmissionDate = x.LastSubmissionDate })
+                .Select(x => new PayeScheme { Reference = x.EmpRef, LastSubmissionDate = x.LastSubmissionDate })
                 .ToList();
 
             replaySafeLogger.LogInformation(
@@ -174,11 +176,15 @@ public class ImportLevyOrchestrator(
         async Task<AccountPayeSchemes> GetPayeSchemesForAccount(long accountId)
         {
             var stageResult = await CallStage(
-                activityName: nameof(GetPayeSchemesByAccountActivity),
+                activityName: nameof(GetAccountPayeSchemesActivity),
                 retryCounterUpdater: summary => summary.GetPayeSchemesRetries += MaxActivityAttempts - 1,
                 activityCall: () => context.CallActivityAsync<List<PayeScheme>>(
-                    nameof(GetPayeSchemesByAccountActivity),
-                    new GetPayeSchemesByAccountActivityRequest(accountId, correlationId, GovernmentGatewaySource),
+                    nameof(GetAccountPayeSchemesActivity),
+                    new GetAccountPayeSchemesActivityInput
+                    {
+                        AccountId = accountId,
+                        CorrelationId = correlationId
+                    },
                     ActivityRetryOptions),
                 accountId: accountId);
 
@@ -194,7 +200,7 @@ public class ImportLevyOrchestrator(
             return new AccountPayeSchemes(accountId, stageResult.Value ?? []);
         }
 
-        async Task<PayeWorkItem> GetPayeWorkItemWithSubmissionDate(PayeWorkItem workItem)
+        async Task<PayeWorkItem?> GetPayeWorkItemWithSubmissionDate(PayeWorkItem workItem)
         {
             var stageResult = await CallStage(
                 activityName: nameof(GetLevyDeclarationLastSubmissionDateActivity),
@@ -212,7 +218,7 @@ public class ImportLevyOrchestrator(
                 {
                     result.FailedItems.Add(stageResult.FailedItem);
                 }
-                return workItem;
+                return null;
             }
 
             return workItem with { LastSubmissionDate = stageResult.Value.LastSubmissionDate };
@@ -220,16 +226,17 @@ public class ImportLevyOrchestrator(
 
         async Task<PayePipelineResult> ProcessPayeExecutionFlowPipeline(PayeWorkItem workItem)
         {
+            var importFromDate = workItem.LastSubmissionDate?.AddDays(-1);
             var levyResult = await CallStage(
                 activityName: nameof(ImportLevyDeclarationsActivity),
                 retryCounterUpdater: summary => summary.ImportLevyDeclarationsRetries += MaxActivityAttempts - 1,
                 activityCall: () => context.CallActivityAsync<ImportLevyDeclarationsActivityResult>(
                     nameof(ImportLevyDeclarationsActivity),
-                    new ImportLevyActivityRequest(workItem.EmpRef, workItem.LastSubmissionDate, correlationId),
+                    new ImportLevyActivityRequest(workItem.EmpRef, importFromDate, correlationId),
                     ActivityRetryOptions),
                 accountId: workItem.AccountId,
                 empRef: workItem.EmpRef,
-                fromDate: workItem.LastSubmissionDate);
+                fromDate: importFromDate);
             if (!levyResult.Success || levyResult.Value == null)
             {
                 return new PayePipelineResult { FailedItem = levyResult.FailedItem };

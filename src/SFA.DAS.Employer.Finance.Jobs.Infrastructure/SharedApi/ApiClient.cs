@@ -1,7 +1,6 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
-
 
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 
@@ -16,4 +15,3 @@ public abstract class ApiClient<T> : GetApiClient<T>, IApiClient<T> where T : IA
     {
     }         
 }
-

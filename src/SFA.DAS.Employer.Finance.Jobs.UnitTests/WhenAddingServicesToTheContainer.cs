@@ -1,8 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using HMRC.ESFA.Levy.Api.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using NServiceBus;
+using NUnit.Framework;
 using SFA.DAS.Api.Common.Infrastructure;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
@@ -14,8 +19,6 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services;
-using System.Collections.Generic;
-using System.Net.Http;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests;
 
@@ -34,7 +37,11 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IEnglishFractionsService))]
     [TestCase(typeof(IEnglishFractionsPersistenceService))]
     [TestCase(typeof(IEnglishFractionCalculationDatePersistenceService))]
+    [TestCase(typeof(IAccountService))]
     [TestCase(typeof(IAccountPaymentsImportService))]
+    [TestCase(typeof(IRefreshPaymentDataCompletedEventPublisher))]
+    [TestCase(typeof(IAccountTransfersService))]
+    [TestCase(typeof(ITransferStagedToOperationalService))]
     public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
     {
         var serviceCollection = new ServiceCollection();
@@ -51,15 +58,21 @@ public class WhenAddingServicesToTheContainer
         services.AddOptions();
 
         var configuration = GenerateConfiguration();
+        services.AddSingleton<IConfiguration>(configuration);
+
         services.Configure<FinanceApiConfiguration>(configuration.GetSection(nameof(FinanceApiConfiguration)));
-        services.AddSingleton(cfg => cfg.GetService<IOptions<FinanceApiConfiguration>>().Value);
+        services.AddSingleton(provider => provider.GetRequiredService<IOptions<FinanceApiConfiguration>>().Value);
 
         services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
-        services.AddSingleton(cfg => cfg.GetService<IOptions<ProviderEventsApiConfiguration>>().Value);
+        services.AddSingleton(provider => provider.GetRequiredService<IOptions<ProviderEventsApiConfiguration>>().Value);
+
+        services.Configure<ImportPaymentsOptions>(configuration.GetSection(nameof(ImportPaymentsOptions)));
+        services.AddSingleton(provider => provider.GetRequiredService<IOptions<ImportPaymentsOptions>>().Value);
 
         services.Configure<HmrcConfiguration>(configuration.GetSection("Hmrc"));
-        services.AddSingleton(cfg => cfg.GetService<IOptions<HmrcConfiguration>>().Value);
+        services.AddSingleton(provider => provider.GetRequiredService<IOptions<HmrcConfiguration>>().Value);
         services.Configure<LevyImportResilienceOptions>(configuration.GetSection(LevyImportResilienceOptions.SectionName));
+        services.Configure<ImportLevyProcessingOptions>(configuration.GetSection(ImportLevyProcessingOptions.SectionName));
 
         services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
         services.AddSingleton<IHmrcClock, HmrcClock>();
@@ -81,13 +94,19 @@ public class WhenAddingServicesToTheContainer
         });
         services.AddSingleton<IHmrcClient, HmrcClient>();
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
+
+        services.AddSingleton(new Mock<IMessageSession>().Object);
         services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
         services.AddScoped<IPeriodEndService, PeriodEndService>();
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
         services.AddScoped<IEnglishFractionsPersistenceService, EnglishFractionsPersistenceService>();
         services.AddScoped<IEnglishFractionCalculationDatePersistenceService, EnglishFractionCalculationDatePersistenceService>();
+        services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
+        services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();
+        services.AddScoped<IAccountTransfersService, AccountTransfersService>();
+        services.AddScoped<ITransferStagedToOperationalService, TransferStagedToOperationalService>();
     }
 
     private static IConfigurationRoot GenerateConfiguration()
@@ -115,4 +134,3 @@ public class WhenAddingServicesToTheContainer
         return new ConfigurationRoot(new List<IConfigurationProvider> { provider });
     }
 }
-

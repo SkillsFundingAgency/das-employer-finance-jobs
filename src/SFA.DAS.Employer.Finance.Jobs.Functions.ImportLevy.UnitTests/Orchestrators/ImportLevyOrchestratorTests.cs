@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Models;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Orchestrators;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
@@ -46,8 +47,16 @@ public class ImportLevyOrchestratorTests
         result.Success.Should().BeTrue();
         result.CorrelationId.Should().Be("corr-123");
         result.TotalAccountsCount.Should().Be(3);
+        result.TotalPayeSchemesCount.Should().Be(3);
+        result.AccountsWithoutPayeSchemesCount.Should().Be(0);
         result.AccountIds.Should().Equal(accountIds);
         result.ErrorMessage.Should().BeEmpty();
+
+        _context.Verify(c => c.CallActivityAsync<ImportLevyDeclarationsActivityResult>(
+                It.Is<TaskName>(name => name.Name == nameof(ImportLevyDeclarationsActivity)),
+                It.Is<ImportLevyActivityRequest>(request => request.FromDate == new DateTime(2023, 12, 31)),
+                It.IsAny<TaskOptions>()),
+            Times.Exactly(3));
     }
 
     [Test]
@@ -67,7 +76,52 @@ public class ImportLevyOrchestratorTests
         result.Success.Should().BeTrue();
         result.CorrelationId.Should().Be("corr-456");
         result.TotalAccountsCount.Should().Be(0);
+        result.TotalPayeSchemesCount.Should().Be(0);
         result.AccountIds.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task RunOrchestrator_Continues_When_Account_Has_No_Paye_Schemes()
+    {
+        _context.Setup(c => c.GetInput<ImportLevyInput>()).Returns(new ImportLevyInput
+        {
+            CorrelationId = "corr-no-paye",
+            TriggeredAt = DateTime.UtcNow
+        });
+        _context.Setup(c => c.CallActivityAsync<List<long>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync([99]);
+        _context.Setup(c => c.CallActivityAsync<List<PayeScheme>>(
+                It.Is<TaskName>(name => name.Name == nameof(GetAccountPayeSchemesActivity)),
+                It.Is<GetAccountPayeSchemesActivityInput>(request => request.AccountId == 99),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync([]);
+
+        var result = await _orchestrator.RunOrchestrator(_context.Object);
+
+        result.Success.Should().BeTrue();
+        result.TotalAccountsCount.Should().Be(1);
+        result.TotalPayeSchemesCount.Should().Be(0);
+        result.AccountsWithoutPayeSchemesCount.Should().Be(1);
+        _context.Verify(c => c.CallActivityAsync<ImportLevyDeclarationsActivityResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<ImportLevyActivityRequest>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+    }
+
+    [Test]
+    public async Task RunOrchestrator_Uses_New_Guid_When_Input_Is_Missing()
+    {
+        var generatedCorrelationId = Guid.NewGuid();
+        _context.Setup(c => c.GetInput<ImportLevyInput>()).Returns((ImportLevyInput?)null);
+        _context.Setup(c => c.NewGuid()).Returns(generatedCorrelationId);
+        _context.Setup(c => c.CallActivityAsync<List<long>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync([]);
+
+        var result = await _orchestrator.RunOrchestrator(_context.Object);
+
+        result.Success.Should().BeTrue();
+        result.CorrelationId.Should().Be(generatedCorrelationId.ToString());
     }
 
     [Test]
@@ -119,11 +173,14 @@ public class ImportLevyOrchestratorTests
         _context.Setup(c => c.CallActivityAsync<List<long>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))
             .ReturnsAsync(accountIds ?? []);
 
-        _context.Setup(c => c.CallActivityAsync<List<PayeScheme>>(It.IsAny<TaskName>(), It.IsAny<GetPayeSchemesByAccountActivityRequest>(), It.IsAny<TaskOptions>()))
-            .ReturnsAsync([new PayeScheme { EmpRef = "123/AB12345" }]);
+        _context.Setup(c => c.CallActivityAsync<List<PayeScheme>>(
+                It.Is<TaskName>(name => name.Name == nameof(GetAccountPayeSchemesActivity)),
+                It.IsAny<GetAccountPayeSchemesActivityInput>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync([new PayeScheme { Reference = "123/AB12345" }]);
 
         _context.Setup(c => c.CallActivityAsync<PayeScheme>(It.IsAny<TaskName>(), It.IsAny<GetLevyDeclarationLastSubmissionDateActivityRequest>(), It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new PayeScheme { EmpRef = "123/AB12345", LastSubmissionDate = new DateTime(2024, 1, 1) });
+            .ReturnsAsync(new PayeScheme { Reference = "123/AB12345", LastSubmissionDate = new DateTime(2024, 1, 1) });
 
         _context.Setup(c => c.CallActivityAsync<ImportLevyDeclarationsActivityResult>(It.IsAny<TaskName>(), It.IsAny<ImportLevyActivityRequest>(), It.IsAny<TaskOptions>()))
             .ReturnsAsync(new ImportLevyDeclarationsActivityResult("123/AB12345", new DateTime(2024, 1, 1), 1, new HMRC.ESFA.Levy.Api.Types.LevyDeclarations()));
