@@ -1,11 +1,13 @@
 using FluentAssertions;
-using HMRC.ESFA.Levy.Api.Types;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Activities;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Models;
 using SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Orchestrators;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.UnitTests.Orchestrators;
@@ -14,7 +16,6 @@ namespace SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.UnitTests.Orchestra
 public class ImportLevyOrchestratorTests
 {
     private Mock<ILogger<ImportLevyOrchestrator>> _logger = null!;
-    private Mock<ILogger> _replaySafeLogger = null!;
     private Mock<TaskOrchestrationContext> _context = null!;
     private ImportLevyOrchestrator _orchestrator = null!;
 
@@ -22,77 +23,44 @@ public class ImportLevyOrchestratorTests
     public void SetUp()
     {
         _logger = new Mock<ILogger<ImportLevyOrchestrator>>();
-        _replaySafeLogger = new Mock<ILogger>();
         _context = new Mock<TaskOrchestrationContext>();
-        _orchestrator = new ImportLevyOrchestrator(_logger.Object);
-
-        _context.Setup(c => c.CreateReplaySafeLogger(It.IsAny<string>())).Returns(_replaySafeLogger.Object);
+        _orchestrator = new ImportLevyOrchestrator(
+            _logger.Object,
+            Options.Create(new ImportLevyProcessingOptions { MaxConcurrentHmrcActivities = 5 }));
     }
 
     [Test]
-    public async Task RunOrchestrator_Returns_Success_And_Imports_Levy_Declarations_For_Each_Paye_Scheme()
+    public async Task RunOrchestrator_Returns_Success_When_Accounts_Are_Retrieved()
     {
         var input = new ImportLevyInput
         {
             CorrelationId = "corr-123",
             TriggeredAt = DateTime.UtcNow
         };
-        var accountIds = new List<long> { 10, 20 };
-        var payeSchemesFor10 = new List<PayeScheme>
-        {
-            new() { Reference = "123/AB456" },
-            new() { Reference = "123/CD789" }
-        };
-        var payeSchemesFor20 = new List<PayeScheme>
-        {
-            new() { Reference = "222/XY123", LastSubmissionDate = new DateTime(2026, 1, 1) }
-        };
+        var accountIds = new List<long> { 10, 20, 30 };
 
         _context.Setup(c => c.GetInput<ImportLevyInput>()).Returns(input);
-        _context.Setup(c => c.CallActivityAsync<List<long>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))
-            .ReturnsAsync(accountIds);
-        _context.Setup(c => c.CallActivityAsync<List<PayeScheme>>(
-                It.Is<TaskName>(x => x.Name == nameof(GetAccountPayeSchemesActivity)),
-                It.Is<GetAccountPayeSchemesActivityInput>(x => x.AccountId == 10 && x.CorrelationId == "corr-123"),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(payeSchemesFor10);
-        _context.Setup(c => c.CallActivityAsync<List<PayeScheme>>(
-                It.Is<TaskName>(x => x.Name == nameof(GetAccountPayeSchemesActivity)),
-                It.Is<GetAccountPayeSchemesActivityInput>(x => x.AccountId == 20 && x.CorrelationId == "corr-123"),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(payeSchemesFor20);
-        _context.Setup(c => c.CallActivityAsync<PayeScheme>(
-                It.Is<TaskName>(x => x.Name == nameof(GetLevyDeclarationLastSubmissionDateActivity)),
-                It.IsAny<GetLevyDeclarationLastSubmissionDateActivityRequest>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync((TaskName _, GetLevyDeclarationLastSubmissionDateActivityRequest request, TaskOptions _) =>
-                new PayeScheme { Reference = request.EmpRef, LastSubmissionDate = new DateTime(2026, 2, 1) });
-        _context.Setup(c => c.CallActivityAsync<ImportLevyDeclarationsActivityResult>(
-                It.Is<TaskName>(x => x.Name == nameof(ImportLevyDeclarationsActivity)),
-                It.IsAny<ImportLevyActivityRequest>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync((TaskName _, ImportLevyActivityRequest request, TaskOptions _) =>
-                new ImportLevyDeclarationsActivityResult(request.EmpRef, request.FromDate, 2, new LevyDeclarations()));
+        SetupHappyPathActivities(accountIds);
 
         var result = await _orchestrator.RunOrchestrator(_context.Object);
 
         result.Success.Should().BeTrue();
         result.CorrelationId.Should().Be("corr-123");
-        result.TotalAccountsCount.Should().Be(2);
+        result.TotalAccountsCount.Should().Be(3);
         result.TotalPayeSchemesCount.Should().Be(3);
         result.AccountsWithoutPayeSchemesCount.Should().Be(0);
-        result.LevyDeclarationsActivityResults.Should().HaveCount(3);
-        result.LevyDeclarationsActivityResults.Sum(x => x.DeclarationsCount).Should().Be(6);
+        result.AccountIds.Should().Equal(accountIds);
+        result.ErrorMessage.Should().BeEmpty();
 
         _context.Verify(c => c.CallActivityAsync<ImportLevyDeclarationsActivityResult>(
-                It.Is<TaskName>(x => x.Name == nameof(ImportLevyDeclarationsActivity)),
-                It.Is<ImportLevyActivityRequest>(r => r.FromDate == new DateTime(2026, 1, 31)),
+                It.Is<TaskName>(name => name.Name == nameof(ImportLevyDeclarationsActivity)),
+                It.Is<ImportLevyActivityRequest>(request => request.FromDate == new DateTime(2023, 12, 31)),
                 It.IsAny<TaskOptions>()),
             Times.Exactly(3));
     }
 
     [Test]
-    public async Task RunOrchestrator_Returns_Success_With_Empty_List_When_Accounts_Activity_Returns_Null()
+    public async Task RunOrchestrator_Returns_Success_With_Empty_List_When_Activity_Returns_Null()
     {
         var input = new ImportLevyInput
         {
@@ -101,8 +69,7 @@ public class ImportLevyOrchestratorTests
         };
 
         _context.Setup(c => c.GetInput<ImportLevyInput>()).Returns(input);
-        _context.Setup(c => c.CallActivityAsync<List<long>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))
-            .Returns(Task.FromResult((List<long>)null!));
+        SetupHappyPathActivities(null);
 
         var result = await _orchestrator.RunOrchestrator(_context.Object);
 
@@ -116,20 +83,18 @@ public class ImportLevyOrchestratorTests
     [Test]
     public async Task RunOrchestrator_Continues_When_Account_Has_No_Paye_Schemes()
     {
-        var input = new ImportLevyInput
+        _context.Setup(c => c.GetInput<ImportLevyInput>()).Returns(new ImportLevyInput
         {
-            CorrelationId = "corr-654",
+            CorrelationId = "corr-no-paye",
             TriggeredAt = DateTime.UtcNow
-        };
-
-        _context.Setup(c => c.GetInput<ImportLevyInput>()).Returns(input);
+        });
         _context.Setup(c => c.CallActivityAsync<List<long>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new List<long> { 99 });
+            .ReturnsAsync([99]);
         _context.Setup(c => c.CallActivityAsync<List<PayeScheme>>(
-                It.Is<TaskName>(x => x.Name == nameof(GetAccountPayeSchemesActivity)),
-                It.Is<GetAccountPayeSchemesActivityInput>(x => x.AccountId == 99),
+                It.Is<TaskName>(name => name.Name == nameof(GetAccountPayeSchemesActivity)),
+                It.Is<GetAccountPayeSchemesActivityInput>(request => request.AccountId == 99),
                 It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new List<PayeScheme>());
+            .ReturnsAsync([]);
 
         var result = await _orchestrator.RunOrchestrator(_context.Object);
 
@@ -137,12 +102,26 @@ public class ImportLevyOrchestratorTests
         result.TotalAccountsCount.Should().Be(1);
         result.TotalPayeSchemesCount.Should().Be(0);
         result.AccountsWithoutPayeSchemesCount.Should().Be(1);
-
         _context.Verify(c => c.CallActivityAsync<ImportLevyDeclarationsActivityResult>(
-                It.Is<TaskName>(x => x.Name == nameof(ImportLevyDeclarationsActivity)),
+                It.IsAny<TaskName>(),
                 It.IsAny<ImportLevyActivityRequest>(),
                 It.IsAny<TaskOptions>()),
             Times.Never);
+    }
+
+    [Test]
+    public async Task RunOrchestrator_Uses_New_Guid_When_Input_Is_Missing()
+    {
+        var generatedCorrelationId = Guid.NewGuid();
+        _context.Setup(c => c.GetInput<ImportLevyInput>()).Returns((ImportLevyInput?)null);
+        _context.Setup(c => c.NewGuid()).Returns(generatedCorrelationId);
+        _context.Setup(c => c.CallActivityAsync<List<long>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync([]);
+
+        var result = await _orchestrator.RunOrchestrator(_context.Object);
+
+        result.Success.Should().BeTrue();
+        result.CorrelationId.Should().Be(generatedCorrelationId.ToString());
     }
 
     [Test]
@@ -166,18 +145,102 @@ public class ImportLevyOrchestratorTests
     }
 
     [Test]
-    public async Task RunOrchestrator_Uses_New_Guid_When_Input_Is_Missing()
+    public async Task RunOrchestrator_Captures_Granular_Stage_Failure_With_Activity_Name()
     {
-        var generatedCorrelationId = Guid.NewGuid();
+        var input = new ImportLevyInput
+        {
+            CorrelationId = "corr-stage-failure",
+            TriggeredAt = DateTime.UtcNow
+        };
 
-        _context.Setup(c => c.GetInput<ImportLevyInput>()).Returns((ImportLevyInput?)null);
-        _context.Setup(c => c.NewGuid()).Returns(generatedCorrelationId);
-        _context.Setup(c => c.CallActivityAsync<List<long>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new List<long>());
+        _context.Setup(c => c.GetInput<ImportLevyInput>()).Returns(input);
+        SetupHappyPathActivities([10]);
+        _context.Setup(c => c.CallActivityAsync<EnglishFractionsFetchResult>(
+                It.Is<TaskName>(name => name.Name == "GetEnglishFractionsActivity"),
+                It.IsAny<GetEnglishFractionsActivityInput>(),
+                It.IsAny<TaskOptions>()))
+            .ThrowsAsync(new Exception("hmrc fractions failed"));
 
         var result = await _orchestrator.RunOrchestrator(_context.Object);
 
-        result.Success.Should().BeTrue();
-        result.CorrelationId.Should().Be(generatedCorrelationId.ToString());
+        result.Success.Should().BeFalse();
+        result.FailedItems.Should().ContainSingle(x => x.ActivityName == "GetEnglishFractionsActivity");
+        result.RunSummary.GetEnglishFractionsRetries.Should().BeGreaterThan(0);
+    }
+
+    private void SetupHappyPathActivities(List<long>? accountIds)
+    {
+        _context.Setup(c => c.CallActivityAsync<List<long>>(It.IsAny<TaskName>(), It.IsAny<string>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(accountIds ?? []);
+
+        _context.Setup(c => c.CallActivityAsync<List<PayeScheme>>(
+                It.Is<TaskName>(name => name.Name == nameof(GetAccountPayeSchemesActivity)),
+                It.IsAny<GetAccountPayeSchemesActivityInput>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync([new PayeScheme { Reference = "123/AB12345" }]);
+
+        _context.Setup(c => c.CallActivityAsync<PayeScheme>(It.IsAny<TaskName>(), It.IsAny<GetLevyDeclarationLastSubmissionDateActivityRequest>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new PayeScheme { Reference = "123/AB12345", LastSubmissionDate = new DateTime(2024, 1, 1) });
+
+        _context.Setup(c => c.CallActivityAsync<ImportLevyDeclarationsActivityResult>(It.IsAny<TaskName>(), It.IsAny<ImportLevyActivityRequest>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new ImportLevyDeclarationsActivityResult("123/AB12345", new DateTime(2024, 1, 1), 1, new HMRC.ESFA.Levy.Api.Types.LevyDeclarations()));
+
+        _context.Setup(c => c.CallActivityAsync<DateTime?>(It.IsAny<TaskName>(), It.IsAny<GetLastEnglishFractionCalculatedDateActivityRequest>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new DateTime(2024, 1, 31));
+
+        _context.Setup(c => c.CallActivityAsync<EnglishFractionsFetchResult>(It.IsAny<TaskName>(), It.IsAny<GetEnglishFractionsActivityInput>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new EnglishFractionsFetchResult
+            {
+                CorrelationId = "corr",
+                EmployerReference = "123/AB12345",
+                UpdateRequired = true,
+                HmrcLatestUpdateDate = new DateTime(2024, 2, 1),
+                Fractions = []
+            });
+
+        _context.Setup(c => c.CallActivityAsync<EnglishFractionsPersistenceResult>(It.IsAny<TaskName>(), It.IsAny<EnglishFractionsFetchResult>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new EnglishFractionsPersistenceResult
+            {
+                CorrelationId = "corr",
+                EmployerReference = "123/AB12345",
+                UpdateRequired = true
+            });
+
+        _context.Setup(c => c.CallActivityAsync<EnglishFractionCalculationDatePersistenceResult>(It.IsAny<TaskName>(), It.IsAny<EnglishFractionsFetchResult>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new EnglishFractionCalculationDatePersistenceResult
+            {
+                CorrelationId = "corr",
+                DateCalculated = new DateTime(2024, 2, 1),
+                Persisted = true,
+                UpdateRequired = true
+            });
+
+        _context.Setup(c => c.CallActivityAsync<List<string>>(It.IsAny<TaskName>(), It.IsAny<GetExistingLevySubmissionIdsActivityRequest>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync([]);
+
+        _context.Setup(c => c.CallActivityAsync<List<NormalizedLevyDeclaration>>(It.IsAny<TaskName>(), It.IsAny<GetExistingPeriod12LevyDeclarationsActivityRequest>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync([]);
+
+        _context.Setup(c => c.CallActivityAsync<NormalizeLevyDeclarationsResult>(It.IsAny<TaskName>(), It.IsAny<NormalizeLevyDeclarationsInput>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new NormalizeLevyDeclarationsResult
+            {
+                CorrelationId = "corr",
+                EmpRef = "123/AB12345",
+                AccountId = 10,
+                Declarations = []
+            });
+
+        _context.Setup(c => c.CallActivityAsync<SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Models.PersistLevyDeclarationsActivityResult>(It.IsAny<TaskName>(), It.IsAny<NormalizeLevyDeclarationsResult>(), It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.Models.PersistLevyDeclarationsActivityResult
+            {
+                CorrelationId = "corr",
+                AccountId = 10,
+                EmpRef = "123/AB12345",
+                Success = true,
+                DeclarationsSubmitted = 1,
+                DeclarationsPersisted = 1,
+                TransactionsCreated = 1
+            });
     }
 }
+

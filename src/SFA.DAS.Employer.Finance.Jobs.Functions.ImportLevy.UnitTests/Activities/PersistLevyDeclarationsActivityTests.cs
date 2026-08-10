@@ -44,7 +44,7 @@ public class PersistLevyDeclarationsActivityTests
     }
 
     [Test]
-    public async Task Run_Posts_NormalizedDeclarations_WithGenerateTransactions_AndReturnsMetrics()
+    public async Task Run_Posts_NormalizedDeclarations_AndReturnsMetrics()
     {
         var input = CreateInput();
         IApiRequest? capturedRequest = null;

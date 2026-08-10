@@ -12,7 +12,9 @@ using SFA.DAS.Api.Common.Infrastructure;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.HMRC;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services.HMRC;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
@@ -28,11 +30,13 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
     [TestCase(typeof(IApprenticeshipLevyApiClient))]
     [TestCase(typeof(IHmrcClient))]
-    [TestCase(typeof(IHmrcRequestThrottle))]
+    [TestCase(typeof(IHmrcRateLimiter))]
     [TestCase(typeof(IHmrcTokenProvider))]
+    [TestCase(typeof(IEnglishFractionCalculationDateWriteTracker))]
     [TestCase(typeof(IPeriodEndService))]
     [TestCase(typeof(IEnglishFractionsService))]
     [TestCase(typeof(IEnglishFractionsPersistenceService))]
+    [TestCase(typeof(IEnglishFractionCalculationDatePersistenceService))]
     [TestCase(typeof(IAccountService))]
     [TestCase(typeof(IAccountPaymentsImportService))]
     [TestCase(typeof(IRefreshPaymentDataCompletedEventPublisher))]
@@ -67,11 +71,18 @@ public class WhenAddingServicesToTheContainer
 
         services.Configure<HmrcConfiguration>(configuration.GetSection("Hmrc"));
         services.AddSingleton(provider => provider.GetRequiredService<IOptions<HmrcConfiguration>>().Value);
+        services.Configure<LevyImportResilienceOptions>(configuration.GetSection(LevyImportResilienceOptions.SectionName));
+        services.Configure<ImportLevyProcessingOptions>(configuration.GetSection(ImportLevyProcessingOptions.SectionName));
 
         services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
         services.AddSingleton<IHmrcClock, HmrcClock>();
-        services.AddSingleton<IHmrcRequestThrottle, HmrcRequestThrottle>();
         services.AddSingleton<IHmrcTokenProvider, HmrcTokenProvider>();
+        services.AddSingleton<IEnglishFractionCalculationDateWriteTracker, EnglishFractionCalculationDateWriteTracker>();
+        services.AddSingleton<IHmrcRateLimiter>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<LevyImportResilienceOptions>>().Value;
+            return new SlidingWindowHmrcRateLimiter(options.MaxRequestsPerWindow, TimeSpan.FromSeconds(options.WindowSeconds));
+        });
         services.AddSingleton<IApprenticeshipLevyApiClient>(provider =>
         {
             var client = new HttpClient
@@ -90,6 +101,7 @@ public class WhenAddingServicesToTheContainer
         services.AddScoped<IPeriodEndService, PeriodEndService>();
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
         services.AddScoped<IEnglishFractionsPersistenceService, EnglishFractionsPersistenceService>();
+        services.AddScoped<IEnglishFractionCalculationDatePersistenceService, EnglishFractionCalculationDatePersistenceService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();
@@ -112,7 +124,9 @@ public class WhenAddingServicesToTheContainer
                 new KeyValuePair<string, string>("Hmrc:BaseUrl", "https://hmrc.test/"),
                 new KeyValuePair<string, string>("Hmrc:ClientId", "client-id"),
                 new KeyValuePair<string, string>("Hmrc:ClientSecret", "client-secret"),
-                new KeyValuePair<string, string>("Hmrc:Scope", "read:apprenticeship-levy")
+                new KeyValuePair<string, string>("Hmrc:Scope", "read:apprenticeship-levy"),
+                new KeyValuePair<string, string>("LevyImportResilience:MaxRequestsPerWindow", "6"),
+                new KeyValuePair<string, string>("LevyImportResilience:WindowSeconds", "2")
             ]
         };
         var provider = new MemoryConfigurationProvider(configSource);
