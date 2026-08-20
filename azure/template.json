@@ -107,6 +107,13 @@
             "metadata": {
                 "description": "When true, disables the ImportPaymentsTimer function via AzureWebJobs.ImportPaymentsTimer.Disabled app setting."
             }
+        },
+        "expireFundsTimerDisabled": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "When true, disables the ExpireFundsTimer function via AzureWebJobs.ExpireFundsTimer.Disabled app setting."
+            }
         }
     },
     "variables": {
@@ -301,6 +308,10 @@
                                 {
                                     "name": "AzureWebJobs.ImportPaymentsTimer.Disabled",
                                     "value": "[parameters('importPaymentsTimerDisabled')]"
+                                },
+                                {
+                                    "name": "AzureWebJobs.ExpireFundsTimer.Disabled",
+                                    "value": "[parameters('expireFundsTimerDisabled')]"
                                 }
                             ]
                         }
