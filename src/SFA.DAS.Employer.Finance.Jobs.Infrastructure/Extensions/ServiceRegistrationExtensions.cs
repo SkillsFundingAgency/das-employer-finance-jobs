@@ -55,6 +55,7 @@ public static class ServiceRegistrationExtensions
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
         services.AddScoped<IEnglishFractionsPersistenceService, EnglishFractionsPersistenceService>();
         services.AddScoped<IEnglishFractionCalculationDatePersistenceService, EnglishFractionCalculationDatePersistenceService>();
+        services.AddScoped<IExpireFundsService, ExpireFundsService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         services.AddScoped<IAccountTransfersService, AccountTransfersService>();
         services.AddScoped<IRefreshPaymentDataService, RefreshPaymentDataService>();

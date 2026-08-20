@@ -37,6 +37,7 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IEnglishFractionsService))]
     [TestCase(typeof(IEnglishFractionsPersistenceService))]
     [TestCase(typeof(IEnglishFractionCalculationDatePersistenceService))]
+    [TestCase(typeof(IExpireFundsService))]
     [TestCase(typeof(IAccountService))]
     [TestCase(typeof(IAccountPaymentsImportService))]
     [TestCase(typeof(IRefreshPaymentDataCompletedEventPublisher))]
@@ -102,6 +103,7 @@ public class WhenAddingServicesToTheContainer
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
         services.AddScoped<IEnglishFractionsPersistenceService, EnglishFractionsPersistenceService>();
         services.AddScoped<IEnglishFractionCalculationDatePersistenceService, EnglishFractionCalculationDatePersistenceService>();
+        services.AddScoped<IExpireFundsService, ExpireFundsService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();
