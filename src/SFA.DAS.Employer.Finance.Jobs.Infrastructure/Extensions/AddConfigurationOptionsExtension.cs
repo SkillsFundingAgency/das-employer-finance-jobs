@@ -38,7 +38,6 @@ public static class AddConfigurationOptionsExtension
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<ImportPaymentsOptions>>().Value);
 
         services.Configure<ExpireFundsOptions>(configuration.GetSection(nameof(ExpireFundsOptions)));
-        services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<ExpireFundsOptions>>().Value);
 
         var encodingConfig = new EncodingConfig { Encodings = [] };
         configuration.GetSection(nameof(encodingConfig.Encodings)).Bind(encodingConfig.Encodings);
