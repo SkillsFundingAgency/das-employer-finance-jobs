@@ -95,6 +95,61 @@ public class WhenProcessingPeriodEndOrchestratorRun
     }
 
     [Test]
+    public async Task Then_Should_Schedule_Every_Account_On_The_Page()
+    {
+        var correlationId = Guid.NewGuid().ToString();
+        var inputPeriodEnd = CreatePeriodEnd("2425-R12");
+        var createdPeriodEnd = CreatePeriodEnd("2425-R12", 101);
+        var input = new ProcessPeriodEndOrchestratorInput
+        {
+            CorrelationId = correlationId,
+            PeriodEnd = inputPeriodEnd,
+            MaxConcurrentAccounts = 10
+        };
+        var accounts = new List<Accounts>
+        {
+            new() { Id = 1, Name = "A1" },
+            new() { Id = 14331, Name = "Demo" },
+            new() { Id = 99, Name = "A99" }
+        };
+
+        _contextMock.Setup(c => c.GetInput<ProcessPeriodEndOrchestratorInput>()).Returns(input);
+        _contextMock.SetupGet(c => c.CurrentUtcDateTime).Returns(new DateTime(2026, 4, 22, 12, 0, 0, DateTimeKind.Utc));
+        _contextMock.Setup(c => c.CallActivityAsync<PeriodEnd>(
+                It.Is<TaskName>(name => name.Name == nameof(ProcessPeriodEndOrchestrator.CreatePeriodEndActivity)),
+                It.IsAny<CreatePeriodEndActivityInput>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(createdPeriodEnd);
+        _contextMock.Setup(c => c.CallActivityAsync<List<Accounts>>(
+                It.Is<TaskName>(name => name.Name == nameof(ProcessPeriodEndOrchestrator.GetAccountsPageActivity)),
+                It.IsAny<GetAccountsRequest>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(accounts);
+        _contextMock.Setup(c => c.CallSubOrchestratorAsync<AccountProcessingResult>(
+                It.Is<TaskName>(name => name.Name == nameof(ProcessAccountOrchestrator)),
+                It.IsAny<ProcessAccountInput>(),
+                It.IsAny<SubOrchestrationOptions>()))
+            .ReturnsAsync((TaskName _, ProcessAccountInput accountInput, SubOrchestrationOptions _) =>
+                new AccountProcessingResult { AccountId = accountInput.AccountId, Success = true });
+
+        var result = await _orchestrator.Run(_contextMock.Object);
+
+        result.TotalCommandsPublished.Should().Be(accounts.Count);
+        _contextMock.Verify(c => c.CallSubOrchestratorAsync<AccountProcessingResult>(
+            It.Is<TaskName>(name => name.Name == nameof(ProcessAccountOrchestrator)),
+            It.Is<ProcessAccountInput>(accountInput => accountInput.AccountId == 1),
+            It.IsAny<SubOrchestrationOptions>()), Times.Once);
+        _contextMock.Verify(c => c.CallSubOrchestratorAsync<AccountProcessingResult>(
+            It.Is<TaskName>(name => name.Name == nameof(ProcessAccountOrchestrator)),
+            It.Is<ProcessAccountInput>(accountInput => accountInput.AccountId == 14331),
+            It.IsAny<SubOrchestrationOptions>()), Times.Once);
+        _contextMock.Verify(c => c.CallSubOrchestratorAsync<AccountProcessingResult>(
+            It.Is<TaskName>(name => name.Name == nameof(ProcessAccountOrchestrator)),
+            It.Is<ProcessAccountInput>(accountInput => accountInput.AccountId == 99),
+            It.IsAny<SubOrchestrationOptions>()), Times.Once);
+    }
+
+    [Test]
     public async Task Then_Accounts_Only_Orchestrator_Should_Not_Create_Period_End_Again()
     {
         var correlationId = Guid.NewGuid().ToString();

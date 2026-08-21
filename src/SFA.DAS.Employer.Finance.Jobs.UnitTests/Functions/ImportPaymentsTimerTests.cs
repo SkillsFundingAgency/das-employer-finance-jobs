@@ -50,6 +50,7 @@ public class ImportPaymentsTimerTests
         clientMock.VerifyAll();
         clientMock.VerifyNoOtherCalls();
         _loggerMock.VerifyLogContains("Started ImportPaymentsOrchestrator");
+        _loggerMock.VerifyLogDoesNotContain("temporarily restricted");
     }
 
     [TestCase(OrchestrationRuntimeStatus.Running)]
@@ -269,5 +270,18 @@ public static class LoggerExtensions
                     It.IsAny<Func<It.IsAnyType, Exception, string>>()),
                 Times.AtLeastOnce,
                 $"Expected log containing '{contains}' but none was found");
+    }
+
+    public static void VerifyLogDoesNotContain<T>(this Mock<ILogger<T>> loggerMock, string contains)
+    {
+        loggerMock.Verify(x =>
+                x.Log(
+                    It.IsAny<LogLevel>(),
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, _) => v.ToString().Contains(contains)),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                Times.Never,
+                $"Did not expect log containing '{contains}'");
     }
 }
