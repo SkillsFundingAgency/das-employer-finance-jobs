@@ -24,6 +24,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds\SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.csproj" />
 		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs.Functions\SFA.DAS.Employer.Finance.Jobs.Functions.csproj" />
 		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs.Infrastructure\SFA.DAS.Employer.Finance.Jobs.Infrastructure.csproj" />
 		<ProjectReference Include="..\SFA.DAS.Employer.Finance.Jobs\SFA.DAS.Employer.Finance.Jobs.Core.csproj" />
