@@ -52,8 +52,7 @@ public class ImportPaymentsAdmin(
                 {
                     CorrelationId = correlationId,
                     PeriodEnd = payload.PeriodEnd,
-                    MaxConcurrentAccounts = maxConcurrent,
-                    TargetAccountId = payload.TargetAccountId
+                    MaxConcurrentAccounts = maxConcurrent
                 },
             new StartOrchestrationOptions { InstanceId = instanceId });
 
@@ -158,7 +157,6 @@ public class ImportPaymentsAdmin(
     {
         public PeriodEnd PeriodEnd { get; set; }
         public int? MaxConcurrentAccounts { get; set; }
-        public long? TargetAccountId { get; set; }
     }
 
     private class StartAccountImportRequest
