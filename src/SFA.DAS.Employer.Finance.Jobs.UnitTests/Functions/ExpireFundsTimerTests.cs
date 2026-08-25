@@ -5,10 +5,10 @@ using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using SFA.DAS.Employer.Finance.Jobs.Functions;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.Functions;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.Orchestrators;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
-using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 using SFA.DAS.Employer.Finance.Jobs.UnitTests.Helpers;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Functions;

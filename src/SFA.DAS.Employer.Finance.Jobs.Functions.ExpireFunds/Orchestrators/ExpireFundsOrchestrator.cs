@@ -1,15 +1,16 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.Activities;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Orchestrators;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.Orchestrators;
 
 public class ExpireFundsOrchestrator(ILogger<ExpireFundsOrchestrator> logger)
 {
-    public const string ProcessAccountActivityName = "ProcessAccountExpireFundsActivity";
+    public const string ProcessAccountActivityName = nameof(ExpireFundsActivities.ProcessAccountExpireFundsActivity);
 
     private static readonly TaskOptions AccountPageRetryOptions = TaskOptions.FromRetryPolicy(
         new RetryPolicy(3, TimeSpan.FromSeconds(5)));
@@ -44,7 +45,7 @@ public class ExpireFundsOrchestrator(ILogger<ExpireFundsOrchestrator> logger)
             while (true)
             {
                 var accounts = await context.CallActivityAsync<List<Accounts>>(
-                                   nameof(ProcessPeriodEndOrchestrator.GetAccountsPageActivity),
+                                   nameof(ExpireFundsActivities.GetAccountsPageActivity),
                                    new GetAccountsRequest
                                    {
                                        Page = page,

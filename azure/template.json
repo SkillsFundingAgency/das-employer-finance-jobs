@@ -122,9 +122,11 @@
         "resourceGroupName": "[concat(variables('resourceNamePrefix'), '-rg')]",
         "importPaymentsFunctionAppName": "[concat(variables('resourceNamePrefix'), '-pay-fa')]",
         "importLevyFunctionAppName": "[concat(variables('resourceNamePrefix'), '-levy-fa')]",
+        "expireFundsFunctionAppName": "[concat(variables('resourceNamePrefix'), '-expiry-fa')]",
         "appServicePlanName": "[concat(variables('resourceNamePrefix'), '-asp')]",
         "configNames": "SFA.DAS.EmployerFinance.Jobs_2.0,SFA.DAS.Encoding_1.0",
         "importLevyConfigNames": "SFA.DAS.EmployerFinance.Jobs_2.0",
+        "expireFundsConfigNames": "SFA.DAS.EmployerFinance.Jobs_2.0",
         "routeTableId": {
             "id": "[resourceId(subscription().subscriptionId, parameters('sharedEnvResourceGroup'), 'Microsoft.Network/routeTables', parameters('SharedRouteTableName'))]"
         },
@@ -308,10 +310,6 @@
                                 {
                                     "name": "AzureWebJobs.ImportPaymentsTimer.Disabled",
                                     "value": "[parameters('importPaymentsTimerDisabled')]"
-                                },
-                                {
-                                    "name": "AzureWebJobs.ExpireFundsTimer.Disabled",
-                                    "value": "[parameters('expireFundsTimerDisabled')]"
                                 }
                             ]
                         }
@@ -611,6 +609,167 @@
                     }
                 }
             }
+        },
+        {
+            "apiVersion": "2021-04-01",
+            "name": "[concat(variables('expireFundsFunctionAppName'), '-app-insights-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[variables('resourceGroupName')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'application-insights.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "appInsightsName": {
+                        "value": "[variables('expireFundsFunctionAppName')]"
+                    },
+                    "attachedService": {
+                        "value": "[variables('expireFundsFunctionAppName')]"
+                    },
+                    "logAnalyticsWorkspaceId": {
+                        "value": "[resourceId(parameters('logAnalyticsSubscriptionId'),parameters('sharedManagementResourceGroup'),'Microsoft.OperationalInsights/workspaces',parameters('logAnalyticsWorkspaceName'))]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2021-04-01",
+            "name": "[concat(variables('expireFundsFunctionAppName'), '-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[variables('resourceGroupName')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'function-app-v2.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "functionAppName": {
+                        "value": "[variables('expireFundsFunctionAppName')]"
+                    },
+                    "appServicePlanName": {
+                        "value": "[variables('appServicePlanName')]"
+                    },
+                    "appServicePlanResourceGroup": {
+                        "value": "[variables('resourceGroupName')]"
+                    },
+                    "netFrameworkVersion": {
+                        "value": "v10.0"
+                    },
+                    "subnetResourceId": {
+                        "value": "[reference(concat(parameters('subnetObject').name, '-', parameters('utcValue'))).outputs.SubnetResourceId.value]"
+                    },
+                    "functionAppAppSettings": {
+                        "value": {
+                            "array": [
+                                {
+                                    "name": "EnvironmentName",
+                                    "value": "[parameters('environmentName')]"
+                                },
+                                {
+                                    "name": "ConfigurationStorageConnectionString",
+                                    "value": "[parameters('configurationStorageConnectionString')]"
+                                },
+                                {
+                                    "name": "ConfigNames",
+                                    "value": "[variables('expireFundsConfigNames')]"
+                                },
+                                {
+                                    "name": "Version",
+                                    "value": "1.0"
+                                },
+                                {
+                                    "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                                    "value": "[reference(concat(variables('expireFundsFunctionAppName'), '-app-insights-', parameters('utcValue'))).outputs.ConnectionString.value]"
+                                },
+                                {
+                                    "name": "AzureWebJobsStorage",
+                                    "value": "[parameters('sharedStorageAccountConnectionString')]"
+                                },
+                                {
+                                    "name": "LoggingRedisConnectionString",
+                                    "value": "[parameters('loggingRedisConnectionString')]"
+                                },
+                                {
+                                    "name": "LoggingRedisKey",
+                                    "value": "[parameters('loggingRedisKey')]"
+                                },
+                                {
+                                    "name": "FUNCTIONS_EXTENSION_VERSION",
+                                    "value": "~4"
+                                },
+                                {
+                                    "name": "FUNCTIONS_WORKER_RUNTIME",
+                                    "value": "dotnet-isolated"
+                                },
+                                {
+                                    "name": "WEBSITE_RUN_FROM_PACKAGE",
+                                    "value": "1"
+                                },
+                                {
+                                    "name": "AzureWebJobs.ExpireFundsTimer.Disabled",
+                                    "value": "[parameters('expireFundsTimerDisabled')]"
+                                }
+                            ]
+                        }
+                    },
+                    "ipSecurityRestrictions": {
+                        "value": "[parameters('workerAccessRestrictions')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('appServicePlanName'), '-', parameters('utcValue'))]",
+                "[concat(variables('expireFundsFunctionAppName'), '-app-insights-', parameters('utcValue'))]"
+            ]
+        },
+        {
+            "apiVersion": "2022-09-01",
+            "name": "[concat(variables('expireFundsFunctionAppName'), '-cors-policies-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[variables('resourceGroupName')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'cors-policy.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "functionAppName": {
+                        "value": "[variables('expireFundsFunctionAppName')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('expireFundsFunctionAppName'), '-', parameters('utcValue'))]"
+            ]
+        },
+        {
+            "condition": "[parameters('deployPrivateLinkedScopedResource')]",
+            "apiVersion": "2021-04-01",
+            "name": "[concat(variables('expireFundsFunctionAppName'), '-private-link-scoped-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[parameters('sharedEnvResourceGroup')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'private-linked-scoped-resource.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "privateLinkScopeName": {
+                        "value": "[variables('privateLinkScopeName')]"
+                    },
+                    "scopedResourceName": {
+                        "value": "[variables('expireFundsFunctionAppName')]"
+                    },
+                    "scopedResourceId": {
+                        "value": "[reference(concat(variables('expireFundsFunctionAppName'), '-app-insights-', parameters('utcValue'))).outputs.AppInsightsResourceId.value]"
+                    }
+                }
+            }
         }
     ],
     "outputs": {
@@ -625,6 +784,10 @@
         "ImportLevyFunctionAppName": {
             "type": "string",
             "value": "[variables('importLevyFunctionAppName')]"
+        },
+        "ExpireFundsFunctionAppName": {
+            "type": "string",
+            "value": "[variables('expireFundsFunctionAppName')]"
         }
     }
 }

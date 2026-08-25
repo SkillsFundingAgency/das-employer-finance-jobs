@@ -5,9 +5,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
-using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.Orchestrators;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.Functions;
 
 public class ExpireFundsTimer(
     ILogger<ExpireFundsTimer> logger,

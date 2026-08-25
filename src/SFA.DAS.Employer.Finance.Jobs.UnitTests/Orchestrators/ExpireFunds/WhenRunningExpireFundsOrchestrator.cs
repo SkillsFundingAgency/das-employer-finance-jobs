@@ -3,9 +3,10 @@ using System.Linq;
 using System.Threading;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.Activities;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.Orchestrators;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
-using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 using SFA.DAS.Employer.Finance.Jobs.UnitTests.Helpers;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Orchestrators.ExpireFunds;
@@ -40,7 +41,7 @@ public class WhenRunningExpireFundsOrchestrator
         SetUpInput(correlationId, accountPageSize: 2, maxConcurrentAccounts: 2);
         _contextMock
             .Setup(context => context.CallActivityAsync<List<Accounts>>(
-                It.Is<TaskName>(name => name.Name == nameof(ProcessPeriodEndOrchestrator.GetAccountsPageActivity)),
+                It.Is<TaskName>(name => name.Name == nameof(ExpireFundsActivities.GetAccountsPageActivity)),
                 It.IsAny<GetAccountsRequest>(),
                 It.IsAny<TaskOptions>()))
             .Returns((TaskName _, GetAccountsRequest request, TaskOptions _) =>
@@ -84,7 +85,7 @@ public class WhenRunningExpireFundsOrchestrator
         SetUpInput(Guid.NewGuid().ToString(), accountPageSize: 100, maxConcurrentAccounts: 10);
         _contextMock
             .Setup(context => context.CallActivityAsync<List<Accounts>>(
-                It.Is<TaskName>(name => name.Name == nameof(ProcessPeriodEndOrchestrator.GetAccountsPageActivity)),
+                It.Is<TaskName>(name => name.Name == nameof(ExpireFundsActivities.GetAccountsPageActivity)),
                 It.Is<GetAccountsRequest>(request => request.Page == 1),
                 It.IsAny<TaskOptions>()))
             .ReturnsAsync([]);
