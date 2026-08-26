@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
@@ -130,7 +131,16 @@ public class RefreshPaymentDataService(IFinanceApiClient<FinanceApiConfiguration
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "[CorrelationId: {CorrelationId}] Error upserting payments to staging in Finance API: {ErrorMessage}", correlationId, ex.Message);
+            var errorContent = ex is HttpRequestContentException httpException
+                ? httpException.ErrorContent
+                : null;
+
+            logger.LogError(
+                ex,
+                "[CorrelationId: {CorrelationId}] Error upserting payments to staging in Finance API: {ErrorMessage}. Content: {ErrorContent}",
+                correlationId,
+                ex.Message,
+                errorContent);
             throw;
         }
 
