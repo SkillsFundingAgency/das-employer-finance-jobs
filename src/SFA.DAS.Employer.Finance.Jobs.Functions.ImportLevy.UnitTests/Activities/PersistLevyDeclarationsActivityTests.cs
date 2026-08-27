@@ -241,8 +241,10 @@ public class PersistLevyDeclarationsActivityTests
 
         Func<Task> act = async () => await activity.Run(input);
 
-        await act.Should().ThrowAsync<HttpRequestContentException>()
-            .WithMessage("bad request");
+        var exception = await act.Should().ThrowAsync<HttpRequestContentException>();
+        exception.Which.Message.Should().Be("bad request. Content: bad request");
+        exception.Which.ErrorContent.Should().Be("bad request");
+        exception.Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         _financeApi.Verify(
             x => x.PostWithResponseCode<PersistLevyDeclarationsResponse>(It.IsAny<IApiRequest>()),
