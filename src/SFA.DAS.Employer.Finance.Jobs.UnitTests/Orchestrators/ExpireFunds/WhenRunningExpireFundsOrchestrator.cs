@@ -80,6 +80,83 @@ public class WhenRunningExpireFundsOrchestrator
     }
 
     [Test]
+    public async Task Then_Account_Processing_Uses_The_Durable_Retry_Policy_And_Success_Is_Recorded()
+    {
+        TaskOptions capturedOptions = null!;
+        var correlationId = Guid.NewGuid().ToString();
+
+        SetUpInput(correlationId, accountPageSize: 10, maxConcurrentAccounts: 1);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<List<Accounts>>(
+                It.Is<TaskName>(name => name.Name == nameof(ExpireFundsActivities.GetAccountsPageActivity)),
+                It.IsAny<GetAccountsRequest>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync([new Accounts { Id = 12345, Name = "Test account" }]);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<ProcessAccountExpireFundsResult>(
+                It.Is<TaskName>(name => name.Name == ExpireFundsOrchestrator.ProcessAccountActivityName),
+                It.IsAny<ProcessAccountExpireFundsInput>(),
+                It.IsAny<TaskOptions>()))
+            .Returns((TaskName _, ProcessAccountExpireFundsInput input, TaskOptions options) =>
+            {
+                capturedOptions = options;
+                return Task.FromResult(new ProcessAccountExpireFundsResult
+                {
+                    AccountId = input.AccountId,
+                    Success = true,
+                    FundsExpired = true
+                });
+            });
+
+        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
+
+        capturedOptions.Retry.Policy.MaxNumberOfAttempts.Should().Be(3);
+        capturedOptions.Retry.Policy.FirstRetryInterval.Should().Be(TimeSpan.FromSeconds(5));
+        result.Success.Should().BeTrue();
+        result.SuccessfulAccountsCount.Should().Be(1);
+        result.FailedAccountsCount.Should().Be(0);
+        result.FundsExpiredAccountsCount.Should().Be(1);
+    }
+
+    [Test]
+    public async Task Then_Durable_Retry_Exhaustion_Is_Captured_As_An_Account_Level_Failure()
+    {
+        TaskOptions capturedOptions = null!;
+        var correlationId = Guid.NewGuid().ToString();
+
+        SetUpInput(correlationId, accountPageSize: 10, maxConcurrentAccounts: 1);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<List<Accounts>>(
+                It.Is<TaskName>(name => name.Name == nameof(ExpireFundsActivities.GetAccountsPageActivity)),
+                It.IsAny<GetAccountsRequest>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync([new Accounts { Id = 12345, Name = "Test account" }]);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<ProcessAccountExpireFundsResult>(
+                It.Is<TaskName>(name => name.Name == ExpireFundsOrchestrator.ProcessAccountActivityName),
+                It.IsAny<ProcessAccountExpireFundsInput>(),
+                It.IsAny<TaskOptions>()))
+            .Returns((TaskName _, ProcessAccountExpireFundsInput _, TaskOptions options) =>
+            {
+                capturedOptions = options;
+                return Task.FromException<ProcessAccountExpireFundsResult>(
+                    new TimeoutException("Finance API remained unavailable after retries"));
+            });
+
+        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
+
+        capturedOptions.Retry.Policy.MaxNumberOfAttempts.Should().Be(3);
+        capturedOptions.Retry.Policy.FirstRetryInterval.Should().Be(TimeSpan.FromSeconds(5));
+        result.Success.Should().BeFalse();
+        result.ProcessedAccountsCount.Should().Be(1);
+        result.SuccessfulAccountsCount.Should().Be(0);
+        result.FailedAccountsCount.Should().Be(1);
+        _loggerMock.VerifyLogContains(LogLevel.Error, "Continuing with remaining accounts");
+        _loggerMock.VerifyLogContains(LogLevel.Error, "AccountId 12345");
+        _loggerMock.VerifyLogContains(LogLevel.Error, correlationId);
+    }
+
+    [Test]
     public async Task Then_An_Empty_First_Page_Completes_Without_Scheduling_Accounts()
     {
         SetUpInput(Guid.NewGuid().ToString(), accountPageSize: 100, maxConcurrentAccounts: 10);
