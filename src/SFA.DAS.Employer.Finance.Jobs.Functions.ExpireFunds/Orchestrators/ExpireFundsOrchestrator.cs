@@ -15,6 +15,9 @@ public class ExpireFundsOrchestrator(ILogger<ExpireFundsOrchestrator> logger)
     private static readonly TaskOptions AccountPageRetryOptions = TaskOptions.FromRetryPolicy(
         new RetryPolicy(3, TimeSpan.FromSeconds(5)));
 
+    private static readonly TaskOptions ProcessAccountRetryOptions = TaskOptions.FromRetryPolicy(
+        new RetryPolicy(3, TimeSpan.FromSeconds(5)));
+
     [Function(nameof(ExpireFundsOrchestrator))]
     public async Task<ExpireFundsOrchestrationResult> RunOrchestrator(
         [OrchestrationTrigger] TaskOrchestrationContext context)
@@ -149,7 +152,8 @@ public class ExpireFundsOrchestrator(ILogger<ExpireFundsOrchestrator> logger)
                 {
                     AccountId = account.Id,
                     CorrelationId = correlationId
-                });
+                },
+                ProcessAccountRetryOptions);
 
             activeAccountTasks.Add((account.Id, accountTask));
         }

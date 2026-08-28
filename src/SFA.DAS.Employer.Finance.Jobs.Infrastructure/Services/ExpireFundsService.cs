@@ -70,7 +70,7 @@ public class ExpireFundsService(
 
             return response.Body;
         }
-        catch (Exception exception) when (IsTransient(exception))
+        catch (Exception exception) when (ExpireFundsTransientErrorDetector.IsTransient(exception))
         {
             logger.LogWarning(
                 exception,
@@ -93,23 +93,4 @@ public class ExpireFundsService(
     private static bool IsSuccess(HttpStatusCode statusCode) =>
         (int)statusCode is >= 200 and <= 299;
 
-    private static bool IsTransient(Exception exception) =>
-        exception switch
-        {
-            HttpRequestContentException contentException => IsTransient(contentException.StatusCode),
-            HttpRequestException requestException when requestException.StatusCode.HasValue =>
-                IsTransient(requestException.StatusCode.Value),
-            HttpRequestException => true,
-            TimeoutException => true,
-            TaskCanceledException => true,
-            _ => false
-        };
-
-    private static bool IsTransient(HttpStatusCode statusCode) =>
-        statusCode is HttpStatusCode.RequestTimeout
-            or HttpStatusCode.TooManyRequests
-            or HttpStatusCode.InternalServerError
-            or HttpStatusCode.BadGateway
-            or HttpStatusCode.ServiceUnavailable
-            or HttpStatusCode.GatewayTimeout;
 }
