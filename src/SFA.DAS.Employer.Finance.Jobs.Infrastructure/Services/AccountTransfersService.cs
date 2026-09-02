@@ -91,11 +91,11 @@ public class AccountTransfersService(
         var paymentLookup = BuildPaymentLookup(payments);
         var fallbackTransferDate = triggeredAt == default ? DateTime.UtcNow : triggeredAt;
 
-        var transferGroups = accountTransfers
+        var transfersById = accountTransfers
             .GroupBy(transfer => transfer.TransferId)
             .ToList();
 
-        var duplicateTransferIds = transferGroups
+        var duplicateTransferIds = transfersById
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
             .ToList();
@@ -108,11 +108,34 @@ public class AccountTransfersService(
                 string.Join(",", duplicateTransferIds));
         }
 
-        return transferGroups
+        // Stage at AccountTransfers grain: one row per Sender/Receiver/Apprenticeship/PeriodEnd with summed Amount.
+        var operationalGroups = transfersById
             .Select(group => group.First())
-            .Select(transfer =>
+            .GroupBy(transfer => new
             {
-                paymentLookup.TryGetValue(transfer.RequiredPaymentId, out var payment);
+                transfer.SenderAccountId,
+                transfer.ReceiverAccountId,
+                ApprenticeshipId = transfer.CommitmentId,
+                PeriodEnd = periodEnd
+            })
+            .ToList();
+
+        var collapsedGroupCount = operationalGroups.Count(group => group.Count() > 1);
+        if (collapsedGroupCount > 0)
+        {
+            logger.LogInformation(
+                "[CorrelationId: {CorrelationId}] Collapsed {CollapsedGroupCount} Provider Events transfer groups to operational AccountTransfers grain before staging for PeriodEnd {PeriodEnd}.",
+                correlationId,
+                collapsedGroupCount,
+                periodEnd);
+        }
+
+        return operationalGroups
+            .Select(group =>
+            {
+                var orderedTransfers = group.OrderBy(transfer => transfer.TransferId).ToList();
+                var representative = orderedTransfers[0];
+                paymentLookup.TryGetValue(representative.RequiredPaymentId, out var payment);
 
                 var transferDate = fallbackTransferDate;
                 if (payment != null && payment.EvidenceSubmittedOn != default)
@@ -122,12 +145,12 @@ public class AccountTransfersService(
 
                 return new TransferStaging
                 {
-                    TransferId = transfer.TransferId,
-                    SenderAccountId = transfer.SenderAccountId,
+                    TransferId = representative.TransferId,
+                    SenderAccountId = representative.SenderAccountId,
                     SenderAccountName = string.Empty,
-                    ReceiverAccountId = transfer.ReceiverAccountId,
+                    ReceiverAccountId = representative.ReceiverAccountId,
                     ReceiverAccountName = receiverAccountName ?? string.Empty,
-                    Amount = transfer.Amount,
+                    Amount = group.Sum(transfer => transfer.Amount),
                     TransferDate = transferDate,
                     PeriodEnd = periodEnd,
                     CollectionPeriodMonth = payment?.CollectionPeriodMonth ?? 0,
@@ -136,9 +159,9 @@ public class AccountTransfersService(
                     CourseName = string.Empty,
                     CourseLevel = null,
                     LearningType = null,
-                    ApprenticeshipId = transfer.CommitmentId,
-                    Type = transfer.Type.ToString(),
-                    RequiredPaymentId = transfer.RequiredPaymentId,
+                    ApprenticeshipId = representative.CommitmentId,
+                    Type = representative.Type.ToString(),
+                    RequiredPaymentId = representative.RequiredPaymentId,
                     CreatedBy = CreatedBy,
                     CorrelationId = correlationId
                 };

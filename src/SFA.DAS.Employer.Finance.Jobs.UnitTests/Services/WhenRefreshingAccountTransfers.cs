@@ -105,12 +105,47 @@ public class WhenRefreshingAccountTransfers
     }
 
     [Test]
+    public async Task Then_Groups_Transfers_To_Operational_Grain_Before_Staging()
+    {
+        var firstPaymentId = Guid.NewGuid();
+        var secondPaymentId = Guid.NewGuid();
+        var firstTransfer = CreateTransfer(1001, 12345, firstPaymentId, commitmentId: 991122, amount: 100m);
+        var secondTransfer = CreateTransfer(1002, 12345, secondPaymentId, commitmentId: 991122, amount: 50m);
+        var input = CreateInput([
+            CreatePaymentLookup(firstPaymentId, 10000494, new DateTime(2025, 11, 18, 12, 0, 0, DateTimeKind.Utc)),
+            CreatePaymentLookup(secondPaymentId, 10000495, new DateTime(2025, 11, 18, 13, 0, 0, DateTimeKind.Utc))
+        ]);
+        StageTransfersRequest capturedRequest = null;
+
+        SetupProviderTransfers([firstTransfer, secondTransfer]);
+        _financeApiClientMock
+            .Setup(client => client.PostWithResponseCode<PostTransfersToStagingResponse>(
+                It.IsAny<PostTransfersToStagingRequest>()))
+            .Callback<IApiRequest>(request => capturedRequest = (StageTransfersRequest)request.Data)
+            .ReturnsAsync(new ApiResponse<PostTransfersToStagingResponse>(
+                new PostTransfersToStagingResponse { InsertedCount = 1, TransferIds = [firstTransfer.TransferId] },
+                HttpStatusCode.Created,
+                null));
+
+        var result = await _service.RefreshAccountTransfers(input);
+
+        result.Status.Should().Be("Succeeded");
+        result.TransfersProcessed.Should().Be(1);
+        capturedRequest.Should().NotBeNull();
+        var stagedTransfer = capturedRequest!.Transfers.Should().ContainSingle().Subject;
+        stagedTransfer.TransferId.Should().Be(1001);
+        stagedTransfer.ApprenticeshipId.Should().Be(991122);
+        stagedTransfer.Amount.Should().Be(150m);
+        stagedTransfer.RequiredPaymentId.Should().Be(firstPaymentId);
+    }
+
+    [Test]
     public async Task Then_Treats_Conflict_As_Idempotent_And_Retries_Remaining_Transfers()
     {
         var alreadyStagedPaymentId = Guid.NewGuid();
         var newPaymentId = Guid.NewGuid();
-        var alreadyStagedTransfer = CreateTransfer(1001, 12345, alreadyStagedPaymentId);
-        var newTransfer = CreateTransfer(1002, 12345, newPaymentId);
+        var alreadyStagedTransfer = CreateTransfer(1001, 12345, alreadyStagedPaymentId, commitmentId: 111);
+        var newTransfer = CreateTransfer(1002, 12345, newPaymentId, commitmentId: 222);
         var input = CreateInput([
             CreatePaymentLookup(alreadyStagedPaymentId, 10000494, new DateTime(2025, 11, 18, 12, 0, 0, DateTimeKind.Utc)),
             CreatePaymentLookup(newPaymentId, 10000495, new DateTime(2025, 11, 18, 13, 0, 0, DateTimeKind.Utc))
@@ -177,7 +212,7 @@ public class WhenRefreshingAccountTransfers
     public async Task Then_Chunks_Transfers_Into_Batches_Of_At_Most_1000()
     {
         var transfers = Enumerable.Range(1, 1001)
-            .Select(index => CreateTransfer(index, 12345, Guid.NewGuid()))
+            .Select(index => CreateTransfer(index, 12345, Guid.NewGuid(), commitmentId: index))
             .ToList();
         var input = CreateInput([]);
         var postedBatchSizes = new List<int>();
@@ -263,7 +298,12 @@ public class WhenRefreshingAccountTransfers
         };
     }
 
-    private static ProviderAccountTransfer CreateTransfer(long transferId, long receiverAccountId, Guid requiredPaymentId)
+    private static ProviderAccountTransfer CreateTransfer(
+        long transferId,
+        long receiverAccountId,
+        Guid requiredPaymentId,
+        long commitmentId = 991122,
+        decimal amount = 123.45m)
     {
         return new ProviderAccountTransfer
         {
@@ -271,8 +311,8 @@ public class WhenRefreshingAccountTransfers
             SenderAccountId = 56789,
             ReceiverAccountId = receiverAccountId,
             RequiredPaymentId = requiredPaymentId,
-            Amount = 123.45m,
-            CommitmentId = 991122,
+            Amount = amount,
+            CommitmentId = commitmentId,
             Type = SFA.DAS.Provider.Events.Api.Types.TransferType.Levy,
             CollectionPeriodName = "2526-R03"
         };
