@@ -1,3 +1,4 @@
+using Azure.Identity;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
@@ -28,10 +29,24 @@ public class RoatpApiClient(
                 IsHistoricProviderName = false
             };
         }
+        catch (Exception ex) when (IsAuthenticationFailure(ex))
+        {
+            logger.LogError(
+                ex,
+                "RoATP authentication failed for Ukprn {Ukprn}. Provider details cannot be treated as missing.",
+                ukprn);
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Unable to get provider details for Ukprn {Ukprn} from RoATP API.", ukprn);
             return null;
         }
+    }
+
+    private static bool IsAuthenticationFailure(Exception exception)
+    {
+        return exception is AuthenticationFailedException
+               || exception.GetBaseException() is AuthenticationFailedException;
     }
 }

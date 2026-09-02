@@ -164,7 +164,7 @@ public class WhenProcessingAccountOrchestratorRun
     }
 
     [Test]
-    public async Task Then_Does_Not_Start_Transaction_Line_Creation_When_No_New_Payments_Remain()
+    public async Task Then_Takes_Empty_Account_Fast_Path_When_Provider_Events_Returns_No_Payments()
     {
         var input = new ProcessAccountInput
         {
@@ -186,13 +186,89 @@ public class WhenProcessingAccountOrchestratorRun
                 Status = "Succeeded",
                 Message = "ok"
             });
+        _contextMock.Setup(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new RefreshAccountTransfersResult
+            {
+                TransfersProcessed = 0,
+                Status = "Succeeded",
+                Message = "No transfers"
+            });
+
+        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
+
+        result.Success.Should().BeTrue();
+        result.PaymentsProcessed.Should().Be(0);
+        _contextMock.Verify(context => context.CallActivityAsync<AccountExistingPaymentIdsImportResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+        _contextMock.Verify(context => context.CallActivityAsync<RefreshPaymentDataActivityResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+        _contextMock.Verify(context => context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentMetadataResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+        _contextMock.Verify(context => context.CallActivityAsync<TransferStagedToOperationalResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+        _contextMock.Verify(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
+                It.Is<TaskName>(name => name.Name == nameof(AccountTransferActivities.RefreshAccountTransfersActivity)),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task Then_Does_Not_Start_Transaction_Line_Creation_When_Staging_Produces_No_Payment_Details()
+    {
+        var payment = new Payment { Id = Guid.NewGuid().ToString() };
+        var input = new ProcessAccountInput
+        {
+            AccountId = 12345,
+            PeriodEndRef = "2024-01",
+            CorrelationId = "correlation-id",
+            IdempotencyKey = "idempotency-key"
+        };
+
+        _contextMock.Setup(context => context.GetInput<ProcessAccountInput>())
+            .Returns(input);
+        _contextMock.Setup(context => context.CallActivityAsync<AccountPaymentsImportResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new AccountPaymentsImportResult
+            {
+                Payments = [payment],
+                Status = "Succeeded",
+                Message = "ok"
+            });
         _contextMock.Setup(context => context.CallActivityAsync<AccountExistingPaymentIdsImportResult>(
                 It.IsAny<TaskName>(),
                 It.IsAny<object>(),
                 It.IsAny<TaskOptions>()))
             .ReturnsAsync(new AccountExistingPaymentIdsImportResult
             {
-                PaymentIds = [],
+                PaymentIds = [payment.Id],
                 Status = "Succeeded",
                 Message = "ok"
             });

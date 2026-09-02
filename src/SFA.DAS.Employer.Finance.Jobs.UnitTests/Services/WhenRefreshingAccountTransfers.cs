@@ -19,6 +19,7 @@ public class WhenRefreshingAccountTransfers
 {
     private Mock<IProviderPaymentApiClient<ProviderEventsApiConfiguration>> _providerPaymentApiClientMock;
     private Mock<IFinanceApiClient<FinanceApiConfiguration>> _financeApiClientMock;
+    private Mock<ICoursesApiClient> _coursesApiClientMock;
     private Mock<ILogger<AccountTransfersService>> _loggerMock;
     private AccountTransfersService _service;
 
@@ -27,11 +28,39 @@ public class WhenRefreshingAccountTransfers
     {
         _providerPaymentApiClientMock = new Mock<IProviderPaymentApiClient<ProviderEventsApiConfiguration>>();
         _financeApiClientMock = new Mock<IFinanceApiClient<FinanceApiConfiguration>>();
+        _coursesApiClientMock = new Mock<ICoursesApiClient>();
         _loggerMock = new Mock<ILogger<AccountTransfersService>>();
         _service = new AccountTransfersService(
             _providerPaymentApiClientMock.Object,
             _financeApiClientMock.Object,
+            _coursesApiClientMock.Object,
             _loggerMock.Object);
+
+        _financeApiClientMock
+            .Setup(client => client.GetWithResponseCode<Accounts>(It.IsAny<GetAccountByIdRequest>()))
+            .ReturnsAsync(new ApiResponse<Accounts>(
+                new Accounts { Id = 56789, Name = "Sender Account" },
+                HttpStatusCode.OK,
+                null));
+
+        _coursesApiClientMock
+            .Setup(client => client.GetStandards())
+            .ReturnsAsync(new StandardsResponse
+            {
+                Standards =
+                [
+                    new StandardResponse
+                    {
+                        Id = "123",
+                        Title = "Software developer",
+                        Level = 4,
+                        LearningType = "Apprenticeship"
+                    }
+                ]
+            });
+        _coursesApiClientMock
+            .Setup(client => client.GetFrameworks())
+            .ReturnsAsync(new FrameworksResponse { Frameworks = [] });
     }
 
     [Test]
@@ -40,7 +69,7 @@ public class WhenRefreshingAccountTransfers
         var requiredPaymentId = Guid.NewGuid();
         var evidenceSubmittedOn = new DateTime(2025, 11, 18, 15, 22, 44, DateTimeKind.Utc);
         var input = CreateInput([
-            CreatePaymentLookup(requiredPaymentId, 10000494, evidenceSubmittedOn)
+            CreatePaymentLookup(requiredPaymentId, 10000494, evidenceSubmittedOn, apprenticeshipId: 991122, standardCode: 123)
         ]);
         var transfer = CreateTransfer(98765, input.AccountId, requiredPaymentId);
         StageTransfersRequest capturedRequest = null;
@@ -72,12 +101,12 @@ public class WhenRefreshingAccountTransfers
         stagedTransfer.CollectionPeriodMonth.Should().Be(10);
         stagedTransfer.CollectionPeriodYear.Should().Be(2025);
         stagedTransfer.Ukprn.Should().Be(10000494);
-        stagedTransfer.CourseName.Should().BeEmpty();
-        stagedTransfer.SenderAccountName.Should().BeEmpty();
+        stagedTransfer.CourseName.Should().Be("Software developer");
+        stagedTransfer.SenderAccountName.Should().Be("Sender Account");
         stagedTransfer.ApprenticeshipId.Should().Be(transfer.CommitmentId);
         stagedTransfer.Type.Should().Be(transfer.Type.ToString());
         stagedTransfer.RequiredPaymentId.Should().Be(transfer.RequiredPaymentId);
-        stagedTransfer.CourseLevel.Should().BeNull();
+        stagedTransfer.CourseLevel.Should().Be(4);
         stagedTransfer.LearningType.Should().BeNull();
         stagedTransfer.CreatedBy.Should().Be("EmployerFinanceJobs");
         stagedTransfer.CorrelationId.Should().Be(input.CorrelationId);
@@ -85,6 +114,36 @@ public class WhenRefreshingAccountTransfers
                 It.Is<GetAccountTransfersRequest>(request =>
                     request.GetUrl == $"api/transfers?page=1&periodId={input.PeriodEndRef}&receiverAccountId={input.AccountId}")),
             Times.Once);
+        _financeApiClientMock.Verify(
+            client => client.GetWithResponseCode<Accounts>(
+                It.Is<GetAccountByIdRequest>(request => request.GetUrl == $"api/accounts/{transfer.SenderAccountId}")),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task Then_Uses_Unknown_Course_When_No_Matching_Payment_Course_Details_Exist()
+    {
+        var requiredPaymentId = Guid.NewGuid();
+        var input = CreateInput([CreatePaymentLookup(requiredPaymentId, 10000494, DateTime.UtcNow)]);
+        var transfer = CreateTransfer(1001, input.AccountId, requiredPaymentId);
+        StageTransfersRequest capturedRequest = null;
+
+        SetupProviderTransfers([transfer]);
+        _financeApiClientMock
+            .Setup(client => client.PostWithResponseCode<PostTransfersToStagingResponse>(
+                It.IsAny<PostTransfersToStagingRequest>()))
+            .Callback<IApiRequest>(request => capturedRequest = (StageTransfersRequest)request.Data)
+            .ReturnsAsync(new ApiResponse<PostTransfersToStagingResponse>(
+                new PostTransfersToStagingResponse { InsertedCount = 1 },
+                HttpStatusCode.Created,
+                null));
+
+        var result = await _service.RefreshAccountTransfers(input);
+
+        result.Status.Should().Be("Succeeded");
+        capturedRequest!.Transfers.Single().CourseName.Should().Be("Unknown Course");
+        capturedRequest.Transfers.Single().CourseLevel.Should().BeNull();
+        capturedRequest.Transfers.Single().SenderAccountName.Should().Be("Sender Account");
     }
 
     [Test]
@@ -105,12 +164,47 @@ public class WhenRefreshingAccountTransfers
     }
 
     [Test]
+    public async Task Then_Groups_Transfers_To_Operational_Grain_Before_Staging()
+    {
+        var firstPaymentId = Guid.NewGuid();
+        var secondPaymentId = Guid.NewGuid();
+        var firstTransfer = CreateTransfer(1001, 12345, firstPaymentId, commitmentId: 991122, amount: 100m);
+        var secondTransfer = CreateTransfer(1002, 12345, secondPaymentId, commitmentId: 991122, amount: 50m);
+        var input = CreateInput([
+            CreatePaymentLookup(firstPaymentId, 10000494, new DateTime(2025, 11, 18, 12, 0, 0, DateTimeKind.Utc)),
+            CreatePaymentLookup(secondPaymentId, 10000495, new DateTime(2025, 11, 18, 13, 0, 0, DateTimeKind.Utc))
+        ]);
+        StageTransfersRequest capturedRequest = null;
+
+        SetupProviderTransfers([firstTransfer, secondTransfer]);
+        _financeApiClientMock
+            .Setup(client => client.PostWithResponseCode<PostTransfersToStagingResponse>(
+                It.IsAny<PostTransfersToStagingRequest>()))
+            .Callback<IApiRequest>(request => capturedRequest = (StageTransfersRequest)request.Data)
+            .ReturnsAsync(new ApiResponse<PostTransfersToStagingResponse>(
+                new PostTransfersToStagingResponse { InsertedCount = 1, TransferIds = [firstTransfer.TransferId] },
+                HttpStatusCode.Created,
+                null));
+
+        var result = await _service.RefreshAccountTransfers(input);
+
+        result.Status.Should().Be("Succeeded");
+        result.TransfersProcessed.Should().Be(1);
+        capturedRequest.Should().NotBeNull();
+        var stagedTransfer = capturedRequest!.Transfers.Should().ContainSingle().Subject;
+        stagedTransfer.TransferId.Should().Be(1001);
+        stagedTransfer.ApprenticeshipId.Should().Be(991122);
+        stagedTransfer.Amount.Should().Be(150m);
+        stagedTransfer.RequiredPaymentId.Should().Be(firstPaymentId);
+    }
+
+    [Test]
     public async Task Then_Treats_Conflict_As_Idempotent_And_Retries_Remaining_Transfers()
     {
         var alreadyStagedPaymentId = Guid.NewGuid();
         var newPaymentId = Guid.NewGuid();
-        var alreadyStagedTransfer = CreateTransfer(1001, 12345, alreadyStagedPaymentId);
-        var newTransfer = CreateTransfer(1002, 12345, newPaymentId);
+        var alreadyStagedTransfer = CreateTransfer(1001, 12345, alreadyStagedPaymentId, commitmentId: 111);
+        var newTransfer = CreateTransfer(1002, 12345, newPaymentId, commitmentId: 222);
         var input = CreateInput([
             CreatePaymentLookup(alreadyStagedPaymentId, 10000494, new DateTime(2025, 11, 18, 12, 0, 0, DateTimeKind.Utc)),
             CreatePaymentLookup(newPaymentId, 10000495, new DateTime(2025, 11, 18, 13, 0, 0, DateTimeKind.Utc))
@@ -177,7 +271,7 @@ public class WhenRefreshingAccountTransfers
     public async Task Then_Chunks_Transfers_Into_Batches_Of_At_Most_1000()
     {
         var transfers = Enumerable.Range(1, 1001)
-            .Select(index => CreateTransfer(index, 12345, Guid.NewGuid()))
+            .Select(index => CreateTransfer(index, 12345, Guid.NewGuid(), commitmentId: index))
             .ToList();
         var input = CreateInput([]);
         var postedBatchSizes = new List<int>();
@@ -263,7 +357,12 @@ public class WhenRefreshingAccountTransfers
         };
     }
 
-    private static ProviderAccountTransfer CreateTransfer(long transferId, long receiverAccountId, Guid requiredPaymentId)
+    private static ProviderAccountTransfer CreateTransfer(
+        long transferId,
+        long receiverAccountId,
+        Guid requiredPaymentId,
+        long commitmentId = 991122,
+        decimal amount = 123.45m)
     {
         return new ProviderAccountTransfer
         {
@@ -271,14 +370,19 @@ public class WhenRefreshingAccountTransfers
             SenderAccountId = 56789,
             ReceiverAccountId = receiverAccountId,
             RequiredPaymentId = requiredPaymentId,
-            Amount = 123.45m,
-            CommitmentId = 991122,
+            Amount = amount,
+            CommitmentId = commitmentId,
             Type = SFA.DAS.Provider.Events.Api.Types.TransferType.Levy,
             CollectionPeriodName = "2526-R03"
         };
     }
 
-    private static TransferPaymentLookup CreatePaymentLookup(Guid paymentId, long ukprn, DateTime evidenceSubmittedOn)
+    private static TransferPaymentLookup CreatePaymentLookup(
+        Guid paymentId,
+        long ukprn,
+        DateTime evidenceSubmittedOn,
+        long? apprenticeshipId = null,
+        long? standardCode = null)
     {
         return new TransferPaymentLookup
         {
@@ -286,7 +390,9 @@ public class WhenRefreshingAccountTransfers
             Ukprn = ukprn,
             EvidenceSubmittedOn = evidenceSubmittedOn,
             CollectionPeriodMonth = 10,
-            CollectionPeriodYear = 2025
+            CollectionPeriodYear = 2025,
+            ApprenticeshipId = apprenticeshipId,
+            StandardCode = standardCode
         };
     }
 }

@@ -177,9 +177,10 @@ public abstract class GetApiClient<T> : IGetApiClient<T> where T : IApiConfigura
         }
 
         // Finance staging POSTs may return Conflict when rows already exist; callers retry without those IDs.
+        // Validation 400s include the error list in the body; callers log that instead of retrying a bad payload.
         if ((httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Put)
             && Configuration is FinanceApiConfiguration
-            && response.StatusCode == HttpStatusCode.Conflict)
+            && (response.StatusCode == HttpStatusCode.Conflict || response.StatusCode == HttpStatusCode.BadRequest))
         {
             return;
         }

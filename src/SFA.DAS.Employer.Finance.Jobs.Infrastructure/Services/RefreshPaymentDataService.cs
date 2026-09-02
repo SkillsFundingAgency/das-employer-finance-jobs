@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
@@ -12,54 +13,85 @@ using System.Text.Json;
 namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 public class RefreshPaymentDataService(IFinanceApiClient<FinanceApiConfiguration> financeApiClient, ILogger<RefreshPaymentDataService> logger) : IRefreshPaymentDataService
 {
+    private const int MaxPaymentsPerRequest = 1000;
+
     public async Task<RefreshPaymentDataResult> PostPaymentsToStaging(List<PaymentStaging> filteredPayments, string correlationId)
     {
         try
         {
-            var remainingPayments = filteredPayments;
             var alreadyStagedPaymentIds = new HashSet<Guid>();
             var totalInserted = 0;
 
-            while (remainingPayments.Count > 0)
+            for (var offset = 0; offset < filteredPayments.Count; offset += MaxPaymentsPerRequest)
             {
-                logger.LogInformation(
-                    "[CorrelationId: {CorrelationId}] Calling Finance API to upsert {Count} payments to staging. AccountIds: {AccountIds}. PaymentIds: {PaymentIds}.",
-                    correlationId,
-                    remainingPayments.Count,
-                    string.Join(",", remainingPayments.Select(payment => payment.AccountId).Distinct()),
-                    string.Join(",", remainingPayments.Select(payment => payment.PaymentId)));
+                var remainingPayments = filteredPayments
+                    .Skip(offset)
+                    .Take(MaxPaymentsPerRequest)
+                    .ToList();
 
-                var paymentsRequest = new BulkPaymentsRequest
+                while (remainingPayments.Count > 0)
                 {
-                    Payments = remainingPayments
-                };
-                var request = new PostPaymentsToStagingRequest(paymentsRequest);
-                var response = await financeApiClient.PostWithResponseCode<PostPaymentsToStagingResponse>(request);
-                if (response == null)
-                {
-                    const string message = "No response received from Finance API";
-                    logger.LogError(
-                        new InvalidOperationException(message),
-                        "[CorrelationId: {CorrelationId}] {ErrorMessage}. Assuming no payments upserted to staging.",
+                    logger.LogInformation(
+                        "[CorrelationId: {CorrelationId}] Calling Finance API to upsert {Count} payments to staging. AccountIds: {AccountIds}. PaymentIds: {PaymentIds}.",
                         correlationId,
-                        message);
-                    return new RefreshPaymentDataResult
+                        remainingPayments.Count,
+                        string.Join(",", remainingPayments.Select(payment => payment.AccountId).Distinct()),
+                        string.Join(",", remainingPayments.Select(payment => payment.PaymentId)));
+
+                    var paymentsRequest = new BulkPaymentsRequest
                     {
-                        PaymentsCreated = totalInserted,
-                        Status = "Failed",
-                        Message = message
+                        Payments = remainingPayments
                     };
-                }
+                    var request = new PostPaymentsToStagingRequest(paymentsRequest);
+                    var response = await financeApiClient.PostWithResponseCode<PostPaymentsToStagingResponse>(request);
+                    if (response == null)
+                    {
+                        const string message = "No response received from Finance API";
+                        logger.LogError(
+                            new InvalidOperationException(message),
+                            "[CorrelationId: {CorrelationId}] {ErrorMessage}. Assuming no payments upserted to staging.",
+                            correlationId,
+                            message);
+                        return new RefreshPaymentDataResult
+                        {
+                            PaymentsCreated = totalInserted,
+                            Status = "Failed",
+                            Message = message
+                        };
+                    }
 
-                if (response.StatusCode == HttpStatusCode.Conflict
-                    && TryGetConflictingPaymentIds(response.ErrorContent, out var conflictedPaymentIds))
-                {
-                    var conflictedRequestedPaymentIds = remainingPayments
-                        .Select(payment => payment.PaymentId)
-                        .Intersect(conflictedPaymentIds)
-                        .ToHashSet();
+                    if (response.StatusCode == HttpStatusCode.Conflict
+                        && TryGetConflictingPaymentIds(response.ErrorContent, out var conflictedPaymentIds))
+                    {
+                        var conflictedRequestedPaymentIds = remainingPayments
+                            .Select(payment => payment.PaymentId)
+                            .Intersect(conflictedPaymentIds)
+                            .ToHashSet();
 
-                    if (conflictedRequestedPaymentIds.Count == 0)
+                        if (conflictedRequestedPaymentIds.Count == 0)
+                        {
+                            return FailedResult(
+                                totalInserted,
+                                $"Finance API returned {response.StatusCode} with error: {response.ErrorContent}.",
+                                correlationId);
+                        }
+
+                        alreadyStagedPaymentIds.UnionWith(conflictedRequestedPaymentIds);
+
+                        logger.LogInformation(
+                            "[CorrelationId: {CorrelationId}] {ConflictCount} payments are already in staging. Retrying {RemainingCount} payments that still need staging.",
+                            correlationId,
+                            conflictedRequestedPaymentIds.Count,
+                            remainingPayments.Count - conflictedRequestedPaymentIds.Count);
+
+                        remainingPayments = remainingPayments
+                            .Where(payment => !conflictedRequestedPaymentIds.Contains(payment.PaymentId))
+                            .ToList();
+
+                        continue;
+                    }
+
+                    if ((int)response.StatusCode < 200 || (int)response.StatusCode > 299)
                     {
                         return FailedResult(
                             totalInserted,
@@ -67,50 +99,28 @@ public class RefreshPaymentDataService(IFinanceApiClient<FinanceApiConfiguration
                             correlationId);
                     }
 
-                    alreadyStagedPaymentIds.UnionWith(conflictedRequestedPaymentIds);
+                    var paymentsResponse = response.Body;
+                    if (paymentsResponse == null)
+                    {
+                        return FailedResult(
+                            totalInserted,
+                            $"Finance API returned {response.StatusCode} but no response body while staging {remainingPayments.Count} payments.",
+                            correlationId);
+                    }
 
-                    logger.LogInformation(
-                        "[CorrelationId: {CorrelationId}] {ConflictCount} payments are already in staging. Retrying {RemainingCount} payments that still need staging.",
-                        correlationId,
-                        conflictedRequestedPaymentIds.Count,
-                        remainingPayments.Count - conflictedRequestedPaymentIds.Count);
+                    if (paymentsResponse.InsertedCount == 0 && remainingPayments.Count > 0)
+                    {
+                        return FailedResult(
+                            totalInserted,
+                            $"Finance API returned {response.StatusCode} but inserted 0 of {remainingPayments.Count} requested payments.",
+                            correlationId);
+                    }
 
-                    remainingPayments = remainingPayments
-                        .Where(payment => !conflictedRequestedPaymentIds.Contains(payment.PaymentId))
-                        .ToList();
+                    totalInserted += paymentsResponse.InsertedCount;
+                    logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully upserted {Count} payments to staging.", correlationId, paymentsResponse.InsertedCount);
 
-                    continue;
+                    break;
                 }
-
-                if ((int)response.StatusCode < 200 || (int)response.StatusCode > 299)
-                {
-                    return FailedResult(
-                        totalInserted,
-                        $"Finance API returned {response.StatusCode} with error: {response.ErrorContent}.",
-                        correlationId);
-                }
-
-                var paymentsResponse = response.Body;
-                if (paymentsResponse == null)
-                {
-                    return FailedResult(
-                        totalInserted,
-                        $"Finance API returned {response.StatusCode} but no response body while staging {remainingPayments.Count} payments.",
-                        correlationId);
-                }
-
-                if (paymentsResponse.InsertedCount == 0 && remainingPayments.Count > 0)
-                {
-                    return FailedResult(
-                        totalInserted,
-                        $"Finance API returned {response.StatusCode} but inserted 0 of {remainingPayments.Count} requested payments.",
-                        correlationId);
-                }
-
-                totalInserted += paymentsResponse.InsertedCount;
-                logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully upserted {Count} payments to staging.", correlationId, paymentsResponse.InsertedCount);
-
-                break;
             }
 
             logger.LogInformation(
@@ -130,7 +140,16 @@ public class RefreshPaymentDataService(IFinanceApiClient<FinanceApiConfiguration
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "[CorrelationId: {CorrelationId}] Error upserting payments to staging in Finance API: {ErrorMessage}", correlationId, ex.Message);
+            var errorContent = ex is HttpRequestContentException httpException
+                ? httpException.ErrorContent
+                : null;
+
+            logger.LogError(
+                ex,
+                "[CorrelationId: {CorrelationId}] Error upserting payments to staging in Finance API: {ErrorMessage}. Content: {ErrorContent}",
+                correlationId,
+                ex.Message,
+                errorContent);
             throw;
         }
 
@@ -216,8 +235,8 @@ public class RefreshPaymentDataService(IFinanceApiClient<FinanceApiConfiguration
                 CollectionPeriodYear = p.CollectionPeriod.Year,
                 DeliveryPeriodMonth = p.DeliveryPeriod.Month,
                 DeliveryPeriodYear = p.DeliveryPeriod.Year,
-                FundingSource = p.FundingSource.ToString(),
-                TransactionType = p.TransactionType.ToString(),
+                FundingSource = ((int)p.FundingSource).ToString(),
+                TransactionType = ((int)p.TransactionType).ToString(),
                 Amount = p.Amount,
                 EvidenceSubmittedOn = p.EvidenceSubmittedOn,
                 EmployerAccountVersion = p.EmployerAccountVersion,

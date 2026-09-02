@@ -49,6 +49,47 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
             importPaymentsResult.Payments?.Count ?? 0,
             importPaymentsResult.Message);
 
+        if (importPaymentsResult.Payments == null || importPaymentsResult.Payments.Count == 0)
+        {
+            logger.LogInformation(
+                "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator taking empty-account fast path for AccountId {AccountId} PeriodEnd {PeriodEndRef}. Skipping existing payment ids, staging, metadata, transaction lines and staged-to-operational.",
+                correlationId,
+                input.AccountId,
+                input.PeriodEndRef);
+
+            var emptyAccountTransfersInput = new RefreshAccountTransfersInput
+            {
+                AccountId = input.AccountId,
+                AccountName = input.AccountName,
+                PeriodEndRef = input.PeriodEndRef,
+                CorrelationId = correlationId,
+                TriggeredAt = input.TriggeredAt,
+                Payments = []
+            };
+
+            var emptyAccountTransfersResult = await context.CallActivityAsync<RefreshAccountTransfersResult>(
+                nameof(AccountTransferActivities.RefreshAccountTransfersActivity),
+                emptyAccountTransfersInput,
+                new TaskOptions(retryPolicy));
+
+            logger.LogInformation(
+                "[CorrelationId: {CorrelationId}] ProcessAccountOrchestrator empty-account fast path completed for AccountId {AccountId} PeriodEnd {PeriodEndRef}. TransfersProcessed: {TransfersProcessed}. Status: {Status}",
+                correlationId,
+                input.AccountId,
+                input.PeriodEndRef,
+                emptyAccountTransfersResult.TransfersProcessed,
+                emptyAccountTransfersResult.Status);
+
+            return new AccountProcessingResult
+            {
+                AccountId = input.AccountId,
+                Success = importPaymentsResult.Status == "Succeeded"
+                          && emptyAccountTransfersResult.Status == "Succeeded",
+                PaymentsProcessed = 0,
+                TransfersProcessed = emptyAccountTransfersResult.TransfersProcessed
+            };
+        }
+
         var importExistingPaymentIdsResult = await context.CallActivityAsync<AccountExistingPaymentIdsImportResult>(
                                     nameof(AccountPaymentsActivities.ImportAccountExistingFinancePaymentIdsActivity),
                                     input,
@@ -313,7 +354,13 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
                 EvidenceSubmittedOn = payment.EvidenceSubmittedOn,
                 CollectionPeriodMonth = payment.CollectionPeriod?.Month ?? 0,
                 CollectionPeriodYear = payment.CollectionPeriod?.Year ?? 0,
-                Ukprn = payment.Ukprn
+                Ukprn = payment.Ukprn,
+                ApprenticeshipId = payment.ApprenticeshipId,
+                StandardCode = payment.StandardCode,
+                FrameworkCode = payment.FrameworkCode,
+                ProgrammeType = payment.ProgrammeType,
+                PathwayCode = payment.PathwayCode,
+                CourseCode = payment.CourseCode
             });
         }
 

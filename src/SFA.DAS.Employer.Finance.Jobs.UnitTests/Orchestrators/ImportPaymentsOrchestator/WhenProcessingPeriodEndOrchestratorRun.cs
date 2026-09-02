@@ -179,6 +179,76 @@ public class WhenProcessingPeriodEndOrchestratorRun
             It.IsAny<TaskOptions>()), Times.Never);
     }
 
+    [Test]
+    public async Task Then_Keeps_The_Account_Window_Open_Across_Pages()
+    {
+        var correlationId = Guid.NewGuid().ToString();
+        var inputPeriodEnd = CreatePeriodEnd("2425-R12");
+        var createdPeriodEnd = CreatePeriodEnd("2425-R12", 101);
+        var input = new ProcessPeriodEndOrchestratorInput
+        {
+            CorrelationId = correlationId,
+            PeriodEnd = inputPeriodEnd,
+            MaxConcurrentAccounts = 2
+        };
+        _orchestrator.AccountPageSize = 2;
+        var pagesRequested = new List<int>();
+        var accountTasks = Enumerable.Range(0, 3)
+            .Select(_ => new TaskCompletionSource<AccountProcessingResult>(TaskCreationOptions.RunContinuationsAsynchronously))
+            .ToList();
+        var scheduledCount = 0;
+
+        _contextMock.Setup(c => c.GetInput<ProcessPeriodEndOrchestratorInput>()).Returns(input);
+        _contextMock.SetupGet(c => c.CurrentUtcDateTime).Returns(new DateTime(2026, 4, 22, 12, 0, 0, DateTimeKind.Utc));
+        _contextMock.Setup(c => c.CallActivityAsync<PeriodEnd>(
+                It.Is<TaskName>(name => name.Name == nameof(ProcessPeriodEndOrchestrator.CreatePeriodEndActivity)),
+                It.IsAny<CreatePeriodEndActivityInput>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(createdPeriodEnd);
+        _contextMock.Setup(c => c.CallActivityAsync<List<Accounts>>(
+                It.Is<TaskName>(name => name.Name == nameof(ProcessPeriodEndOrchestrator.GetAccountsPageActivity)),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .Callback<TaskName, object, TaskOptions>((_, pageInput, _) =>
+            {
+                pagesRequested.Add(((GetAccountsRequest)pageInput).Page);
+            })
+            .ReturnsAsync((TaskName _, object pageInput, TaskOptions _) =>
+            {
+                var page = ((GetAccountsRequest)pageInput).Page;
+                return page == 1
+                    ? new List<Accounts> { new() { Id = 1, Name = "A1" }, new() { Id = 2, Name = "A2" } }
+                    : new List<Accounts> { new() { Id = 3, Name = "A3" } };
+            });
+        _contextMock.Setup(c => c.CallSubOrchestratorAsync<AccountProcessingResult>(
+                It.Is<TaskName>(name => name.Name == nameof(ProcessAccountOrchestrator)),
+                It.IsAny<ProcessAccountInput>(),
+                It.IsAny<SubOrchestrationOptions>()))
+            .Returns(() =>
+            {
+                scheduledCount++;
+                return accountTasks[scheduledCount - 1].Task;
+            });
+
+        var orchestrationTask = _orchestrator.Run(_contextMock.Object);
+
+        await Task.Delay(150);
+
+        pagesRequested.Should().Contain(1);
+        pagesRequested.Should().Contain(2, "the next account page should be fetched while the current page still has active imports");
+        scheduledCount.Should().Be(2, "page two should wait for a window slot rather than draining page one first");
+
+        accountTasks[0].SetResult(new AccountProcessingResult { AccountId = 1, Success = true });
+        await Task.Delay(100);
+        scheduledCount.Should().Be(3);
+
+        accountTasks[1].SetResult(new AccountProcessingResult { AccountId = 2, Success = true });
+        accountTasks[2].SetResult(new AccountProcessingResult { AccountId = 3, Success = true });
+
+        var result = await orchestrationTask;
+        result.TotalCommandsPublished.Should().Be(3);
+    }
+
     private static PeriodEnd CreatePeriodEnd(string periodEndId, int id = 0)
     {
         return new PeriodEnd

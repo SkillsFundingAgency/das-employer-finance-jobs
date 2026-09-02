@@ -7,11 +7,7 @@ public static class MessageHandler
 {
     public static Mock<HttpMessageHandler> SetupMessageHandlerMock(HttpResponseMessage response, string baseUrl, string httpMethod = "get")
     {
-        var method = HttpMethod.Get;
-        if (httpMethod.Equals("get", StringComparison.CurrentCultureIgnoreCase))
-        {
-            method = HttpMethod.Get;
-        }
+        var method = new HttpMethod(httpMethod);
 
         var httpMessageHandler = new Mock<HttpMessageHandler>();
         httpMessageHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",ItExpr.Is<HttpRequestMessage>(c => c.Method.Equals(method) && c.RequestUri.AbsoluteUri.Equals(baseUrl)),
