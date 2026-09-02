@@ -354,7 +354,13 @@ public class ProcessAccountOrchestrator(ILogger<ProcessAccountOrchestrator> logg
                 EvidenceSubmittedOn = payment.EvidenceSubmittedOn,
                 CollectionPeriodMonth = payment.CollectionPeriod?.Month ?? 0,
                 CollectionPeriodYear = payment.CollectionPeriod?.Year ?? 0,
-                Ukprn = payment.Ukprn
+                Ukprn = payment.Ukprn,
+                ApprenticeshipId = payment.ApprenticeshipId,
+                StandardCode = payment.StandardCode,
+                FrameworkCode = payment.FrameworkCode,
+                ProgrammeType = payment.ProgrammeType,
+                PathwayCode = payment.PathwayCode,
+                CourseCode = payment.CourseCode
             });
         }
 

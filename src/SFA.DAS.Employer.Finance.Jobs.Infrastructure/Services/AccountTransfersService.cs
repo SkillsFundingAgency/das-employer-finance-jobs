@@ -14,10 +14,17 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 public class AccountTransfersService(
     IProviderPaymentApiClient<ProviderEventsApiConfiguration> providerPaymentApiClient,
     IFinanceApiClient<FinanceApiConfiguration> financeApiClient,
+    ICoursesApiClient coursesApiClient,
     ILogger<AccountTransfersService> logger) : IAccountTransfersService
 {
     private const string CreatedBy = "EmployerFinanceJobs";
+    private const string UnknownCourseName = "Unknown Course";
     private const int MaxTransfersPerRequest = 1000;
+
+    private Task<StandardsResponse?>? _standardsTask;
+    private Task<FrameworksResponse?>? _frameworksTask;
+    private Dictionary<string, StandardResponse>? _standardsById;
+    private Dictionary<(int FrameworkCode, int ProgType, int PathwayCode), FrameworkResponse>? _frameworksByKey;
 
     public async Task<RefreshAccountTransfersResult> RefreshAccountTransfers(RefreshAccountTransfersInput input)
     {
@@ -33,7 +40,7 @@ public class AccountTransfersService(
             };
         }
 
-        var transfers = MapTransfersToStaging(
+        var transfers = await MapTransfersToStaging(
             providerTransfers,
             input.Payments ?? [],
             input.AccountName,
@@ -80,7 +87,7 @@ public class AccountTransfersService(
         return transfers;
     }
 
-    private List<TransferStaging> MapTransfersToStaging(
+    private async Task<List<TransferStaging>> MapTransfersToStaging(
         IReadOnlyCollection<ProviderAccountTransfer> accountTransfers,
         IReadOnlyCollection<TransferPaymentLookup> payments,
         string? receiverAccountName,
@@ -89,7 +96,11 @@ public class AccountTransfersService(
         DateTime triggeredAt)
     {
         var paymentLookup = BuildPaymentLookup(payments);
+        var paymentsByApprenticeshipId = payments
+            .Where(payment => payment.ApprenticeshipId.HasValue && payment.ApprenticeshipId.Value > 0)
+            .ToLookup(payment => payment.ApprenticeshipId!.Value);
         var fallbackTransferDate = triggeredAt == default ? DateTime.UtcNow : triggeredAt;
+        var senderAccountNames = new Dictionary<long, string>();
 
         var transfersById = accountTransfers
             .GroupBy(transfer => transfer.TransferId)
@@ -130,43 +141,157 @@ public class AccountTransfersService(
                 periodEnd);
         }
 
-        return operationalGroups
-            .Select(group =>
+        var stagedTransfers = new List<TransferStaging>(operationalGroups.Count);
+        foreach (var group in operationalGroups)
+        {
+            var orderedTransfers = group.OrderBy(transfer => transfer.TransferId).ToList();
+            var representative = orderedTransfers[0];
+            paymentLookup.TryGetValue(representative.RequiredPaymentId, out var requiredPayment);
+
+            var coursePayment = requiredPayment
+                ?? paymentsByApprenticeshipId[representative.CommitmentId].FirstOrDefault();
+
+            var transferDate = fallbackTransferDate;
+            if (requiredPayment != null && requiredPayment.EvidenceSubmittedOn != default)
             {
-                var orderedTransfers = group.OrderBy(transfer => transfer.TransferId).ToList();
-                var representative = orderedTransfers[0];
-                paymentLookup.TryGetValue(representative.RequiredPaymentId, out var payment);
+                transferDate = requiredPayment.EvidenceSubmittedOn;
+            }
 
-                var transferDate = fallbackTransferDate;
-                if (payment != null && payment.EvidenceSubmittedOn != default)
-                {
-                    transferDate = payment.EvidenceSubmittedOn;
-                }
+            var (courseName, courseLevel) = await ResolveCourseDetails(coursePayment);
+            var senderAccountName = await GetAccountName(representative.SenderAccountId, senderAccountNames, correlationId);
 
-                return new TransferStaging
-                {
-                    TransferId = representative.TransferId,
-                    SenderAccountId = representative.SenderAccountId,
-                    SenderAccountName = string.Empty,
-                    ReceiverAccountId = representative.ReceiverAccountId,
-                    ReceiverAccountName = receiverAccountName ?? string.Empty,
-                    Amount = group.Sum(transfer => transfer.Amount),
-                    TransferDate = transferDate,
-                    PeriodEnd = periodEnd,
-                    CollectionPeriodMonth = payment?.CollectionPeriodMonth ?? 0,
-                    CollectionPeriodYear = payment?.CollectionPeriodYear ?? 0,
-                    Ukprn = payment?.Ukprn ?? 0,
-                    CourseName = string.Empty,
-                    CourseLevel = null,
-                    LearningType = null,
-                    ApprenticeshipId = representative.CommitmentId,
-                    Type = representative.Type.ToString(),
-                    RequiredPaymentId = representative.RequiredPaymentId,
-                    CreatedBy = CreatedBy,
-                    CorrelationId = correlationId
-                };
-            })
-            .ToList();
+            stagedTransfers.Add(new TransferStaging
+            {
+                TransferId = representative.TransferId,
+                SenderAccountId = representative.SenderAccountId,
+                SenderAccountName = senderAccountName,
+                ReceiverAccountId = representative.ReceiverAccountId,
+                ReceiverAccountName = receiverAccountName ?? string.Empty,
+                Amount = group.Sum(transfer => transfer.Amount),
+                TransferDate = transferDate,
+                PeriodEnd = periodEnd,
+                CollectionPeriodMonth = requiredPayment?.CollectionPeriodMonth ?? coursePayment?.CollectionPeriodMonth ?? 0,
+                CollectionPeriodYear = requiredPayment?.CollectionPeriodYear ?? coursePayment?.CollectionPeriodYear ?? 0,
+                Ukprn = requiredPayment?.Ukprn ?? coursePayment?.Ukprn ?? 0,
+                CourseName = courseName,
+                CourseLevel = courseLevel,
+                LearningType = null,
+                ApprenticeshipId = representative.CommitmentId,
+                Type = representative.Type.ToString(),
+                RequiredPaymentId = representative.RequiredPaymentId,
+                CreatedBy = CreatedBy,
+                CorrelationId = correlationId
+            });
+        }
+
+        return stagedTransfers;
+    }
+
+    private async Task<string> GetAccountName(
+        long accountId,
+        IDictionary<long, string> cache,
+        string correlationId)
+    {
+        if (cache.TryGetValue(accountId, out var cachedName))
+        {
+            return cachedName;
+        }
+
+        try
+        {
+            var response = await financeApiClient.GetWithResponseCode<Accounts>(new GetAccountByIdRequest(accountId));
+            var accountName = response.Body?.Name ?? string.Empty;
+            cache[accountId] = accountName;
+            return accountName;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "[CorrelationId: {CorrelationId}] Unable to get account name for AccountId {AccountId} while staging transfers.",
+                correlationId,
+                accountId);
+            cache[accountId] = string.Empty;
+            return string.Empty;
+        }
+    }
+
+    private async Task<(string CourseName, int? CourseLevel)> ResolveCourseDetails(TransferPaymentLookup? payment)
+    {
+        if (payment == null)
+        {
+            return (UnknownCourseName, null);
+        }
+
+        if (payment.StandardCode is > 0)
+        {
+            var standard = await GetStandard(payment.StandardCode.Value.ToString());
+            return (string.IsNullOrWhiteSpace(standard?.Title) ? UnknownCourseName : standard!.Title!, standard?.Level);
+        }
+
+        if (payment.FrameworkCode is > 0 && payment.ProgrammeType.HasValue && payment.PathwayCode.HasValue)
+        {
+            var frameworksByKey = await GetFrameworksByKey();
+            frameworksByKey.TryGetValue(
+                (payment.FrameworkCode.Value, payment.ProgrammeType.Value, payment.PathwayCode.Value),
+                out var framework);
+
+            return (
+                string.IsNullOrWhiteSpace(framework?.FrameworkName) ? UnknownCourseName : framework!.FrameworkName!,
+                framework?.Level);
+        }
+
+        if (!string.IsNullOrWhiteSpace(payment.CourseCode))
+        {
+            var standard = await GetStandard(payment.CourseCode);
+            return (string.IsNullOrWhiteSpace(standard?.Title) ? UnknownCourseName : standard!.Title!, standard?.Level);
+        }
+
+        return (UnknownCourseName, null);
+    }
+
+    private async Task<Dictionary<string, StandardResponse>> GetStandardsById()
+    {
+        if (_standardsById != null)
+        {
+            return _standardsById;
+        }
+
+        var standards = await GetStandards();
+        _standardsById = standards?.Standards
+            .Where(standard => !string.IsNullOrWhiteSpace(standard.Id))
+            .GroupBy(standard => standard.Id!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase)
+            ?? new Dictionary<string, StandardResponse>(StringComparer.OrdinalIgnoreCase);
+
+        return _standardsById;
+    }
+
+    private async Task<Dictionary<(int FrameworkCode, int ProgType, int PathwayCode), FrameworkResponse>> GetFrameworksByKey()
+    {
+        if (_frameworksByKey != null)
+        {
+            return _frameworksByKey;
+        }
+
+        var frameworks = await GetFrameworks();
+        _frameworksByKey = frameworks?.Frameworks
+            .GroupBy(framework => (framework.FrameworkCode, framework.ProgType, framework.PathwayCode))
+            .ToDictionary(group => group.Key, group => group.First())
+            ?? [];
+
+        return _frameworksByKey;
+    }
+
+    private Task<StandardsResponse?> GetStandards() => _standardsTask ??= coursesApiClient.GetStandards();
+
+    private Task<FrameworksResponse?> GetFrameworks() => _frameworksTask ??= coursesApiClient.GetFrameworks();
+
+    private async Task<StandardResponse?> GetStandard(string standardId)
+    {
+        var standardsById = await GetStandardsById();
+        standardsById.TryGetValue(standardId, out var standard);
+        return standard;
     }
 
     private async Task<RefreshAccountTransfersResult> PostTransfersToStaging(List<TransferStaging> transfers, string correlationId)
