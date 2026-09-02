@@ -67,6 +67,9 @@ public class WhenAddingServicesToTheContainer
         services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
         services.AddSingleton(provider => provider.GetRequiredService<IOptions<ProviderEventsApiConfiguration>>().Value);
 
+        services.Configure<CoursesApiConfiguration>(configuration.GetSection(nameof(CoursesApiConfiguration)));
+        services.AddSingleton(provider => provider.GetRequiredService<IOptions<CoursesApiConfiguration>>().Value);
+
         services.Configure<ImportPaymentsOptions>(configuration.GetSection(nameof(ImportPaymentsOptions)));
         services.AddSingleton(provider => provider.GetRequiredService<IOptions<ImportPaymentsOptions>>().Value);
 
@@ -108,6 +111,7 @@ public class WhenAddingServicesToTheContainer
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();
         services.AddScoped<IAccountTransfersService, AccountTransfersService>();
+        services.AddScoped<ICoursesApiClient, CoursesApiClient>();
         services.AddScoped<ITransferStagedToOperationalService, TransferStagedToOperationalService>();
     }
 
@@ -123,6 +127,8 @@ public class WhenAddingServicesToTheContainer
                 new KeyValuePair<string, string>("FinanceApiConfiguration:Identifier", "https://test.com/"),
                 new KeyValuePair<string, string>("ProviderEventsApiConfiguration:Url", "https://test.com/"),
                 new KeyValuePair<string, string>("ProviderEventsApiConfiguration:Identifier", "https://test.com/"),
+                new KeyValuePair<string, string>("CoursesApiConfiguration:Url", "https://test.com/"),
+                new KeyValuePair<string, string>("CoursesApiConfiguration:Identifier", "https://test.com/"),
                 new KeyValuePair<string, string>("Hmrc:BaseUrl", "https://hmrc.test/"),
                 new KeyValuePair<string, string>("Hmrc:ClientId", "client-id"),
                 new KeyValuePair<string, string>("Hmrc:ClientSecret", "client-secret"),
