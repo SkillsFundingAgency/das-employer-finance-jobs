@@ -19,7 +19,7 @@ var host = new HostBuilder()
         services.AddDasLogging();
         services.AddDasDataProtection(configuration);
         services.AddConfigurationOptions(configuration);
-        services.AddExpireFundsServiceRegistration();
+        services.AddExpireFundsServiceRegistration(configuration);
     })
     .Build();
 

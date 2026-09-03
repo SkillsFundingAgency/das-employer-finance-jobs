@@ -27,18 +27,19 @@ public class WhenAddingServicesToTheContainer
 {
     [TestCase(typeof(IAccountService))]
     [TestCase(typeof(IExpireFundsService))]
+    [TestCase(typeof(IAccountFundsExpiredEventPublisher))]
+    [TestCase(typeof(IMessageSession))]
     public void Then_The_Expire_Funds_App_Dependencies_Are_Correctly_Resolved(Type toResolve)
     {
         var services = new ServiceCollection();
         var configuration = GenerateConfiguration();
 
         services.AddConfigurationOptions(configuration);
-        services.AddExpireFundsServiceRegistration();
+        services.AddExpireFundsServiceRegistration(configuration);
 
         using var provider = services.BuildServiceProvider();
 
         provider.GetService(toResolve).Should().NotBeNull();
-        provider.GetService<IMessageSession>().Should().BeNull();
     }
 
     [TestCase(typeof(IAzureClientCredentialHelper))]
@@ -58,6 +59,7 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IAccountService))]
     [TestCase(typeof(IAccountPaymentsImportService))]
     [TestCase(typeof(IRefreshPaymentDataCompletedEventPublisher))]
+    [TestCase(typeof(IAccountFundsExpiredEventPublisher))]
     [TestCase(typeof(IAccountTransfersService))]
     [TestCase(typeof(ITransferStagedToOperationalService))]
     public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
@@ -124,6 +126,7 @@ public class WhenAddingServicesToTheContainer
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();
+        services.AddSingleton<IAccountFundsExpiredEventPublisher, AccountFundsExpiredEventPublisher>();
         services.AddScoped<IAccountTransfersService, AccountTransfersService>();
         services.AddScoped<ITransferStagedToOperationalService, TransferStagedToOperationalService>();
     }
