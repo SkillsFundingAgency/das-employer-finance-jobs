@@ -138,7 +138,7 @@ public class WhenAddingServicesToTheContainer
             InitialData =
             [
                 new KeyValuePair<string, string>("FUNCTIONS_WORKER_RUNTIME", "dotnet-isolated"),
-                new KeyValuePair<string, string>("AzureWebJobsServiceBus", "abc"),
+                new KeyValuePair<string, string>("AzureWebJobsServiceBus", "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=dGVzdC1zaGFyZWQtYWNjZXNzLWtleS12YWx1ZQ=="),
                 new KeyValuePair<string, string>("FinanceApiConfiguration:Url", "https://test.com/"),
                 new KeyValuePair<string, string>("FinanceApiConfiguration:Identifier", "https://test.com/"),
                 new KeyValuePair<string, string>("ProviderEventsApiConfiguration:Url", "https://test.com/"),
