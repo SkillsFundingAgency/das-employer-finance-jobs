@@ -8,11 +8,14 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Extensions;
 public class WhenUsingNServiceBusExtensions
 {
     [Test]
-    public void Then_Payments_And_Levy_Endpoint_Names_Are_Distinct()
+    public void Then_Function_App_Endpoint_Names_Are_Distinct()
     {
         NServiceBusExtensions.PaymentsEndpointName.Should().Be("SFA.DAS.EmployerFinance.Jobs.Payments");
         NServiceBusExtensions.LevyEndpointName.Should().Be("SFA.DAS.EmployerFinance.Jobs.Levy");
+        NServiceBusExtensions.ExpireFundsEndpointName.Should().Be("SFA.DAS.EmployerFinance.Jobs.ExpireFunds");
         NServiceBusExtensions.PaymentsEndpointName.Should().NotBe(NServiceBusExtensions.LevyEndpointName);
+        NServiceBusExtensions.PaymentsEndpointName.Should().NotBe(NServiceBusExtensions.ExpireFundsEndpointName);
+        NServiceBusExtensions.LevyEndpointName.Should().NotBe(NServiceBusExtensions.ExpireFundsEndpointName);
         NServiceBusExtensions.PaymentsEndpointName.Should().NotBe("SFA.DAS.EmployerFinance.Jobs.Functions");
     }
 
