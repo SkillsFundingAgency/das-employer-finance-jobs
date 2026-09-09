@@ -2,7 +2,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 
 public class ImportPaymentsOptions
 {
-    public const int DefaultMaxConcurrentAccounts = 50;
+    public const int DefaultMaxConcurrentAccounts = 10;
     public const int DefaultMaxConcurrentPeriodEnds = 5;
     public const int DefaultActiveInstanceInactivityThresholdMinutes = 90;
     public const int DefaultStaleInstanceTerminationTimeoutSeconds = 30;

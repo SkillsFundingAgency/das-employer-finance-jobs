@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
@@ -17,6 +18,9 @@ public class PaymentMetadataService(
     ICoursesApiClient coursesApiClient,
     ILogger<PaymentMetadataService> logger) : IPaymentMetadataService
 {
+    public const int MaxConcurrentMetadataPerAccount = 8;
+
+    private readonly object _courseLookupLock = new();
     private Task<StandardsResponse?>? _standardsTask;
     private Task<FrameworksResponse?>? _frameworksTask;
     private Dictionary<string, StandardResponse>? _standardsById;
@@ -36,47 +40,55 @@ public class PaymentMetadataService(
 
         var metadataCreated = 0;
         var failed = 0;
-        var providerByUkprn = new Dictionary<long, ProviderDetails?>();
+        var providerByUkprn = new ConcurrentDictionary<long, Lazy<Task<ProviderDetails?>>>();
+        var apprenticeshipById = new ConcurrentDictionary<long, Lazy<Task<ApprenticeshipDetails?>>>();
 
-        foreach (var payment in input.PaymentDetails)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (!Guid.TryParse(payment.Id, out var paymentId))
+        await Parallel.ForEachAsync(
+            input.PaymentDetails,
+            new ParallelOptions
             {
-                failed++;
-                logger.LogWarning(
-                    "[CorrelationId: {CorrelationId}] Payment metadata staging skipped because PaymentId {PaymentId} is not a valid Guid.",
-                    input.CorrelationId,
-                    payment.Id);
-                continue;
-            }
-
-            try
+                MaxDegreeOfParallelism = MaxConcurrentMetadataPerAccount,
+                CancellationToken = cancellationToken
+            },
+            async (payment, ct) =>
             {
-                var metadata = await BuildPaymentMetadata(input.AccountId, payment, correlationId, providerByUkprn);
-                var success = await PostPaymentMetadataToStaging(paymentId, metadata, input.CorrelationId);
+                ct.ThrowIfCancellationRequested();
 
-                if (success)
+                if (!Guid.TryParse(payment.Id, out var paymentId))
                 {
-                    metadataCreated++;
+                    Interlocked.Increment(ref failed);
+                    logger.LogWarning(
+                        "[CorrelationId: {CorrelationId}] Payment metadata staging skipped because PaymentId {PaymentId} is not a valid Guid.",
+                        input.CorrelationId,
+                        payment.Id);
+                    return;
                 }
-                else
+
+                try
                 {
-                    failed++;
+                    var metadata = await BuildPaymentMetadata(input.AccountId, payment, correlationId, providerByUkprn, apprenticeshipById);
+                    var success = await PostPaymentMetadataToStaging(paymentId, metadata, input.CorrelationId);
+
+                    if (success)
+                    {
+                        Interlocked.Increment(ref metadataCreated);
+                    }
+                    else
+                    {
+                        Interlocked.Increment(ref failed);
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                failed++;
-                logger.LogError(
-                    ex,
-                    "[CorrelationId: {CorrelationId}] Error creating payment metadata for AccountId {AccountId}, PaymentId {PaymentId}.",
-                    input.CorrelationId,
-                    input.AccountId,
-                    payment.Id);
-            }
-        }
+                catch (Exception ex)
+                {
+                    Interlocked.Increment(ref failed);
+                    logger.LogError(
+                        ex,
+                        "[CorrelationId: {CorrelationId}] Error creating payment metadata for AccountId {AccountId}, PaymentId {PaymentId}.",
+                        input.CorrelationId,
+                        input.AccountId,
+                        payment.Id);
+                }
+            });
 
         var status = failed == 0 ? "Succeeded" : metadataCreated > 0 ? "PartiallySucceeded" : "Failed";
 
@@ -98,26 +110,34 @@ public class PaymentMetadataService(
 
     public Task<PaymentMetadataStaging> BuildPaymentMetadata(long accountId, Payment payment, Guid correlationId)
     {
-        return BuildPaymentMetadata(accountId, payment, correlationId, new Dictionary<long, ProviderDetails?>());
+        return BuildPaymentMetadata(
+            accountId,
+            payment,
+            correlationId,
+            new ConcurrentDictionary<long, Lazy<Task<ProviderDetails?>>>(),
+            new ConcurrentDictionary<long, Lazy<Task<ApprenticeshipDetails?>>>());
     }
 
     private async Task<PaymentMetadataStaging> BuildPaymentMetadata(
         long accountId,
         Payment payment,
         Guid correlationId,
-        Dictionary<long, ProviderDetails?> providerByUkprn)
+        ConcurrentDictionary<long, Lazy<Task<ProviderDetails?>>> providerByUkprn,
+        ConcurrentDictionary<long, Lazy<Task<ApprenticeshipDetails?>>> apprenticeshipById)
     {
-        if (!providerByUkprn.TryGetValue(payment.Ukprn, out var provider))
+        var providerTask = providerByUkprn.GetOrAdd(
+            payment.Ukprn,
+            ukprn => new Lazy<Task<ProviderDetails?>>(() => roatpApiClient.GetProvider(ukprn)));
+        var provider = await providerTask.Value;
+
+        ApprenticeshipDetails? apprenticeship = null;
+        if (payment.ApprenticeshipId.HasValue)
         {
-            provider = await roatpApiClient.GetProvider(payment.Ukprn);
-            providerByUkprn[payment.Ukprn] = provider;
+            var apprenticeshipTask = apprenticeshipById.GetOrAdd(
+                payment.ApprenticeshipId.Value,
+                id => new Lazy<Task<ApprenticeshipDetails?>>(() => commitmentsApiClient.GetApprenticeship(id)));
+            apprenticeship = await apprenticeshipTask.Value;
         }
-
-        var apprenticeshipTask = payment.ApprenticeshipId.HasValue
-            ? commitmentsApiClient.GetApprenticeship(payment.ApprenticeshipId.Value)
-            : Task.FromResult<ApprenticeshipDetails?>(null);
-
-        var apprenticeship = await apprenticeshipTask;
 
         var metadata = new PaymentMetadataStaging
         {
@@ -183,13 +203,14 @@ public class PaymentMetadataService(
         }
 
         var standards = await GetStandards();
-        _standardsById = standards?.Standards
-            .Where(standard => !string.IsNullOrWhiteSpace(standard.Id))
-            .GroupBy(standard => standard.Id!, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase)
-            ?? new Dictionary<string, StandardResponse>(StringComparer.OrdinalIgnoreCase);
-
-        return _standardsById;
+        lock (_courseLookupLock)
+        {
+            return _standardsById ??= standards?.Standards
+                .Where(standard => !string.IsNullOrWhiteSpace(standard.Id))
+                .GroupBy(standard => standard.Id!, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase)
+                ?? new Dictionary<string, StandardResponse>(StringComparer.OrdinalIgnoreCase);
+        }
     }
 
     private async Task<Dictionary<(int FrameworkCode, int ProgType, int PathwayCode), FrameworkResponse>> GetFrameworksByKey()
@@ -200,22 +221,29 @@ public class PaymentMetadataService(
         }
 
         var frameworks = await GetFrameworks();
-        _frameworksByKey = frameworks?.Frameworks
-            .GroupBy(framework => (framework.FrameworkCode, framework.ProgType, framework.PathwayCode))
-            .ToDictionary(group => group.Key, group => group.First())
-            ?? [];
-
-        return _frameworksByKey;
+        lock (_courseLookupLock)
+        {
+            return _frameworksByKey ??= frameworks?.Frameworks
+                .GroupBy(framework => (framework.FrameworkCode, framework.ProgType, framework.PathwayCode))
+                .ToDictionary(group => group.Key, group => group.First())
+                ?? [];
+        }
     }
 
     private Task<StandardsResponse?> GetStandards()
     {
-        return _standardsTask ??= coursesApiClient.GetStandards();
+        lock (_courseLookupLock)
+        {
+            return _standardsTask ??= coursesApiClient.GetStandards();
+        }
     }
 
     private Task<FrameworksResponse?> GetFrameworks()
     {
-        return _frameworksTask ??= coursesApiClient.GetFrameworks();
+        lock (_courseLookupLock)
+        {
+            return _frameworksTask ??= coursesApiClient.GetFrameworks();
+        }
     }
 
     private async Task<StandardResponse?> GetStandard(string standardId)

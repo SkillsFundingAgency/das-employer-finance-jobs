@@ -212,8 +212,10 @@ public class WhenCallingGetWithResponseCode
         var act = () => actualClient.GetWithResponseCode<string>(getTestRequest);
 
         //Assert
-        await act.Should().ThrowAsync<HttpRequestContentException>()
-            .Where(ex => ex.StatusCode == HttpStatusCode.TooManyRequests);
+        var exception = await act.Should().ThrowAsync<HttpRequestContentException>();
+        exception.Which.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        exception.Which.ErrorContent.Should().Be(responseContent);
+        exception.Which.Message.Should().Contain(responseContent);
     }
     private class GetTestRequest : IApiRequest
     {

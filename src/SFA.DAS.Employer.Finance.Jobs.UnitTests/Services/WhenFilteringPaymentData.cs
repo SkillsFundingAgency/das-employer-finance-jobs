@@ -82,8 +82,8 @@ public class WhenFilteringPaymentData
         stagingPayment.CollectionPeriodYear.Should().Be(payment.CollectionPeriod.Year);
         stagingPayment.DeliveryPeriodMonth.Should().Be(payment.DeliveryPeriod.Month);
         stagingPayment.DeliveryPeriodYear.Should().Be(payment.DeliveryPeriod.Year);
-        stagingPayment.FundingSource.Should().Be(payment.FundingSource.ToString());
-        stagingPayment.TransactionType.Should().Be(payment.TransactionType.ToString());
+        stagingPayment.FundingSource.Should().Be(((int)payment.FundingSource).ToString());
+        stagingPayment.TransactionType.Should().Be(((int)payment.TransactionType).ToString());
         stagingPayment.Amount.Should().Be(payment.Amount);
         stagingPayment.EvidenceSubmittedOn.Should().Be(evidenceSubmittedOn);
         stagingPayment.EmployerAccountVersion.Should().Be(payment.EmployerAccountVersion);
@@ -232,6 +232,58 @@ public class WhenFilteringPaymentData
         postedPaymentBatches.Should().HaveCount(2);
         postedPaymentBatches[0].Should().BeEquivalentTo([alreadyStagedPaymentId, newPaymentId]);
         postedPaymentBatches[1].Should().BeEquivalentTo([newPaymentId]);
+    }
+
+    [Test]
+    public void Then_Persists_FundingSource_And_TransactionType_As_Integer_Strings()
+    {
+        const long processingAccountId = 14331;
+        var payment = CreatePayment(FundingSource.Levy);
+        payment.TransactionType = TransactionType.First16To18EmployerIncentive;
+
+        var result = _service.FilterPayments([payment], [], processingAccountId, "correlation-id");
+
+        var stagingPayment = result.Should().ContainSingle().Subject;
+        stagingPayment.FundingSource.Should().Be(((int)FundingSource.Levy).ToString());
+        stagingPayment.TransactionType.Should().Be(((int)TransactionType.First16To18EmployerIncentive).ToString());
+        stagingPayment.FundingSource.Length.Should().BeLessThanOrEqualTo(25);
+        stagingPayment.TransactionType.Length.Should().BeLessThanOrEqualTo(25);
+        stagingPayment.TransactionType.Should().NotBe(TransactionType.First16To18EmployerIncentive.ToString());
+    }
+
+    [Test]
+    public async Task Then_Chunks_Payments_Into_Batches_Of_At_Most_1000()
+    {
+        var payments = Enumerable.Range(0, 1001)
+            .Select(_ => new PaymentStaging { PaymentId = Guid.NewGuid(), AccountId = 14331 })
+            .ToList();
+        var postedBatchSizes = new List<int>();
+
+        _financeApiClientMock
+            .Setup(client => client.PostWithResponseCode<PostPaymentsToStagingResponse>(
+                It.IsAny<PostPaymentsToStagingRequest>()))
+            .Callback<IApiRequest>(request =>
+            {
+                var bulkPaymentsRequest = (BulkPaymentsRequest)request.Data;
+                postedBatchSizes.Add(bulkPaymentsRequest.Payments.Count);
+            })
+            .ReturnsAsync(() =>
+            {
+                var count = postedBatchSizes[^1];
+                return new ApiResponse<PostPaymentsToStagingResponse>(
+                    new PostPaymentsToStagingResponse { InsertedCount = count },
+                    HttpStatusCode.Created,
+                    null);
+            });
+
+        var result = await _service.PostPaymentsToStaging(payments, "correlation-id");
+
+        result.Status.Should().Be("Succeeded");
+        result.PaymentsCreated.Should().Be(1001);
+        postedBatchSizes.Should().BeEquivalentTo([1000, 1]);
+        _financeApiClientMock.Verify(
+            client => client.PostWithResponseCode<PostPaymentsToStagingResponse>(It.IsAny<PostPaymentsToStagingRequest>()),
+            Times.Exactly(2));
     }
 
     private static Payment CreatePayment(FundingSource fundingSource)
