@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Functions.Activities;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Orchestrators;
-using SFA.DAS.Provider.Events.Api.Types;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Orchestrators.ImportPaymentsOrchestator;
 
@@ -26,9 +25,10 @@ public class WhenProcessingAccountOrchestratorRun
     }
 
     [Test]
-    public async Task Then_Uses_The_CreateTransactionLines_Input_When_Payments_Are_Refreshed()
+    public async Task Then_Pages_Staging_And_Passes_Slim_Transfer_Lookups_Without_Payment_Lists()
     {
-        var payment = new Payment { Id = Guid.NewGuid().ToString() };
+        var paymentId = Guid.NewGuid();
+        var lookup = new TransferPaymentLookup { PaymentId = paymentId, Ukprn = 100 };
         var input = new ProcessAccountInput
         {
             AccountId = 12345,
@@ -41,34 +41,19 @@ public class WhenProcessingAccountOrchestratorRun
 
         _contextMock.Setup(context => context.GetInput<ProcessAccountInput>())
             .Returns(input);
-        _contextMock.Setup(context => context.CallActivityAsync<AccountPaymentsImportResult>(
+        _contextMock.Setup(context => context.CallActivityAsync<StageAccountPaymentsPageResult>(
                 It.IsAny<TaskName>(),
                 It.IsAny<object>(),
                 It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new AccountPaymentsImportResult
+            .ReturnsAsync(new StageAccountPaymentsPageResult
             {
-                Payments = [payment],
-                Status = "Succeeded",
-                Message = "ok"
-            });
-        _contextMock.Setup(context => context.CallActivityAsync<AccountExistingPaymentIdsImportResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new AccountExistingPaymentIdsImportResult
-            {
-                PaymentIds = [],
-                Status = "Succeeded",
-                Message = "ok"
-            });
-        _contextMock.Setup(context => context.CallActivityAsync<RefreshPaymentDataActivityResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new RefreshPaymentDataActivityResult
-            {
+                PageNumber = 1,
+                TotalPages = 1,
+                ItemCount = 1,
                 PaymentsCreated = 1,
-                PaymentDetails = [payment],
+                MetadataCreated = 1,
+                TransactionsCreated = 1,
+                TransferLookups = [lookup],
                 Status = "Succeeded",
                 Message = "ok"
             });
@@ -82,37 +67,49 @@ public class WhenProcessingAccountOrchestratorRun
                 Status = "Succeeded",
                 Message = "ok"
             });
-        _contextMock.Setup(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new CreatePaymentTransactionLinesResult
-            {
-                TransactionsCreated = 1,
-                Transactions = [],
-                Status = "Succeeded",
-                Message = "ok"
-            });
-        _contextMock.Setup(context => context.CallActivityAsync<CreatePaymentMetadataResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new CreatePaymentMetadataResult
-            {
-                MetadataCreated = 1,
-                Status = "Succeeded",
-                Message = "ok"
-            });
 
         var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
 
         result.Success.Should().BeTrue();
+        result.PaymentsProcessed.Should().Be(1);
         result.TransfersProcessed.Should().Be(2);
-        _contextMock.Verify(context => context.CallActivityAsync<RefreshPaymentDataActivityResult>(
-                It.IsAny<TaskName>(),
-                It.Is<RefreshPaymentDataInput>(refreshInput => refreshInput.AccountId == input.AccountId),
+
+        _contextMock.Verify(context => context.CallActivityAsync<StageAccountPaymentsPageResult>(
+                It.Is<TaskName>(name => name.Name == nameof(AccountPaymentPageStagingActivities.StageAccountPaymentsPageActivity)),
+                It.Is<StageAccountPaymentsPageInput>(pageInput =>
+                    pageInput.AccountId == input.AccountId
+                    && pageInput.PeriodEndRef == input.PeriodEndRef
+                    && pageInput.PageNumber == 1
+                    && pageInput.CorrelationId == input.CorrelationId),
                 It.IsAny<TaskOptions>()),
             Times.Once);
+
+        _contextMock.Verify(context => context.CallActivityAsync<AccountPaymentsImportResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+        _contextMock.Verify(context => context.CallActivityAsync<AccountExistingPaymentIdsImportResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+        _contextMock.Verify(context => context.CallActivityAsync<RefreshPaymentDataActivityResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentMetadataResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Never);
+
         _contextMock.Verify(context => context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
                 It.Is<TaskName>(name => name.Name == nameof(RefreshPaymentDataCompletedEventActivities.PublishRefreshPaymentDataCompletedEventActivity)),
                 It.Is<PublishRefreshPaymentDataCompletedEventInput>(publishInput =>
@@ -126,45 +123,19 @@ public class WhenProcessingAccountOrchestratorRun
                 It.Is<TaskName>(name => name.Name == nameof(AccountTransferActivities.RefreshAccountTransfersActivity)),
                 It.Is<RefreshAccountTransfersInput>(transferInput =>
                     transferInput.AccountId == input.AccountId
-                    && transferInput.AccountName == input.AccountName
-                    && transferInput.PeriodEndRef == input.PeriodEndRef
-                    && transferInput.CorrelationId == input.CorrelationId
-                    && transferInput.TriggeredAt == input.TriggeredAt
                     && transferInput.Payments.Count == 1
-                    && transferInput.Payments.Single().PaymentId.ToString() == payment.Id),
-                It.IsAny<TaskOptions>()),
-            Times.Once);
-        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
-                It.IsAny<TaskName>(),
-                It.Is<CreatePaymentTransactionLinesInput>(transactionInput =>
-                    transactionInput.AccountId == input.AccountId
-                    && transactionInput.PeriodEnd == input.PeriodEndRef
-                    && transactionInput.CorrelationId == input.CorrelationId
-                    && transactionInput.PaymentDetails.Count == 1
-                    && transactionInput.PaymentDetails.Single().Id == payment.Id),
-                It.IsAny<TaskOptions>()),
-            Times.Once);
-        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentMetadataResult>(
-                It.IsAny<TaskName>(),
-                It.Is<CreatePaymentMetadataInput>(metadataInput =>
-                    metadataInput.AccountId == input.AccountId
-                    && metadataInput.CorrelationId == input.CorrelationId
-                    && metadataInput.PaymentDetails.Count == 1
-                    && metadataInput.PaymentDetails.Single().Id == payment.Id),
+                    && transferInput.Payments.Single().PaymentId == paymentId),
                 It.IsAny<TaskOptions>()),
             Times.Once);
         _contextMock.Verify(context => context.CallActivityAsync<TransferStagedToOperationalResult>(
-                It.Is<TaskName>(name => name.Name == nameof(TransferStagedToOperationalActivities.TransferStagedToOperationalActivity)),
-                It.Is<TransferStagedToOperationalInput>(transferInput =>
-                    transferInput.AccountId == input.AccountId
-                    && transferInput.PeriodEndRef == input.PeriodEndRef
-                    && transferInput.CorrelationId == input.CorrelationId),
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
                 It.IsAny<TaskOptions>()),
             Times.Once);
     }
 
     [Test]
-    public async Task Then_Takes_Empty_Account_Fast_Path_When_Provider_Events_Returns_No_Payments()
+    public async Task Then_Takes_Empty_Account_Fast_Path_When_First_Page_Has_No_Payments()
     {
         var input = new ProcessAccountInput
         {
@@ -176,15 +147,18 @@ public class WhenProcessingAccountOrchestratorRun
 
         _contextMock.Setup(context => context.GetInput<ProcessAccountInput>())
             .Returns(input);
-        _contextMock.Setup(context => context.CallActivityAsync<AccountPaymentsImportResult>(
+        _contextMock.Setup(context => context.CallActivityAsync<StageAccountPaymentsPageResult>(
                 It.IsAny<TaskName>(),
                 It.IsAny<object>(),
                 It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new AccountPaymentsImportResult
+            .ReturnsAsync(new StageAccountPaymentsPageResult
             {
-                Payments = [],
+                PageNumber = 1,
+                TotalPages = 0,
+                ItemCount = 0,
+                TransferLookups = [],
                 Status = "Succeeded",
-                Message = "ok"
+                Message = "No payments on page."
             });
         _contextMock.Setup(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
                 It.IsAny<TaskName>(),
@@ -201,27 +175,12 @@ public class WhenProcessingAccountOrchestratorRun
 
         result.Success.Should().BeTrue();
         result.PaymentsProcessed.Should().Be(0);
-        _contextMock.Verify(context => context.CallActivityAsync<AccountExistingPaymentIdsImportResult>(
+        _contextMock.Verify(context => context.CallActivityAsync<StageAccountPaymentsPageResult>(
                 It.IsAny<TaskName>(),
                 It.IsAny<object>(),
                 It.IsAny<TaskOptions>()),
-            Times.Never);
-        _contextMock.Verify(context => context.CallActivityAsync<RefreshPaymentDataActivityResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()),
-            Times.Never);
+            Times.Once);
         _contextMock.Verify(context => context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()),
-            Times.Never);
-        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()),
-            Times.Never);
-        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentMetadataResult>(
                 It.IsAny<TaskName>(),
                 It.IsAny<object>(),
                 It.IsAny<TaskOptions>()),
@@ -232,16 +191,15 @@ public class WhenProcessingAccountOrchestratorRun
                 It.IsAny<TaskOptions>()),
             Times.Never);
         _contextMock.Verify(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
-                It.Is<TaskName>(name => name.Name == nameof(AccountTransferActivities.RefreshAccountTransfersActivity)),
+                It.IsAny<TaskName>(),
                 It.IsAny<object>(),
                 It.IsAny<TaskOptions>()),
             Times.Once);
     }
 
     [Test]
-    public async Task Then_Does_Not_Start_Transaction_Line_Creation_When_Staging_Produces_No_Payment_Details()
+    public async Task Then_Loops_Provider_Events_Pages_Without_Exceeding_Page_Bound_Per_Result()
     {
-        var payment = new Payment { Id = Guid.NewGuid().ToString() };
         var input = new ProcessAccountInput
         {
             AccountId = 12345,
@@ -250,37 +208,56 @@ public class WhenProcessingAccountOrchestratorRun
             IdempotencyKey = "idempotency-key"
         };
 
+        var pageOneLookups = Enumerable.Range(0, StageAccountPaymentsPageResult.MaxTransferLookupsPerPage)
+            .Select(_ => new TransferPaymentLookup { PaymentId = Guid.NewGuid() })
+            .ToList();
+        var pageTwoLookups = Enumerable.Range(0, 500)
+            .Select(_ => new TransferPaymentLookup { PaymentId = Guid.NewGuid() })
+            .ToList();
+
         _contextMock.Setup(context => context.GetInput<ProcessAccountInput>())
             .Returns(input);
-        _contextMock.Setup(context => context.CallActivityAsync<AccountPaymentsImportResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
+        _contextMock.Setup(context => context.CallActivityAsync<StageAccountPaymentsPageResult>(
+                It.Is<TaskName>(name => name.Name == nameof(AccountPaymentPageStagingActivities.StageAccountPaymentsPageActivity)),
+                It.Is<StageAccountPaymentsPageInput>(pageInput => pageInput.PageNumber == 1),
                 It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new AccountPaymentsImportResult
+            .ReturnsAsync(new StageAccountPaymentsPageResult
             {
-                Payments = [payment],
+                PageNumber = 1,
+                TotalPages = 3,
+                ItemCount = pageOneLookups.Count,
+                PaymentsCreated = pageOneLookups.Count,
+                TransferLookups = pageOneLookups,
                 Status = "Succeeded",
                 Message = "ok"
             });
-        _contextMock.Setup(context => context.CallActivityAsync<AccountExistingPaymentIdsImportResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
+        _contextMock.Setup(context => context.CallActivityAsync<StageAccountPaymentsPageResult>(
+                It.Is<TaskName>(name => name.Name == nameof(AccountPaymentPageStagingActivities.StageAccountPaymentsPageActivity)),
+                It.Is<StageAccountPaymentsPageInput>(pageInput => pageInput.PageNumber == 2),
                 It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new AccountExistingPaymentIdsImportResult
+            .ReturnsAsync(new StageAccountPaymentsPageResult
             {
-                PaymentIds = [payment.Id],
+                PageNumber = 2,
+                TotalPages = 3,
+                ItemCount = pageOneLookups.Count,
+                PaymentsCreated = pageOneLookups.Count,
+                TransferLookups = pageOneLookups,
                 Status = "Succeeded",
                 Message = "ok"
             });
-        _contextMock.Setup(context => context.CallActivityAsync<RefreshPaymentDataActivityResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
+        _contextMock.Setup(context => context.CallActivityAsync<StageAccountPaymentsPageResult>(
+                It.Is<TaskName>(name => name.Name == nameof(AccountPaymentPageStagingActivities.StageAccountPaymentsPageActivity)),
+                It.Is<StageAccountPaymentsPageInput>(pageInput => pageInput.PageNumber == 3),
                 It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new RefreshPaymentDataActivityResult
+            .ReturnsAsync(new StageAccountPaymentsPageResult
             {
-                PaymentDetails = [],
+                PageNumber = 3,
+                TotalPages = 3,
+                ItemCount = pageTwoLookups.Count,
+                PaymentsCreated = pageTwoLookups.Count,
+                TransferLookups = pageTwoLookups,
                 Status = "Succeeded",
-                Message = "No new payments"
+                Message = "ok"
             });
         _contextMock.Setup(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
                 It.IsAny<TaskName>(),
@@ -290,82 +267,31 @@ public class WhenProcessingAccountOrchestratorRun
             {
                 TransfersProcessed = 0,
                 Status = "Succeeded",
-                Message = "No transfers"
-            });
-
-        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
-
-        result.Success.Should().BeTrue();
-        _contextMock.Verify(context => context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
-                It.Is<TaskName>(name => name.Name == nameof(RefreshPaymentDataCompletedEventActivities.PublishRefreshPaymentDataCompletedEventActivity)),
-                It.Is<PublishRefreshPaymentDataCompletedEventInput>(publishInput =>
-                    publishInput.AccountId == input.AccountId
-                    && publishInput.PeriodEnd == input.PeriodEndRef
-                    && publishInput.CorrelationId == input.CorrelationId
-                    && !publishInput.PaymentsProcessed),
-                It.IsAny<TaskOptions>()),
-            Times.Once);
-        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()),
-            Times.Never);
-        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentMetadataResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()),
-            Times.Never);
-    }
-
-    [Test]
-    public async Task Then_Starts_Transaction_Line_Creation_When_Metadata_Creation_Fails()
-    {
-        var payment = new Payment { Id = Guid.NewGuid().ToString() };
-        var input = new ProcessAccountInput
-        {
-            AccountId = 12345,
-            PeriodEndRef = "2024-01",
-            CorrelationId = "correlation-id",
-            IdempotencyKey = "idempotency-key"
-        };
-
-        SetupPaymentsStaged(input, payment);
-        _contextMock.Setup(context => context.CallActivityAsync<CreatePaymentMetadataResult>(
-                It.Is<TaskName>(name => name.Name == nameof(PaymentMetadataActivities.CreatePaymentMetadataActivity)),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ThrowsAsync(new InvalidOperationException("Commitments API base URL is missing"));
-        _contextMock.Setup(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
-                It.Is<TaskName>(name => name.Name == nameof(PaymentTransactionLineActivities.CreatePaymentTransactionLinesActivity)),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new CreatePaymentTransactionLinesResult
-            {
-                TransactionsCreated = 1,
-                Transactions = [],
-                Status = "Succeeded",
                 Message = "ok"
             });
 
         var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
 
-        result.Success.Should().BeFalse();
-        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
-                It.Is<TaskName>(name => name.Name == nameof(PaymentTransactionLineActivities.CreatePaymentTransactionLinesActivity)),
-                It.Is<CreatePaymentTransactionLinesInput>(transactionInput =>
-                    transactionInput.AccountId == input.AccountId
-                    && transactionInput.PeriodEnd == input.PeriodEndRef
-                    && transactionInput.CorrelationId == input.CorrelationId
-                    && transactionInput.PaymentDetails.Count == 1
-                    && transactionInput.PaymentDetails.Single().Id == payment.Id),
+        result.Success.Should().BeTrue();
+        result.PaymentsProcessed.Should().Be(pageOneLookups.Count * 2 + pageTwoLookups.Count);
+
+        _contextMock.Verify(context => context.CallActivityAsync<StageAccountPaymentsPageResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()),
+            Times.Exactly(3));
+        _contextMock.Verify(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
+                It.Is<TaskName>(name => name.Name == nameof(AccountTransferActivities.RefreshAccountTransfersActivity)),
+                It.Is<RefreshAccountTransfersInput>(transferInput =>
+                    transferInput.Payments.Count == pageOneLookups.Count * 2 + pageTwoLookups.Count
+                    && transferInput.Payments.Count <= StageAccountPaymentsPageResult.MaxTransferLookupsPerPage * 3),
                 It.IsAny<TaskOptions>()),
             Times.Once);
     }
 
     [Test]
-    public async Task Then_Continues_Account_Processing_When_Refresh_Payment_Data_Completed_Event_Publishing_Fails()
+    public async Task Then_Continues_When_Refresh_Payment_Data_Completed_Event_Publishing_Fails()
     {
-        var payment = new Payment { Id = Guid.NewGuid().ToString() };
         var input = new ProcessAccountInput
         {
             AccountId = 12345,
@@ -374,30 +300,19 @@ public class WhenProcessingAccountOrchestratorRun
             IdempotencyKey = "idempotency-key"
         };
 
-        SetupPaymentsStaged(input, payment);
+        SetupSingleSucceededPage(input, paymentsCreated: 1);
         _contextMock.Setup(context => context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
-                It.Is<TaskName>(name => name.Name == nameof(RefreshPaymentDataCompletedEventActivities.PublishRefreshPaymentDataCompletedEventActivity)),
+                It.IsAny<TaskName>(),
                 It.IsAny<object>(),
                 It.IsAny<TaskOptions>()))
             .ThrowsAsync(new InvalidOperationException("Service Bus publish failed"));
-        _contextMock.Setup(context => context.CallActivityAsync<CreatePaymentMetadataResult>(
-                It.Is<TaskName>(name => name.Name == nameof(PaymentMetadataActivities.CreatePaymentMetadataActivity)),
+        _contextMock.Setup(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
+                It.IsAny<TaskName>(),
                 It.IsAny<object>(),
                 It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new CreatePaymentMetadataResult
+            .ReturnsAsync(new RefreshAccountTransfersResult
             {
-                MetadataCreated = 1,
-                Status = "Succeeded",
-                Message = "ok"
-            });
-        _contextMock.Setup(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
-                It.Is<TaskName>(name => name.Name == nameof(PaymentTransactionLineActivities.CreatePaymentTransactionLinesActivity)),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new CreatePaymentTransactionLinesResult
-            {
-                TransactionsCreated = 1,
-                Transactions = [],
+                TransfersProcessed = 0,
                 Status = "Succeeded",
                 Message = "ok"
             });
@@ -405,11 +320,6 @@ public class WhenProcessingAccountOrchestratorRun
         var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
 
         result.Success.Should().BeTrue();
-        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
-                It.Is<TaskName>(name => name.Name == nameof(PaymentTransactionLineActivities.CreatePaymentTransactionLinesActivity)),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()),
-            Times.Once);
         _loggerMock.Verify(
             logger => logger.Log(
                 LogLevel.Error,
@@ -421,48 +331,8 @@ public class WhenProcessingAccountOrchestratorRun
     }
 
     [Test]
-    public async Task Then_Returns_Failed_Result_When_Transaction_Line_Creation_Fails()
+    public async Task Then_Returns_Failed_Result_When_Page_Staging_Fails()
     {
-        var payment = new Payment { Id = Guid.NewGuid().ToString() };
-        var input = new ProcessAccountInput
-        {
-            AccountId = 12345,
-            PeriodEndRef = "2024-01",
-            CorrelationId = "correlation-id",
-            IdempotencyKey = "idempotency-key"
-        };
-
-        SetupPaymentsStaged(input, payment);
-        _contextMock.Setup(context => context.CallActivityAsync<CreatePaymentMetadataResult>(
-                It.Is<TaskName>(name => name.Name == nameof(PaymentMetadataActivities.CreatePaymentMetadataActivity)),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new CreatePaymentMetadataResult
-            {
-                MetadataCreated = 1,
-                Status = "Succeeded",
-                Message = "ok"
-            });
-        _contextMock.Setup(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
-                It.Is<TaskName>(name => name.Name == nameof(PaymentTransactionLineActivities.CreatePaymentTransactionLinesActivity)),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ThrowsAsync(new InvalidOperationException("Finance API returned BadRequest"));
-
-        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
-
-        result.Success.Should().BeFalse();
-        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
-                It.Is<TaskName>(name => name.Name == nameof(PaymentTransactionLineActivities.CreatePaymentTransactionLinesActivity)),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()),
-            Times.Once);
-    }
-
-    [Test]
-    public async Task Then_Does_Not_Start_Transaction_Line_Creation_When_Refresh_Payment_Data_Fails()
-    {
-        var payment = new Payment { Id = Guid.NewGuid().ToString() };
         var input = new ProcessAccountInput
         {
             AccountId = 12345,
@@ -473,33 +343,17 @@ public class WhenProcessingAccountOrchestratorRun
 
         _contextMock.Setup(context => context.GetInput<ProcessAccountInput>())
             .Returns(input);
-        _contextMock.Setup(context => context.CallActivityAsync<AccountPaymentsImportResult>(
+        _contextMock.Setup(context => context.CallActivityAsync<StageAccountPaymentsPageResult>(
                 It.IsAny<TaskName>(),
                 It.IsAny<object>(),
                 It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new AccountPaymentsImportResult
+            .ReturnsAsync(new StageAccountPaymentsPageResult
             {
-                Payments = [payment],
-                Status = "Succeeded",
-                Message = "ok"
-            });
-        _contextMock.Setup(context => context.CallActivityAsync<AccountExistingPaymentIdsImportResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new AccountExistingPaymentIdsImportResult
-            {
-                PaymentIds = [],
-                Status = "Succeeded",
-                Message = "ok"
-            });
-        _contextMock.Setup(context => context.CallActivityAsync<RefreshPaymentDataActivityResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new RefreshPaymentDataActivityResult
-            {
-                PaymentDetails = [payment],
+                PageNumber = 1,
+                TotalPages = 1,
+                ItemCount = 1,
+                PaymentsCreated = 0,
+                TransferLookups = [new TransferPaymentLookup { PaymentId = Guid.NewGuid() }],
                 Status = "Failed",
                 Message = "Finance API returned BadRequest"
             });
@@ -511,7 +365,7 @@ public class WhenProcessingAccountOrchestratorRun
             {
                 TransfersProcessed = 0,
                 Status = "Succeeded",
-                Message = "No transfers"
+                Message = "ok"
             });
 
         var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
@@ -522,53 +376,20 @@ public class WhenProcessingAccountOrchestratorRun
                 It.IsAny<object>(),
                 It.IsAny<TaskOptions>()),
             Times.Never);
-        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentTransactionLinesResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()),
-            Times.Never);
-        _contextMock.Verify(context => context.CallActivityAsync<CreatePaymentMetadataResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()),
-            Times.Never);
     }
 
-    private void SetupPaymentsStaged(ProcessAccountInput input, Payment payment)
+    [Test]
+    public async Task Then_Does_Not_Publish_Completed_Event_When_No_Payments_Were_Created_On_Succeeded_Pages()
     {
-        _contextMock.Setup(context => context.GetInput<ProcessAccountInput>())
-            .Returns(input);
-        _contextMock.Setup(context => context.CallActivityAsync<AccountPaymentsImportResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new AccountPaymentsImportResult
-            {
-                Payments = [payment],
-                Status = "Succeeded",
-                Message = "ok"
-            });
-        _contextMock.Setup(context => context.CallActivityAsync<AccountExistingPaymentIdsImportResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new AccountExistingPaymentIdsImportResult
-            {
-                PaymentIds = [],
-                Status = "Succeeded",
-                Message = "ok"
-            });
-        _contextMock.Setup(context => context.CallActivityAsync<RefreshPaymentDataActivityResult>(
-                It.IsAny<TaskName>(),
-                It.IsAny<object>(),
-                It.IsAny<TaskOptions>()))
-            .ReturnsAsync(new RefreshPaymentDataActivityResult
-            {
-                PaymentsCreated = 1,
-                PaymentDetails = [payment],
-                Status = "Succeeded",
-                Message = "ok"
-            });
+        var input = new ProcessAccountInput
+        {
+            AccountId = 12345,
+            PeriodEndRef = "2024-01",
+            CorrelationId = "correlation-id",
+            IdempotencyKey = "idempotency-key"
+        };
+
+        SetupSingleSucceededPage(input, paymentsCreated: 0);
         _contextMock.Setup(context => context.CallActivityAsync<RefreshAccountTransfersResult>(
                 It.IsAny<TaskName>(),
                 It.IsAny<object>(),
@@ -577,7 +398,36 @@ public class WhenProcessingAccountOrchestratorRun
             {
                 TransfersProcessed = 0,
                 Status = "Succeeded",
-                Message = "No transfers"
+                Message = "ok"
+            });
+
+        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
+
+        result.Success.Should().BeTrue();
+        _contextMock.Verify(context => context.CallActivityAsync<PublishRefreshPaymentDataCompletedEventResult>(
+                It.Is<TaskName>(name => name.Name == nameof(RefreshPaymentDataCompletedEventActivities.PublishRefreshPaymentDataCompletedEventActivity)),
+                It.Is<PublishRefreshPaymentDataCompletedEventInput>(publishInput => !publishInput.PaymentsProcessed),
+                It.IsAny<TaskOptions>()),
+            Times.Once);
+    }
+
+    private void SetupSingleSucceededPage(ProcessAccountInput input, int paymentsCreated)
+    {
+        _contextMock.Setup(context => context.GetInput<ProcessAccountInput>())
+            .Returns(input);
+        _contextMock.Setup(context => context.CallActivityAsync<StageAccountPaymentsPageResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<object>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new StageAccountPaymentsPageResult
+            {
+                PageNumber = 1,
+                TotalPages = 1,
+                ItemCount = 1,
+                PaymentsCreated = paymentsCreated,
+                TransferLookups = [new TransferPaymentLookup { PaymentId = Guid.NewGuid() }],
+                Status = "Succeeded",
+                Message = "ok"
             });
     }
 

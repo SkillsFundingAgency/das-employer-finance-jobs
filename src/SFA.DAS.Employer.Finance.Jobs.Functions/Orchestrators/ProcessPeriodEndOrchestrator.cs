@@ -1,6 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
@@ -106,7 +107,7 @@ public class ProcessPeriodEndOrchestrator(
 
         var totalPublished = 0;
         var page = 1;
-        var maxConcurrency = maxConcurrentAccounts <= 0 ? 50 : maxConcurrentAccounts;
+        var maxConcurrency = maxConcurrentAccounts <= 0 ? ImportPaymentsOptions.DefaultMaxConcurrentAccounts : maxConcurrentAccounts;
         var activeAccountTasks = new List<(long AccountId, Task<AccountProcessingResult> Task)>();
 
         while (true)
