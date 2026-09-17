@@ -35,7 +35,7 @@ public class ProcessPeriodEndOrchestrator(
         var periodEndRef = string.IsNullOrWhiteSpace(periodEnd.PeriodEndId)
             ? periodEnd.Id.ToString()
             : periodEnd.PeriodEndId;
-        var totalCommandsPublished = await FanOutAccountImports(context, periodEndRef, input.MaxConcurrentAccounts, input.CorrelationId, input.TargetAccountId);
+        var totalCommandsPublished = await FanOutAccountImports(context, periodEndRef, input.MaxConcurrentAccounts, input.CorrelationId);
 
         logger.LogInformation(
             "[CorrelationId: {CorrelationId}] ProcessPeriodEndOrchestrator completed for PeriodEndRef {PeriodEndRef}. Total account imports scheduled: {TotalCommandsPublished}",
@@ -71,7 +71,7 @@ public class ProcessPeriodEndOrchestrator(
 
         ValidateOrThrow(input.PeriodEnd, context);
 
-        var totalCommandsPublished = await FanOutAccountImports(context, periodEndRef, input.MaxConcurrentAccounts, input.CorrelationId, input.TargetAccountId);
+        var totalCommandsPublished = await FanOutAccountImports(context, periodEndRef, input.MaxConcurrentAccounts, input.CorrelationId);
 
         logger.LogInformation(
             "[CorrelationId: {CorrelationId}] ProcessPeriodEndAccountsOrchestrator completed for PeriodEndRef {PeriodEndRef}. Total account imports scheduled: {TotalCommandsPublished}",
@@ -92,7 +92,7 @@ public class ProcessPeriodEndOrchestrator(
         return await periodEndService.CreatePeriodEndAsync(input.PeriodEnd, input.CorrelationId);
     }
 
-    private async Task<int> FanOutAccountImports(TaskOrchestrationContext context, string periodEndRef, int maxConcurrentAccounts, string CorrelationId, long? targetAccountId)
+    private async Task<int> FanOutAccountImports(TaskOrchestrationContext context, string periodEndRef, int maxConcurrentAccounts, string CorrelationId)
     {
         var retryPolicy = new RetryPolicy(
             5,
@@ -107,7 +107,6 @@ public class ProcessPeriodEndOrchestrator(
         var totalPublished = 0;
         var page = 1;
         var maxConcurrency = maxConcurrentAccounts <= 0 ? 50 : maxConcurrentAccounts;
-        var targetAccountScheduled = false;
 
         while (true)
         {
@@ -132,24 +131,9 @@ public class ProcessPeriodEndOrchestrator(
                 break;
             }
 
-            var accountsToProcess = targetAccountId.HasValue
-                ? accounts.Where(account => account.Id == targetAccountId.Value).ToList()
-                : accounts.ToList();
-
-            if (targetAccountId.HasValue)
-            {
-                logger.LogInformation(
-                    "[CorrelationId: {CorrelationId}] FanOutAccountImports is restricted to AccountId {TargetAccountId}. Page {Page} contains {MatchedCount} matching accounts out of {PageCount}.",
-                    CorrelationId,
-                    targetAccountId.Value,
-                    page,
-                    accountsToProcess.Count,
-                    accounts.Count);
-            }
-
             var activeAccountTasks = new List<(long AccountId, Task<AccountProcessingResult> Task)>();
 
-            foreach (var account in accountsToProcess)
+            foreach (var account in accounts)
             {
                 while (activeAccountTasks.Count >= maxConcurrency)
                 {
@@ -191,11 +175,6 @@ public class ProcessPeriodEndOrchestrator(
 
                 activeAccountTasks.Add((account.Id, accountTask));
                 totalPublished++;
-
-                if (targetAccountId.HasValue && account.Id == targetAccountId.Value)
-                {
-                    targetAccountScheduled = true;
-                }
             }
 
             if (activeAccountTasks.Count > 0)
@@ -216,20 +195,9 @@ public class ProcessPeriodEndOrchestrator(
             logger.LogInformation(
                 "[CorrelationId: {CorrelationId}] FanOutAccountImports: scheduled {Count} account imports for page {Page} (total so far: {TotalPublished})",
                 CorrelationId,
-                accountsToProcess.Count,
+                accounts.Count,
                 page,
                 totalPublished);
-
-            if (targetAccountId.HasValue && targetAccountScheduled)
-            {
-                logger.LogInformation(
-                    "[CorrelationId: {CorrelationId}] FanOutAccountImports found restricted AccountId {TargetAccountId} on page {Page}. Stopping further account paging for period end {PeriodEndRef}.",
-                    CorrelationId,
-                    targetAccountId.Value,
-                    page,
-                    periodEndRef);
-                break;
-            }
 
             if (accounts.Count < PageSize)
             {
@@ -243,26 +211,6 @@ public class ProcessPeriodEndOrchestrator(
             }
 
             page++;
-        }
-
-        if (targetAccountId.HasValue)
-        {
-            if (targetAccountScheduled)
-            {
-                logger.LogInformation(
-                    "[CorrelationId: {CorrelationId}] FanOutAccountImports completed paged fetch for restricted AccountId {TargetAccountId} PeriodEnd {PeriodEndRef}. Target account was scheduled.",
-                    CorrelationId,
-                    targetAccountId.Value,
-                    periodEndRef);
-            }
-            else
-            {
-                logger.LogWarning(
-                    "[CorrelationId: {CorrelationId}] FanOutAccountImports completed paged fetch for restricted AccountId {TargetAccountId} PeriodEnd {PeriodEndRef}. Target account was not found in any page.",
-                    CorrelationId,
-                    targetAccountId.Value,
-                    periodEndRef);
-            }
         }
 
         return totalPublished;

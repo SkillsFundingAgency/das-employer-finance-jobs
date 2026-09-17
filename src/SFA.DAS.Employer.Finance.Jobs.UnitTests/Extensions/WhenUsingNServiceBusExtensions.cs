@@ -1,6 +1,10 @@
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
+using NServiceBus;
+using NServiceBus.Configuration.AdvancedExtensibility;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Extensions;
@@ -92,6 +96,30 @@ public class WhenUsingNServiceBusExtensions
         result.Should().BeEmpty();
     }
 
+    [Test]
+    public async Task Then_Host_Startup_Diagnostics_Use_A_No_Op_Writer_Instead_Of_The_File_System()
+    {
+        var endpointConfiguration = new EndpointConfiguration("SFA.DAS.EmployerFinance.Jobs.Payments");
+
+        endpointConfiguration.ConfigureHostStartupDiagnosticsForAzureFunctions();
+
+        var writer = endpointConfiguration.GetSettings()
+            .GetOrDefault<Func<string, CancellationToken, Task>>("HostDiagnosticsWriter");
+
+        writer.Should().NotBeNull();
+        await writer("diagnostics", CancellationToken.None);
+    }
+
+    [Test]
+    public void Then_Host_Startup_Diagnostics_Are_Written_To_The_Log()
+    {
+        var endpointConfiguration = new EndpointConfiguration("SFA.DAS.EmployerFinance.Jobs.Levy");
+
+        endpointConfiguration.ConfigureHostStartupDiagnosticsForAzureFunctions();
+
+        GetWriteDiagnosticsToLog(endpointConfiguration).Should().BeTrue();
+    }
+
     private static IConfigurationRoot BuildConfiguration(params KeyValuePair<string, string>[] values)
     {
         var configSource = new MemoryConfigurationSource
@@ -101,5 +129,17 @@ public class WhenUsingNServiceBusExtensions
         var provider = new MemoryConfigurationProvider(configSource);
 
         return new ConfigurationRoot(new List<IConfigurationProvider> { provider });
+    }
+
+    private static bool GetWriteDiagnosticsToLog(EndpointConfiguration endpointConfiguration)
+    {
+        var settings = endpointConfiguration.GetSettings();
+        var hostingSettingsType = typeof(EndpointConfiguration).Assembly.GetType("NServiceBus.HostingComponent+Settings");
+        var getMethod = settings.GetType()
+            .GetMethods()
+            .Single(method => method.Name == "Get" && method.IsGenericMethodDefinition && method.GetParameters().Length == 0);
+        var hostingSettings = getMethod.MakeGenericMethod(hostingSettingsType).Invoke(settings, null);
+
+        return (bool)hostingSettingsType.GetProperty("WriteDiagnosticsToLog").GetValue(hostingSettings);
     }
 }

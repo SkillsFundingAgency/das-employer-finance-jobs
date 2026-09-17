@@ -15,6 +15,7 @@ public static class NServiceBusExtensions
         var endpointConfiguration = new EndpointConfiguration(endpointName);
 
         endpointConfiguration.AssemblyScanner().ScanFileSystemAssemblies = false;
+        endpointConfiguration.ConfigureHostStartupDiagnosticsForAzureFunctions();
 
         endpointConfiguration.UseSerialization<NewtonsoftJsonSerializer>();
         endpointConfiguration.SendOnly();
@@ -30,6 +31,12 @@ public static class NServiceBusExtensions
         }
 
         services.AddNServiceBusEndpoint(endpointConfiguration);
+    }
+
+    public static void ConfigureHostStartupDiagnosticsForAzureFunctions(this EndpointConfiguration endpointConfiguration)
+    {
+        endpointConfiguration.CustomDiagnosticsWriter((_, _) => Task.CompletedTask);
+        endpointConfiguration.WriteDiagnosticsToLog();
     }
 
     public static AzureServiceBusTransport BuildTransport(IConfiguration configuration)

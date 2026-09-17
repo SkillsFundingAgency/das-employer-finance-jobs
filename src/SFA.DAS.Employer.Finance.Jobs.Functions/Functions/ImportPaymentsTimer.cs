@@ -48,8 +48,7 @@ public class ImportPaymentsTimer(
                     CorrelationId = correlationId,
                     TriggeredAt = DateTime.UtcNow,
                     MaxConcurrentAccounts = maxConcurrentAccounts,
-                    MaxConcurrentPeriodEnds = maxConcurrentPeriodEnds,
-                    TargetAccountId = _options.TargetAccountId
+                    MaxConcurrentPeriodEnds = maxConcurrentPeriodEnds
                 },
                 new StartOrchestrationOptions
                 {
@@ -62,14 +61,6 @@ public class ImportPaymentsTimer(
                 correlationId,
                 maxConcurrentAccounts,
                 maxConcurrentPeriodEnds);
-
-            if (_options.TargetAccountId.HasValue)
-            {
-                logger.LogInformation(
-                    "[CorrelationId: {CorrelationId}] ImportPayments is temporarily restricted to AccountId {TargetAccountId}",
-                    correlationId,
-                    _options.TargetAccountId.Value);
-            }
         }
         catch (Exception ex)
         {
@@ -194,5 +185,4 @@ public class ImportPaymentsOrchestratorInput
     public DateTime TriggeredAt { get; set; }
     public int MaxConcurrentAccounts { get; set; }
     public int MaxConcurrentPeriodEnds { get; set; }
-    public long? TargetAccountId { get; set; }
 }
