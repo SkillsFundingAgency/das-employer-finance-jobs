@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,8 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Orchestrators.ExpireFunds;
 [TestFixture]
 public class WhenRunningExpireFundsOrchestrator
 {
+    private static readonly DateTime EventCreated = new(2026, 9, 3, 10, 30, 0, DateTimeKind.Utc);
+
     private Mock<ILogger<ExpireFundsOrchestrator>> _loggerMock;
     private Mock<TaskOrchestrationContext> _contextMock;
     private ExpireFundsOrchestrator _orchestrator;
@@ -23,6 +26,18 @@ public class WhenRunningExpireFundsOrchestrator
     {
         _loggerMock = new Mock<ILogger<ExpireFundsOrchestrator>>();
         _contextMock = new Mock<TaskOrchestrationContext>();
+        _contextMock.SetupGet(context => context.CurrentUtcDateTime).Returns(EventCreated);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<PublishAccountFundsExpiredEventResult>(
+                It.Is<TaskName>(name => name.Name == ExpireFundsOrchestrator.PublishAccountFundsExpiredEventActivityName),
+                It.IsAny<PublishAccountFundsExpiredEventInput>(),
+                It.IsAny<TaskOptions>()))
+            .Returns((TaskName _, PublishAccountFundsExpiredEventInput input, TaskOptions _) =>
+                Task.FromResult(new PublishAccountFundsExpiredEventResult
+                {
+                    AccountId = input.AccountId,
+                    Published = true
+                }));
         _orchestrator = new ExpireFundsOrchestrator(_loggerMock.Object);
     }
 
@@ -116,6 +131,245 @@ public class WhenRunningExpireFundsOrchestrator
         result.SuccessfulAccountsCount.Should().Be(1);
         result.FailedAccountsCount.Should().Be(0);
         result.FundsExpiredAccountsCount.Should().Be(1);
+    }
+
+    [Test]
+    public async Task Then_An_Expired_Funds_Event_Is_Published_With_A_Stable_Message_Id_And_Retry_Policy()
+    {
+        var correlationId = Guid.NewGuid().ToString();
+        PublishAccountFundsExpiredEventInput capturedInput = null!;
+        TaskOptions capturedOptions = null!;
+
+        SetUpInput(correlationId, accountPageSize: 10, maxConcurrentAccounts: 1);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<List<Accounts>>(
+                It.IsAny<TaskName>(),
+                It.IsAny<GetAccountsRequest>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync([new Accounts { Id = 12345, Name = "Test account" }]);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<ProcessAccountExpireFundsResult>(
+                It.Is<TaskName>(name => name.Name == ExpireFundsOrchestrator.ProcessAccountActivityName),
+                It.IsAny<ProcessAccountExpireFundsInput>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new ProcessAccountExpireFundsResult
+            {
+                AccountId = 12345,
+                Success = true,
+                FundsExpired = true
+            });
+        _contextMock
+            .Setup(context => context.CallActivityAsync<PublishAccountFundsExpiredEventResult>(
+                It.Is<TaskName>(name => name.Name == ExpireFundsOrchestrator.PublishAccountFundsExpiredEventActivityName),
+                It.IsAny<PublishAccountFundsExpiredEventInput>(),
+                It.IsAny<TaskOptions>()))
+            .Returns((TaskName _, PublishAccountFundsExpiredEventInput input, TaskOptions options) =>
+            {
+                capturedInput = input;
+                capturedOptions = options;
+                return Task.FromResult(new PublishAccountFundsExpiredEventResult
+                {
+                    AccountId = input.AccountId,
+                    Published = true
+                });
+            });
+
+        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
+
+        result.Success.Should().BeTrue();
+        result.FundsExpiredAccountsCount.Should().Be(1);
+        capturedInput.AccountId.Should().Be(12345);
+        capturedInput.CorrelationId.Should().Be(correlationId);
+        capturedInput.Created.Should().Be(EventCreated);
+        capturedInput.Created.Kind.Should().Be(DateTimeKind.Utc);
+        var idempotencyKey = System.Text.Encoding.UTF8.GetBytes($"{correlationId}:12345");
+        var expectedHash = Convert.ToHexString(SHA256.HashData(idempotencyKey));
+        capturedInput.MessageId.Should().Be($"AccountFundsExpiredEvent-12345-{expectedHash[..32]}");
+        capturedInput.MessageId.Length.Should().BeLessThanOrEqualTo(128);
+        capturedOptions.Retry.Policy.MaxNumberOfAttempts.Should().Be(3);
+        capturedOptions.Retry.Policy.FirstRetryInterval.Should().Be(TimeSpan.FromSeconds(5));
+        _contextMock.Verify(context => context.CallActivityAsync<PublishAccountFundsExpiredEventResult>(
+            It.Is<TaskName>(name => name.Name == ExpireFundsOrchestrator.PublishAccountFundsExpiredEventActivityName),
+            It.IsAny<PublishAccountFundsExpiredEventInput>(),
+            It.IsAny<TaskOptions>()), Times.Once);
+    }
+
+    [Test]
+    public async Task Then_An_Event_Is_Not_Published_When_No_Funds_Expire()
+    {
+        SetUpInput(Guid.NewGuid().ToString(), accountPageSize: 10, maxConcurrentAccounts: 1);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<List<Accounts>>(
+                It.IsAny<TaskName>(),
+                It.IsAny<GetAccountsRequest>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync([new Accounts { Id = 12345, Name = "Test account" }]);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<ProcessAccountExpireFundsResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<ProcessAccountExpireFundsInput>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new ProcessAccountExpireFundsResult
+            {
+                AccountId = 12345,
+                Success = true,
+                FundsExpired = false
+            });
+
+        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
+
+        result.Success.Should().BeTrue();
+        result.FundsExpiredAccountsCount.Should().Be(0);
+        _contextMock.Verify(context => context.CallActivityAsync<PublishAccountFundsExpiredEventResult>(
+            It.IsAny<TaskName>(),
+            It.IsAny<PublishAccountFundsExpiredEventInput>(),
+            It.IsAny<TaskOptions>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Then_An_Event_Is_Not_Published_When_Expiry_Processing_Fails()
+    {
+        SetUpInput(Guid.NewGuid().ToString(), accountPageSize: 10, maxConcurrentAccounts: 1);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<List<Accounts>>(
+                It.IsAny<TaskName>(),
+                It.IsAny<GetAccountsRequest>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync([new Accounts { Id = 12345, Name = "Test account" }]);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<ProcessAccountExpireFundsResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<ProcessAccountExpireFundsInput>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new ProcessAccountExpireFundsResult
+            {
+                AccountId = 12345,
+                Success = false,
+                ErrorMessage = "Finance API failed"
+            });
+
+        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
+
+        result.Success.Should().BeFalse();
+        result.FailedAccountsCount.Should().Be(1);
+        _contextMock.Verify(context => context.CallActivityAsync<PublishAccountFundsExpiredEventResult>(
+            It.IsAny<TaskName>(),
+            It.IsAny<PublishAccountFundsExpiredEventInput>(),
+            It.IsAny<TaskOptions>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Then_Publish_Retry_Exhaustion_Is_An_Account_Failure_And_Remaining_Accounts_Continue()
+    {
+        var correlationId = Guid.NewGuid().ToString();
+        TaskOptions failedPublicationOptions = null!;
+
+        SetUpInput(correlationId, accountPageSize: 10, maxConcurrentAccounts: 2);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<List<Accounts>>(
+                It.IsAny<TaskName>(),
+                It.IsAny<GetAccountsRequest>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(
+            [
+                new Accounts { Id = 1, Name = "A1" },
+                new Accounts { Id = 2, Name = "A2" }
+            ]);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<ProcessAccountExpireFundsResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<ProcessAccountExpireFundsInput>(),
+                It.IsAny<TaskOptions>()))
+            .Returns((TaskName _, ProcessAccountExpireFundsInput input, TaskOptions _) =>
+                Task.FromResult(new ProcessAccountExpireFundsResult
+                {
+                    AccountId = input.AccountId,
+                    Success = true,
+                    FundsExpired = true
+                }));
+        _contextMock
+            .Setup(context => context.CallActivityAsync<PublishAccountFundsExpiredEventResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<PublishAccountFundsExpiredEventInput>(),
+                It.IsAny<TaskOptions>()))
+            .Returns((TaskName _, PublishAccountFundsExpiredEventInput input, TaskOptions options) =>
+            {
+                if (input.AccountId == 1)
+                {
+                    failedPublicationOptions = options;
+                    return Task.FromException<PublishAccountFundsExpiredEventResult>(
+                        new TimeoutException("Service Bus remained unavailable after retries"));
+                }
+
+                return Task.FromResult(new PublishAccountFundsExpiredEventResult
+                {
+                    AccountId = input.AccountId,
+                    Published = true
+                });
+            });
+
+        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
+
+        failedPublicationOptions.Retry.Policy.MaxNumberOfAttempts.Should().Be(3);
+        failedPublicationOptions.Retry.Policy.FirstRetryInterval.Should().Be(TimeSpan.FromSeconds(5));
+        result.Success.Should().BeFalse();
+        result.ProcessedAccountsCount.Should().Be(2);
+        result.SuccessfulAccountsCount.Should().Be(1);
+        result.FailedAccountsCount.Should().Be(1);
+        result.FundsExpiredAccountsCount.Should().Be(2);
+        _contextMock.Verify(context => context.CallActivityAsync<PublishAccountFundsExpiredEventResult>(
+            It.IsAny<TaskName>(),
+            It.IsAny<PublishAccountFundsExpiredEventInput>(),
+            It.IsAny<TaskOptions>()), Times.Exactly(2));
+        _loggerMock.VerifyLogContains(LogLevel.Warning, "Continuing with remaining accounts");
+        _loggerMock.VerifyLogContains(LogLevel.Warning, "AccountId 1");
+        _loggerMock.VerifyLogContains(LogLevel.Information, "AccountId 2");
+    }
+
+    [Test]
+    public async Task Then_A_NonTransient_Publish_Failure_Is_Recorded_For_The_Account()
+    {
+        var correlationId = Guid.NewGuid().ToString();
+
+        SetUpInput(correlationId, accountPageSize: 10, maxConcurrentAccounts: 1);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<List<Accounts>>(
+                It.IsAny<TaskName>(),
+                It.IsAny<GetAccountsRequest>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync([new Accounts { Id = 12345, Name = "Test account" }]);
+        _contextMock
+            .Setup(context => context.CallActivityAsync<ProcessAccountExpireFundsResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<ProcessAccountExpireFundsInput>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new ProcessAccountExpireFundsResult
+            {
+                AccountId = 12345,
+                Success = true,
+                FundsExpired = true
+            });
+        _contextMock
+            .Setup(context => context.CallActivityAsync<PublishAccountFundsExpiredEventResult>(
+                It.IsAny<TaskName>(),
+                It.IsAny<PublishAccountFundsExpiredEventInput>(),
+                It.IsAny<TaskOptions>()))
+            .ReturnsAsync(new PublishAccountFundsExpiredEventResult
+            {
+                AccountId = 12345,
+                Published = false,
+                ErrorMessage = "Invalid Service Bus configuration"
+            });
+
+        var result = await _orchestrator.RunOrchestrator(_contextMock.Object);
+
+        result.Success.Should().BeFalse();
+        result.ProcessedAccountsCount.Should().Be(1);
+        result.SuccessfulAccountsCount.Should().Be(0);
+        result.FailedAccountsCount.Should().Be(1);
+        result.FundsExpiredAccountsCount.Should().Be(1);
+        _loggerMock.VerifyLogContains(LogLevel.Warning, "Invalid Service Bus configuration");
+        _loggerMock.VerifyLogContains(LogLevel.Warning, correlationId);
     }
 
     [Test]

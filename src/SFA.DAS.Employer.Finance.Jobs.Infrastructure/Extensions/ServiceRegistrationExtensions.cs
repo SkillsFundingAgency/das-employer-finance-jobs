@@ -71,15 +71,20 @@ public static class ServiceRegistrationExtensions
         services.AddLevyImportHmrcServices(configuration);
     }
 
-    public static void AddExpireFundsServiceRegistration(this IServiceCollection services)
+    public static void AddExpireFundsServiceRegistration(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddHttpClient();
+
+        services.ConfigureNServiceBusForSend(configuration, NServiceBusExtensions.ExpireFundsEndpointName);
 
         services.AddSingleton<IAzureClientCredentialHelper, AzureClientCredentialHelper>();
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IExpireFundsService, ExpireFundsService>();
+        services.AddSingleton<IAccountFundsExpiredEventPublisher, AccountFundsExpiredEventPublisher>();
     }
 
     private static IServiceCollection AddLevyImportHmrcServices(this IServiceCollection services, IConfiguration configuration)
