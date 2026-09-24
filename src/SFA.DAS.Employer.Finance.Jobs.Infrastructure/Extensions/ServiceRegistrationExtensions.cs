@@ -49,7 +49,7 @@ public static class ServiceRegistrationExtensions
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
         services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
-
+        
         services.AddScoped<IPeriodEndService, PeriodEndService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
@@ -67,8 +67,10 @@ public static class ServiceRegistrationExtensions
         services.AddScoped<IRoatpApiClient, RoatpApiClient>();
         services.AddScoped<IPaymentMetadataService, PaymentMetadataService>();
         services.AddScoped<IEncodingService, EncodingService>();
+        services.AddScoped<IEmployerFinanceJobsOuterService, EmployerFinanceJobsOuterService>();
 
         services.AddLevyImportHmrcServices(configuration);
+        services.AddOuterApiClient<IEmployerFinanceJobsOuterApiClient, EmployerFinanceJobsOuterApiClient, EmployerFinanceJobsOuterApiConfiguration>();
     }
 
     private static IServiceCollection AddLevyImportHmrcServices(this IServiceCollection services, IConfiguration configuration)
@@ -93,6 +95,29 @@ public static class ServiceRegistrationExtensions
                 resilience.MaxRequestsPerWindow,
                 TimeSpan.FromSeconds(resilience.WindowSeconds));
         });
+
+        return services;
+    }
+
+    public static IServiceCollection AddOuterApiClient<TClient, TClientImpl, TConfig>(this IServiceCollection services,
+        Action<HttpClient>? configureClient = null)
+        where TClient : class
+        where TClientImpl : class, TClient
+        where TConfig : class, IOuterApiConfiguration
+    {
+        services.AddOptions<TConfig>()
+            .BindConfiguration(typeof(TConfig).Name)
+            .ValidateDataAnnotations();
+
+        services.AddHttpClient<OuterApiClient<TConfig>>((sp, client) =>
+        {
+            var config = sp.GetRequiredService<IOptions<TConfig>>().Value;
+            client.BaseAddress = new Uri(config.BaseUrl);
+            client.Timeout = TimeSpan.FromHours(1); // Set a long timeout for long-running operations
+            configureClient?.Invoke(client);
+        });
+
+        services.AddScoped<TClient, TClientImpl>();
 
         return services;
     }

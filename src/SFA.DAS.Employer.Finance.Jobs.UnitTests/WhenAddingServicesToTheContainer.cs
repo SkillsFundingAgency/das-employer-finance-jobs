@@ -1,13 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
 using HMRC.ESFA.Levy.Api.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NServiceBus;
-using NUnit.Framework;
 using SFA.DAS.Api.Common.Infrastructure;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
@@ -19,6 +15,9 @@ using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.SharedApi.Services;
+using System.Collections.Generic;
+using System.Net.Http;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests;
 
@@ -28,6 +27,7 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IInternalApiClient<FinanceApiConfiguration>))]
     [TestCase(typeof(IProviderPaymentApiClient<ProviderEventsApiConfiguration>))]
     [TestCase(typeof(IFinanceApiClient<FinanceApiConfiguration>))]
+    [TestCase(typeof(IEmployerFinanceJobsOuterApiClient))]
     [TestCase(typeof(IApprenticeshipLevyApiClient))]
     [TestCase(typeof(IHmrcClient))]
     [TestCase(typeof(IHmrcRateLimiter))]
@@ -64,6 +64,9 @@ public class WhenAddingServicesToTheContainer
         services.Configure<FinanceApiConfiguration>(configuration.GetSection(nameof(FinanceApiConfiguration)));
         services.AddSingleton(provider => provider.GetRequiredService<IOptions<FinanceApiConfiguration>>().Value);
 
+        services.Configure<EmployerFinanceJobsOuterApiConfiguration>(configuration.GetSection(nameof(EmployerFinanceJobsOuterApiConfiguration)));
+        services.AddSingleton(provider => provider.GetRequiredService<IOptions<EmployerFinanceJobsOuterApiConfiguration>>().Value);
+
         services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
         services.AddSingleton(provider => provider.GetRequiredService<IOptions<ProviderEventsApiConfiguration>>().Value);
 
@@ -99,6 +102,7 @@ public class WhenAddingServicesToTheContainer
         services.AddSingleton(new Mock<IMessageSession>().Object);
         services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
+        services.AddTransient<IEmployerFinanceJobsOuterApiClient, EmployerFinanceJobsOuterApiClient>();
         services.AddScoped<IPeriodEndService, PeriodEndService>();
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
         services.AddScoped<IEnglishFractionsPersistenceService, EnglishFractionsPersistenceService>();
@@ -109,6 +113,8 @@ public class WhenAddingServicesToTheContainer
         services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();
         services.AddScoped<IAccountTransfersService, AccountTransfersService>();
         services.AddScoped<ITransferStagedToOperationalService, TransferStagedToOperationalService>();
+        services.AddScoped<IEmployerFinanceJobsOuterService, EmployerFinanceJobsOuterService>();
+        services.AddOuterApiClient<IEmployerFinanceJobsOuterApiClient, EmployerFinanceJobsOuterApiClient, EmployerFinanceJobsOuterApiConfiguration>();
     }
 
     private static IConfigurationRoot GenerateConfiguration()
@@ -121,6 +127,8 @@ public class WhenAddingServicesToTheContainer
                 new KeyValuePair<string, string>("AzureWebJobsServiceBus", "abc"),
                 new KeyValuePair<string, string>("FinanceApiConfiguration:Url", "https://test.com/"),
                 new KeyValuePair<string, string>("FinanceApiConfiguration:Identifier", "https://test.com/"),
+                new KeyValuePair<string, string>("EmployerFinanceJobsOuterApiConfiguration:BaseUrl", "https://test.com/"),
+                new KeyValuePair<string, string>("EmployerFinanceJobsOuterApiConfiguration:Key", "1234567"),
                 new KeyValuePair<string, string>("ProviderEventsApiConfiguration:Url", "https://test.com/"),
                 new KeyValuePair<string, string>("ProviderEventsApiConfiguration:Identifier", "https://test.com/"),
                 new KeyValuePair<string, string>("Hmrc:BaseUrl", "https://hmrc.test/"),
