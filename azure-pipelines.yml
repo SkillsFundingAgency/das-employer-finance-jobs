@@ -52,6 +52,8 @@ stages:
   - group: DevTest Management Resources
   - group: AT DevTest Shared Resources
   - group: AT das-employer-finance-jobs
+  - name: EmployerFinanceJobsApimUrl
+    value: https://at-gateway.apprenticeships.education.gov.uk/employerfinancejobs/
   jobs:
   - template: pipeline-templates/job/deploy.yml
     parameters:
@@ -142,6 +144,8 @@ stages:
   - group: DevTest Management Resources
   - group: DEMO DevTest Shared Resources
   - group: DEMO das-employer-finance-jobs
+  - name: EmployerFinanceJobsApimUrl
+    value: https://demo-gateway.apprenticeships.education.gov.uk/employerfinancejobs/
   jobs:
   - template: pipeline-templates/job/deploy.yml
     parameters:
