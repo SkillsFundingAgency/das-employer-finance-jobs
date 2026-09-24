@@ -44,6 +44,8 @@ jobs:
             Version: '2.0'
             ConfigurationSecrets:
               HmrcClientSecret: $(HmrcClientSecret)
+              EmployerFinanceJobsApimUrl: $(EmployerFinanceJobsApimUrl)
+              EmployerFinanceJobsApimSubscriptionKey: $(EmployerFinanceJobsApimSubscriptionKey)
         - template: azure-pipelines-templates/deploy/step/app-role-assignments.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.AppRoleAssignmentsServiceConnection }}
