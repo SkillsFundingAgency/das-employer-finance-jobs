@@ -9,6 +9,7 @@ public static class NServiceBusExtensions
 {
     public const string PaymentsEndpointName = "SFA.DAS.EmployerFinance.Jobs.Payments";
     public const string LevyEndpointName = "SFA.DAS.EmployerFinance.Jobs.Levy";
+    public const string ExpireFundsEndpointName = "SFA.DAS.EmployerFinance.Jobs.ExpireFunds";
 
     public static void ConfigureNServiceBusForSend(this IServiceCollection services, IConfiguration configuration, string endpointName)
     {

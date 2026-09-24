@@ -13,6 +13,29 @@ jobs:
     runOnce:
       deploy:
         steps:
+        - task: PowerShell@2
+          displayName: Validate Employer Finance Jobs Outer API configuration
+          inputs:
+            targetType: inline
+            pwsh: true
+            script: |
+              $requiredVariables = @('EmployerFinanceJobsApimUrl', 'EmployerFinanceJobsApimSubscriptionKey')
+              $missingVariables = $requiredVariables | Where-Object {
+                $value = [Environment]::GetEnvironmentVariable($_)
+                [string]::IsNullOrWhiteSpace($value) -or $value -match '\$\([^)]+\)'
+              }
+              if ($missingVariables) {
+                throw "Missing or unresolved required pipeline variables: $($missingVariables -join ', '). Set them in a variable group used by this deployment."
+              }
+
+              $outerApiUri = $null
+              if (-not [Uri]::TryCreate($env:EmployerFinanceJobsApimUrl, [UriKind]::Absolute, [ref]$outerApiUri) -or
+                  $outerApiUri.Scheme -notin @('http', 'https')) {
+                throw 'EmployerFinanceJobsApimUrl must be an absolute HTTP or HTTPS URL.'
+              }
+          env:
+            EmployerFinanceJobsApimUrl: $(EmployerFinanceJobsApimUrl)
+            EmployerFinanceJobsApimSubscriptionKey: $(EmployerFinanceJobsApimSubscriptionKey)
         - template: azure-pipelines-templates/deploy/step/wait-azure-devops-deployment.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.ServiceConnection }}
@@ -44,6 +67,8 @@ jobs:
             Version: '2.0'
             ConfigurationSecrets:
               HmrcClientSecret: $(HmrcClientSecret)
+              EmployerFinanceJobsApimUrl: $(EmployerFinanceJobsApimUrl)
+              EmployerFinanceJobsApimSubscriptionKey: $(EmployerFinanceJobsApimSubscriptionKey)
         - template: azure-pipelines-templates/deploy/step/app-role-assignments.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.AppRoleAssignmentsServiceConnection }}
@@ -66,3 +91,14 @@ jobs:
             ServiceConnection: ${{ parameters.ServiceConnection }}
             FunctionAppName: $(ImportLevyFunctionAppName)
             DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy/SFA.DAS.Employer.Finance.Jobs.Functions.ImportLevy.zip
+        - template: azure-pipelines-templates/deploy/step/app-role-assignments.yml@das-platform-building-blocks
+          parameters:
+            ServiceConnection: ${{ parameters.AppRoleAssignmentsServiceConnection }}
+            ResourceName: $(ExpireFundsFunctionAppName)
+            Tenant: $(Tenant)
+            IsMultiRepoCheckout: true
+        - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
+          parameters:
+            ServiceConnection: ${{ parameters.ServiceConnection }}
+            FunctionAppName: $(ExpireFundsFunctionAppName)
+            DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds/SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.zip
