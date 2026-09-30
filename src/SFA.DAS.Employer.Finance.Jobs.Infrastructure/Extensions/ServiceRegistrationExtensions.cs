@@ -50,6 +50,7 @@ public static class ServiceRegistrationExtensions
         services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
 
+        services.AddSingleton<IImportPaymentsTelemetry, ImportPaymentsTelemetry>();
         services.AddScoped<IPeriodEndService, PeriodEndService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using HMRC.ESFA.Levy.Api.Client;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,6 +45,7 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IRefreshPaymentDataCompletedEventPublisher))]
     [TestCase(typeof(IAccountTransfersService))]
     [TestCase(typeof(ITransferStagedToOperationalService))]
+    [TestCase(typeof(IImportPaymentsTelemetry))]
     public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
     {
         var serviceCollection = new ServiceCollection();
@@ -100,6 +103,11 @@ public class WhenAddingServicesToTheContainer
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
 
         services.AddSingleton(new Mock<IMessageSession>().Object);
+        services.AddSingleton(new TelemetryClient(new TelemetryConfiguration
+        {
+            ConnectionString = "InstrumentationKey=00000000-0000-0000-0000-000000000000"
+        }));
+        services.AddSingleton<IImportPaymentsTelemetry, ImportPaymentsTelemetry>();
         services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
         services.AddScoped<IPeriodEndService, PeriodEndService>();

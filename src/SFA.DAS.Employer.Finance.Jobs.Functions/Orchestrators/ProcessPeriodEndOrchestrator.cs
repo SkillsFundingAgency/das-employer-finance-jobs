@@ -11,7 +11,8 @@ namespace SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 public class ProcessPeriodEndOrchestrator(
     ILogger<ProcessPeriodEndOrchestrator> logger,
     IPeriodEndService periodEndService,
-    IAccountService accountService)
+    IAccountService accountService,
+    IImportPaymentsTelemetry importPaymentsTelemetry)
 {
     internal int AccountPageSize { get; set; } = 10000;
 
@@ -145,7 +146,7 @@ public class ProcessPeriodEndOrchestrator(
                         periodEndRef,
                         page);
 
-                    await WaitForOneAccountImportToComplete(activeAccountTasks, CorrelationId, periodEndRef);
+                    await WaitForOneAccountImportToComplete(context, activeAccountTasks, CorrelationId, periodEndRef);
                 }
 
                 var instanceId = $"ProcessAccount-PeriodEnd-{periodEndRef}-Account-{account.Id}-Correlation-{CorrelationId}";
@@ -208,13 +209,14 @@ public class ProcessPeriodEndOrchestrator(
 
             while (activeAccountTasks.Count > 0)
             {
-                await WaitForOneAccountImportToComplete(activeAccountTasks, CorrelationId, periodEndRef);
+                await WaitForOneAccountImportToComplete(context, activeAccountTasks, CorrelationId, periodEndRef);
             }
         }
 
         return totalPublished;
 
         async Task WaitForOneAccountImportToComplete(
+            TaskOrchestrationContext orchestrationContext,
             List<(long AccountId, Task<AccountProcessingResult> Task)> activeAccountTasks,
             string correlationId,
             string periodEndRef)
@@ -235,6 +237,26 @@ public class ProcessPeriodEndOrchestrator(
                     accountResult.Success,
                     accountResult.PaymentsProcessed,
                     accountResult.TransfersProcessed);
+
+                if (!orchestrationContext.IsReplaying)
+                {
+                    if (accountResult.Success)
+                    {
+                        importPaymentsTelemetry.TrackAccountCompleted(
+                            periodEndRef,
+                            correlationId,
+                            completedAccountTask.AccountId,
+                            accountResult.PaymentsProcessed,
+                            accountResult.TransfersProcessed);
+                    }
+                    else
+                    {
+                        importPaymentsTelemetry.TrackAccountFailed(
+                            periodEndRef,
+                            correlationId,
+                            completedAccountTask.AccountId);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -244,6 +266,14 @@ public class ProcessPeriodEndOrchestrator(
                     correlationId,
                     completedAccountTask.AccountId,
                     periodEndRef);
+
+                if (!orchestrationContext.IsReplaying)
+                {
+                    importPaymentsTelemetry.TrackAccountFailed(
+                        periodEndRef,
+                        correlationId,
+                        completedAccountTask.AccountId);
+                }
             }
         }
     }
