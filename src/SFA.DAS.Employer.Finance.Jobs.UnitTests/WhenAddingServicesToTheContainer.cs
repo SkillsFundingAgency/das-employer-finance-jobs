@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using HMRC.ESFA.Levy.Api.Client;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,6 +45,7 @@ public class WhenAddingServicesToTheContainer
     [TestCase(typeof(IRefreshPaymentDataCompletedEventPublisher))]
     [TestCase(typeof(IAccountTransfersService))]
     [TestCase(typeof(ITransferStagedToOperationalService))]
+    [TestCase(typeof(IImportPaymentsTelemetry))]
     public void Then_The_Dependencies_Are_Correctly_Resolved_For_Services(Type toResolve)
     {
         var serviceCollection = new ServiceCollection();
@@ -66,6 +69,9 @@ public class WhenAddingServicesToTheContainer
 
         services.Configure<ProviderEventsApiConfiguration>(configuration.GetSection(nameof(ProviderEventsApiConfiguration)));
         services.AddSingleton(provider => provider.GetRequiredService<IOptions<ProviderEventsApiConfiguration>>().Value);
+
+        services.Configure<CoursesApiConfiguration>(configuration.GetSection(nameof(CoursesApiConfiguration)));
+        services.AddSingleton(provider => provider.GetRequiredService<IOptions<CoursesApiConfiguration>>().Value);
 
         services.Configure<ImportPaymentsOptions>(configuration.GetSection(nameof(ImportPaymentsOptions)));
         services.AddSingleton(provider => provider.GetRequiredService<IOptions<ImportPaymentsOptions>>().Value);
@@ -97,6 +103,11 @@ public class WhenAddingServicesToTheContainer
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
 
         services.AddSingleton(new Mock<IMessageSession>().Object);
+        services.AddSingleton(new TelemetryClient(new TelemetryConfiguration
+        {
+            ConnectionString = "InstrumentationKey=00000000-0000-0000-0000-000000000000"
+        }));
+        services.AddSingleton<IImportPaymentsTelemetry, ImportPaymentsTelemetry>();
         services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
         services.AddScoped<IPeriodEndService, PeriodEndService>();
@@ -108,6 +119,7 @@ public class WhenAddingServicesToTheContainer
         services.AddScoped<IAccountPaymentsImportService, AccountPaymentsImportService>();
         services.AddSingleton<IRefreshPaymentDataCompletedEventPublisher, RefreshPaymentDataCompletedEventPublisher>();
         services.AddScoped<IAccountTransfersService, AccountTransfersService>();
+        services.AddScoped<ICoursesApiClient, CoursesApiClient>();
         services.AddScoped<ITransferStagedToOperationalService, TransferStagedToOperationalService>();
     }
 
@@ -123,6 +135,8 @@ public class WhenAddingServicesToTheContainer
                 new KeyValuePair<string, string>("FinanceApiConfiguration:Identifier", "https://test.com/"),
                 new KeyValuePair<string, string>("ProviderEventsApiConfiguration:Url", "https://test.com/"),
                 new KeyValuePair<string, string>("ProviderEventsApiConfiguration:Identifier", "https://test.com/"),
+                new KeyValuePair<string, string>("CoursesApiConfiguration:Url", "https://test.com/"),
+                new KeyValuePair<string, string>("CoursesApiConfiguration:Identifier", "https://test.com/"),
                 new KeyValuePair<string, string>("Hmrc:BaseUrl", "https://hmrc.test/"),
                 new KeyValuePair<string, string>("Hmrc:ClientId", "client-id"),
                 new KeyValuePair<string, string>("Hmrc:ClientSecret", "client-secret"),

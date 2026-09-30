@@ -72,21 +72,36 @@ public class AccountPaymentsImportService(
         {
             logger.LogInformation("[CorrelationId: {CorrelationId}] Calling Finance API to get existing payment Ids for AccountId:{accountId}", correlationId, accountId);
 
-            var request = new GetExistingPaymentIdsRequest(accountId);
+            var allPaymentIds = new List<string>();
+            var totalPages = 1;
 
-            var response = await financeApiClient.GetWithResponseCode<GetAccountPaymentIdsResponse>(request);
-            var paymentIdsResponse = response.Body
-                ?? throw new InvalidOperationException(
-                    $"Finance API returned {response.StatusCode} without a response body for AccountId:{accountId}.");
+            for (var pageNumber = 1; pageNumber <= totalPages; pageNumber++)
+            {
+                var request = new GetExistingPaymentIdsRequest(accountId, pageNumber);
+                var response = await financeApiClient.GetWithResponseCode<GetAccountPaymentIdsResponse>(request);
+                var paymentIdsResponse = response.Body
+                    ?? throw new InvalidOperationException(
+                        $"Finance API returned {response.StatusCode} without a response body for AccountId:{accountId} page {pageNumber}.");
 
-            var paymentIds = paymentIdsResponse.PaymentIds ?? [];
-            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} existing payment ids from Finance API", correlationId, paymentIds?.Count ?? 0);
+                var paymentIds = paymentIdsResponse.PaymentIds ?? [];
+                allPaymentIds.AddRange(paymentIds);
+                totalPages = paymentIdsResponse.TotalPages > 0 ? paymentIdsResponse.TotalPages : 1;
+
+                logger.LogInformation(
+                    "[CorrelationId: {CorrelationId}] Successfully retrieved existing payment ids page {PageNumber} of {TotalPages} from Finance API. PageCount: {PageCount}",
+                    correlationId,
+                    pageNumber,
+                    totalPages,
+                    paymentIds.Count);
+            }
+
+            logger.LogInformation("[CorrelationId: {CorrelationId}] Successfully retrieved {Count} existing payment ids from Finance API", correlationId, allPaymentIds.Count);
 
             return new AccountExistingPaymentIdsImportResult
             {
-                PaymentIds = paymentIds!,
+                PaymentIds = allPaymentIds,
                 Status = "Succeeded",
-                Message = $"Successfully retrieved {(paymentIds?.Count ?? 0)} payments"
+                Message = $"Successfully retrieved {allPaymentIds.Count} payments"
             };
         }
         catch (Exception ex)

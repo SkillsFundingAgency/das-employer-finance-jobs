@@ -22,6 +22,8 @@
     "extensions": {
         "durableTask": {
             "hubName": "ImportPaymentsHub",
+            "maxConcurrentActivityFunctions": 4,
+            "maxConcurrentOrchestratorFunctions": 10,
             "storageProvider": {
                 "connectionName": "AzureWebJobsStorage"
             }

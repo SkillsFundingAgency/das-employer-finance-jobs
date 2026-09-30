@@ -13,9 +13,20 @@ public class HttpRequestContentException : HttpRequestException
     {
     }
 
-    public HttpRequestContentException(string message, HttpStatusCode statusCode, string errorContent) : base(message)
+    public HttpRequestContentException(string message, HttpStatusCode statusCode, string errorContent)
+        : base(BuildMessage(message, errorContent))
     {
         StatusCode = statusCode;
         ErrorContent = errorContent;
+    }
+
+    private static string BuildMessage(string message, string errorContent)
+    {
+        if (string.IsNullOrWhiteSpace(errorContent))
+        {
+            return message;
+        }
+
+        return $"{message}. Content: {errorContent}";
     }
 }
