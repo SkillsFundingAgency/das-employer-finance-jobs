@@ -122,7 +122,7 @@
         "resourceGroupName": "[concat(variables('resourceNamePrefix'), '-rg')]",
         "importPaymentsFunctionAppName": "[concat(variables('resourceNamePrefix'), '-pay-fa')]",
         "importLevyFunctionAppName": "[concat(variables('resourceNamePrefix'), '-levy-fa')]",
-        "expireFundsFunctionAppName": "[concat(variables('resourceNamePrefix'), '-expiry-fa')]",
+        "expireFundsFunctionAppName": "[concat(variables('resourceNamePrefix'), '-exp-fa')]",
         "appServicePlanName": "[concat(variables('resourceNamePrefix'), '-asp')]",
         "configNames": "SFA.DAS.EmployerFinance.Jobs_2.0,SFA.DAS.Encoding_1.0",
         "importLevyConfigNames": "SFA.DAS.EmployerFinance.Jobs_2.0",
