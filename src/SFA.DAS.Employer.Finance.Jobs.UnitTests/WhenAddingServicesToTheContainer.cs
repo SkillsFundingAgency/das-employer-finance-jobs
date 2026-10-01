@@ -11,6 +11,7 @@ using NUnit.Framework;
 using SFA.DAS.Api.Common.Infrastructure;
 using SFA.DAS.Api.Common.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces.HMRC;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
@@ -24,6 +25,22 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests;
 
 public class WhenAddingServicesToTheContainer
 {
+    [TestCase(typeof(IAccountService))]
+    [TestCase(typeof(IExpireFundsService))]
+    public void Then_The_Expire_Funds_App_Dependencies_Are_Correctly_Resolved(Type toResolve)
+    {
+        var services = new ServiceCollection();
+        var configuration = GenerateConfiguration();
+
+        services.AddConfigurationOptions(configuration);
+        services.AddExpireFundsServiceRegistration();
+
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetService(toResolve).Should().NotBeNull();
+        provider.GetService<IMessageSession>().Should().BeNull();
+    }
+
     [TestCase(typeof(IAzureClientCredentialHelper))]
     [TestCase(typeof(IInternalApiClient<FinanceApiConfiguration>))]
     [TestCase(typeof(IProviderPaymentApiClient<ProviderEventsApiConfiguration>))]
