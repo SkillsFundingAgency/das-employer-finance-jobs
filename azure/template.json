@@ -114,6 +114,12 @@
             "metadata": {
                 "description": "When true, disables the ExpireFundsTimer function via AzureWebJobs.ExpireFundsTimer.Disabled app setting."
             }
+        },
+        "sharedApimName": {
+            "type": "string"
+        },
+        "sharedApimResourceGroup": {
+            "type": "string"
         }
     },
     "variables": {
@@ -770,6 +776,30 @@
                     }
                 }
             }
+        },
+        {
+            "apiVersion": "2020-06-01",
+            "name": "[concat('apim-product-subscription-', parameters('utcValue'))]",
+            "resourceGroup": "[parameters('sharedApimResourceGroup')]",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'apim/apim-subscription.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "apimName": {
+                        "value": "[parameters('sharedApimName')]"
+                    },
+                    "subscriptionName": {
+                        "value": "[variables('resourceNamePrefix')]"
+                    },
+                    "subscriptionScope": {
+                        "value": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', parameters('sharedApimResourceGroup'), '/providers/Microsoft.ApiManagement/service/', parameters('sharedApimName'), '/products/EmployerFinanceJobsOuterApi')]"
+                    }
+                }
+            }
         }
     ],
     "outputs": {
@@ -788,6 +818,10 @@
         "ExpireFundsFunctionAppName": {
             "type": "string",
             "value": "[variables('expireFundsFunctionAppName')]"
+        },
+        "ApimSubscriptionName": {
+            "type": "string",
+            "value": "[variables('resourceNamePrefix')]"
         }
     }
 }
