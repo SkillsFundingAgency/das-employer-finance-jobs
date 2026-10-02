@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
@@ -5,17 +6,23 @@ using SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.Activities;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
+using SFA.DAS.EmployerFinance.Messages.Events;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.Orchestrators;
 
 public class ExpireFundsOrchestrator(ILogger<ExpireFundsOrchestrator> logger)
 {
     public const string ProcessAccountActivityName = nameof(ExpireFundsActivities.ProcessAccountExpireFundsActivity);
+    public const string PublishAccountFundsExpiredEventActivityName =
+        nameof(AccountFundsExpiredEventActivities.PublishAccountFundsExpiredEventActivity);
 
     private static readonly TaskOptions AccountPageRetryOptions = TaskOptions.FromRetryPolicy(
         new RetryPolicy(3, TimeSpan.FromSeconds(5)));
 
     private static readonly TaskOptions ProcessAccountRetryOptions = TaskOptions.FromRetryPolicy(
+        new RetryPolicy(3, TimeSpan.FromSeconds(5)));
+
+    private static readonly TaskOptions PublishEventRetryOptions = TaskOptions.FromRetryPolicy(
         new RetryPolicy(3, TimeSpan.FromSeconds(5)));
 
     [Function(nameof(ExpireFundsOrchestrator))]
@@ -71,7 +78,13 @@ public class ExpireFundsOrchestrator(ILogger<ExpireFundsOrchestrator> logger)
                 }
 
                 result.TotalAccountsCount += accounts.Count;
-                await ProcessAccountPage(context, accounts, maxConcurrentAccounts, correlationId, result, replaySafeLogger);
+                await ProcessAccountPage(
+                    context,
+                    accounts,
+                    maxConcurrentAccounts,
+                    correlationId,
+                    result,
+                    replaySafeLogger);
 
                 replaySafeLogger.LogInformation(
                     "[CorrelationId: {CorrelationId}] Completed account page {Page}. Processed {ProcessedAccountsCount} of {TotalAccountsCount} accounts discovered so far, Failures {FailedAccountsCount}",
@@ -146,14 +159,10 @@ public class ExpireFundsOrchestrator(ILogger<ExpireFundsOrchestrator> logger)
                 correlationId,
                 account.Id);
 
-            var accountTask = context.CallActivityAsync<ProcessAccountExpireFundsResult>(
-                ProcessAccountActivityName,
-                new ProcessAccountExpireFundsInput
-                {
-                    AccountId = account.Id,
-                    CorrelationId = correlationId
-                },
-                ProcessAccountRetryOptions);
+            var accountTask = ProcessAccount(
+                context,
+                account.Id,
+                correlationId);
 
             activeAccountTasks.Add((account.Id, accountTask));
         }
@@ -161,6 +170,54 @@ public class ExpireFundsOrchestrator(ILogger<ExpireFundsOrchestrator> logger)
         while (activeAccountTasks.Count > 0)
         {
             await ObserveOneAccountTask(activeAccountTasks, correlationId, result, replaySafeLogger);
+        }
+    }
+
+    private static async Task<ProcessAccountExpireFundsResult> ProcessAccount(
+        TaskOrchestrationContext context,
+        long accountId,
+        string correlationId)
+    {
+        var accountResult = await context.CallActivityAsync<ProcessAccountExpireFundsResult>(
+            ProcessAccountActivityName,
+            new ProcessAccountExpireFundsInput
+            {
+                AccountId = accountId,
+                CorrelationId = correlationId
+            },
+            ProcessAccountRetryOptions);
+
+        if (accountResult is not { Success: true, FundsExpired: true })
+        {
+            return accountResult;
+        }
+
+        try
+        {
+            var publicationResult = await context.CallActivityAsync<PublishAccountFundsExpiredEventResult>(
+                PublishAccountFundsExpiredEventActivityName,
+                new PublishAccountFundsExpiredEventInput
+                {
+                    AccountId = accountId,
+                    CorrelationId = correlationId,
+                    Created = context.CurrentUtcDateTime,
+                    MessageId = CreateEventMessageId(correlationId, accountId)
+                },
+                PublishEventRetryOptions);
+
+            if (publicationResult is { Published: true })
+            {
+                return accountResult;
+            }
+
+            return CreatePublicationFailureResult(
+                accountResult,
+                publicationResult?.ErrorMessage
+                ?? "AccountFundsExpiredEvent publication did not return a successful result.");
+        }
+        catch (Exception exception)
+        {
+            return CreatePublicationFailureResult(accountResult, exception.Message);
         }
     }
 
@@ -179,6 +236,11 @@ public class ExpireFundsOrchestrator(ILogger<ExpireFundsOrchestrator> logger)
         {
             var accountResult = await completedTask;
 
+            if (accountResult?.FundsExpired == true)
+            {
+                result.FundsExpiredAccountsCount++;
+            }
+
             if (accountResult is not { Success: true })
             {
                 var errorMessage = accountResult?.ErrorMessage
@@ -194,10 +256,6 @@ public class ExpireFundsOrchestrator(ILogger<ExpireFundsOrchestrator> logger)
             }
 
             result.SuccessfulAccountsCount++;
-            if (accountResult.FundsExpired)
-            {
-                result.FundsExpiredAccountsCount++;
-            }
 
             replaySafeLogger.LogInformation(
                 "[CorrelationId: {CorrelationId}] Expire funds processing completed for AccountId {AccountId}. FundsExpired {FundsExpired}",
@@ -215,5 +273,24 @@ public class ExpireFundsOrchestrator(ILogger<ExpireFundsOrchestrator> logger)
                 correlationId,
                 completedAccountTask.AccountId);
         }
+    }
+
+    private static ProcessAccountExpireFundsResult CreatePublicationFailureResult(
+        ProcessAccountExpireFundsResult accountResult,
+        string errorMessage) =>
+        new()
+        {
+            AccountId = accountResult.AccountId,
+            Success = false,
+            FundsExpired = accountResult.FundsExpired,
+            ErrorMessage = $"AccountFundsExpiredEvent publication failed: {errorMessage}"
+        };
+
+    private static string CreateEventMessageId(string correlationId, long accountId)
+    {
+        var idempotencyKey = System.Text.Encoding.UTF8.GetBytes($"{correlationId}:{accountId}");
+        var hash = Convert.ToHexString(SHA256.HashData(idempotencyKey));
+
+        return $"{nameof(AccountFundsExpiredEvent)}-{accountId}-{hash[..32]}";
     }
 }
