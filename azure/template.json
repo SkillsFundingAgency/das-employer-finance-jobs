@@ -819,10 +819,6 @@
             "type": "string",
             "value": "[variables('expireFundsFunctionAppName')]"
         },
-        "ExpireFundsFunctionAppName": {
-            "type": "string",
-            "value": "[variables('expireFundsFunctionAppName')]"
-        },
         "ApimSubscriptionName": {
             "type": "string",
             "value": "[variables('resourceNamePrefix')]"
