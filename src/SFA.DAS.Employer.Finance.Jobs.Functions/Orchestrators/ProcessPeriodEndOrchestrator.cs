@@ -1,6 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Configuration;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests;
@@ -10,9 +11,10 @@ namespace SFA.DAS.Employer.Finance.Jobs.Orchestrators;
 public class ProcessPeriodEndOrchestrator(
     ILogger<ProcessPeriodEndOrchestrator> logger,
     IPeriodEndService periodEndService,
-    IAccountService accountService)
+    IAccountService accountService,
+    IImportPaymentsTelemetry importPaymentsTelemetry)
 {
-    private const int PageSize = 10000;
+    internal int AccountPageSize { get; set; } = 10000;
 
     [Function(nameof(ProcessPeriodEndOrchestrator))]
     public async Task<PeriodEndResult> Run([OrchestrationTrigger] TaskOrchestrationContext context)
@@ -102,18 +104,19 @@ public class ProcessPeriodEndOrchestrator(
             "[CorrelationId: {CorrelationId}] FanOutAccountImports started for period end {PeriodEndRef}, fetching accounts from Finance API in pages of {PageSize}",
             CorrelationId,
             periodEndRef,
-            PageSize);
+            AccountPageSize);
 
         var totalPublished = 0;
         var page = 1;
-        var maxConcurrency = maxConcurrentAccounts <= 0 ? 50 : maxConcurrentAccounts;
+        var maxConcurrency = maxConcurrentAccounts <= 0 ? ImportPaymentsOptions.DefaultMaxConcurrentAccounts : maxConcurrentAccounts;
+        var activeAccountTasks = new List<(long AccountId, Task<AccountProcessingResult> Task)>();
 
         while (true)
         {
             var pageInput = new GetAccountsRequest
             {
                 Page = page,
-                PageSize = PageSize,
+                PageSize = AccountPageSize,
                 CorrelationId = CorrelationId
             };
 
@@ -131,8 +134,6 @@ public class ProcessPeriodEndOrchestrator(
                 break;
             }
 
-            var activeAccountTasks = new List<(long AccountId, Task<AccountProcessingResult> Task)>();
-
             foreach (var account in accounts)
             {
                 while (activeAccountTasks.Count >= maxConcurrency)
@@ -145,7 +146,7 @@ public class ProcessPeriodEndOrchestrator(
                         periodEndRef,
                         page);
 
-                    await WaitForOneAccountImportToComplete(activeAccountTasks, CorrelationId, periodEndRef);
+                    await WaitForOneAccountImportToComplete(context, activeAccountTasks, CorrelationId, periodEndRef);
                 }
 
                 var instanceId = $"ProcessAccount-PeriodEnd-{periodEndRef}-Account-{account.Id}-Correlation-{CorrelationId}";
@@ -177,21 +178,6 @@ public class ProcessPeriodEndOrchestrator(
                 totalPublished++;
             }
 
-            if (activeAccountTasks.Count > 0)
-            {
-                logger.LogInformation(
-                    "[CorrelationId: {CorrelationId}] Waiting for the remaining {ActiveCount} active account imports to complete for period end {PeriodEndRef} on page {Page}.",
-                    CorrelationId,
-                    activeAccountTasks.Count,
-                    periodEndRef,
-                    page);
-
-                while (activeAccountTasks.Count > 0)
-                {
-                    await WaitForOneAccountImportToComplete(activeAccountTasks, CorrelationId, periodEndRef);
-                }
-            }
-
             logger.LogInformation(
                 "[CorrelationId: {CorrelationId}] FanOutAccountImports: scheduled {Count} account imports for page {Page} (total so far: {TotalPublished})",
                 CorrelationId,
@@ -199,7 +185,7 @@ public class ProcessPeriodEndOrchestrator(
                 page,
                 totalPublished);
 
-            if (accounts.Count < PageSize)
+            if (accounts.Count < AccountPageSize)
             {
                 logger.LogInformation(
                     "[CorrelationId: {CorrelationId}] FanOutAccountImports completed for period end {PeriodEndRef}: {TotalPublished} account imports scheduled across {TotalPages} pages",
@@ -213,9 +199,24 @@ public class ProcessPeriodEndOrchestrator(
             page++;
         }
 
+        if (activeAccountTasks.Count > 0)
+        {
+            logger.LogInformation(
+                "[CorrelationId: {CorrelationId}] Waiting for the remaining {ActiveCount} active account imports to complete for period end {PeriodEndRef}.",
+                CorrelationId,
+                activeAccountTasks.Count,
+                periodEndRef);
+
+            while (activeAccountTasks.Count > 0)
+            {
+                await WaitForOneAccountImportToComplete(context, activeAccountTasks, CorrelationId, periodEndRef);
+            }
+        }
+
         return totalPublished;
 
         async Task WaitForOneAccountImportToComplete(
+            TaskOrchestrationContext orchestrationContext,
             List<(long AccountId, Task<AccountProcessingResult> Task)> activeAccountTasks,
             string correlationId,
             string periodEndRef)
@@ -236,6 +237,26 @@ public class ProcessPeriodEndOrchestrator(
                     accountResult.Success,
                     accountResult.PaymentsProcessed,
                     accountResult.TransfersProcessed);
+
+                if (!orchestrationContext.IsReplaying)
+                {
+                    if (accountResult.Success)
+                    {
+                        importPaymentsTelemetry.TrackAccountCompleted(
+                            periodEndRef,
+                            correlationId,
+                            completedAccountTask.AccountId,
+                            accountResult.PaymentsProcessed,
+                            accountResult.TransfersProcessed);
+                    }
+                    else
+                    {
+                        importPaymentsTelemetry.TrackAccountFailed(
+                            periodEndRef,
+                            correlationId,
+                            completedAccountTask.AccountId);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -245,6 +266,14 @@ public class ProcessPeriodEndOrchestrator(
                     correlationId,
                     completedAccountTask.AccountId,
                     periodEndRef);
+
+                if (!orchestrationContext.IsReplaying)
+                {
+                    importPaymentsTelemetry.TrackAccountFailed(
+                        periodEndRef,
+                        correlationId,
+                        completedAccountTask.AccountId);
+                }
             }
         }
     }

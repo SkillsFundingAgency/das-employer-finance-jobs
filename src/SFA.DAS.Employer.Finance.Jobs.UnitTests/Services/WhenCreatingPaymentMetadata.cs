@@ -467,11 +467,17 @@ public class WhenCreatingPaymentMetadata
             });
 
         _financeApiClientMock
-            .SetupSequence(client => client.PutWithResponseCode<PaymentMetadataStagingResponse>(It.IsAny<PutPaymentMetadataToStagingRequest>()))
+            .Setup(client => client.PutWithResponseCode<PaymentMetadataStagingResponse>(
+                It.Is<PutPaymentMetadataToStagingRequest>(request =>
+                    ((PaymentMetadataStaging)request.Data).PaymentId.ToString() == successfulPayment.Id)))
             .ReturnsAsync(new ApiResponse<PaymentMetadataStagingResponse>(
                 new PaymentMetadataStagingResponse { Upserted = true, MetadataId = 1 },
                 HttpStatusCode.OK,
-                null))
+                null));
+        _financeApiClientMock
+            .Setup(client => client.PutWithResponseCode<PaymentMetadataStagingResponse>(
+                It.Is<PutPaymentMetadataToStagingRequest>(request =>
+                    ((PaymentMetadataStaging)request.Data).PaymentId.ToString() == failedPayment.Id)))
             .ReturnsAsync(new ApiResponse<PaymentMetadataStagingResponse>(
                 new PaymentMetadataStagingResponse(),
                 HttpStatusCode.BadRequest,
@@ -525,6 +531,81 @@ public class WhenCreatingPaymentMetadata
         result.Status.Should().Be("Failed");
         result.MetadataCreated.Should().Be(0);
         result.Message.Should().Be("Created 0 payment metadata staging rows. Failed 1.");
+    }
+
+    [Test]
+    public async Task Then_Reuses_Apprenticeship_Lookup_Within_Activity()
+    {
+        var firstPayment = CreatePayment(Guid.NewGuid());
+        var secondPayment = CreatePayment(Guid.NewGuid());
+        secondPayment.ApprenticeshipId = firstPayment.ApprenticeshipId;
+        firstPayment.StandardCode = 123;
+        secondPayment.StandardCode = 123;
+
+        _roatpApiClientMock
+            .Setup(client => client.GetProvider(It.IsAny<long>()))
+            .ReturnsAsync((long ukprn) => new ProviderDetails { Ukprn = ukprn, Name = "Test Provider" });
+        _coursesApiClientMock
+            .Setup(client => client.GetStandards())
+            .ReturnsAsync(new StandardsResponse
+            {
+                Standards =
+                [
+                    new StandardResponse { Id = "123", Title = "Software developer", Level = 4, LearningType = "Apprenticeship" }
+                ]
+            });
+        _commitmentsApiClientMock
+            .Setup(client => client.GetApprenticeship(firstPayment.ApprenticeshipId!.Value))
+            .ReturnsAsync(new ApprenticeshipDetails
+            {
+                FirstName = "Ada",
+                LastName = "Lovelace",
+                NINumber = "AB123456C",
+                StartDate = new DateTime(2024, 8, 1)
+            });
+        _financeApiClientMock
+            .Setup(client => client.PutWithResponseCode<PaymentMetadataStagingResponse>(It.IsAny<PutPaymentMetadataToStagingRequest>()))
+            .ReturnsAsync(new ApiResponse<PaymentMetadataStagingResponse>(
+                new PaymentMetadataStagingResponse { Upserted = true, MetadataId = 1 },
+                HttpStatusCode.OK,
+                null));
+
+        var result = await _service.CreatePaymentMetadata(new CreatePaymentMetadataInput
+        {
+            AccountId = 12345,
+            CorrelationId = Guid.NewGuid().ToString(),
+            PaymentDetails = [firstPayment, secondPayment]
+        }, CancellationToken.None);
+
+        result.Status.Should().Be("Succeeded");
+        result.MetadataCreated.Should().Be(2);
+        _commitmentsApiClientMock.Verify(client => client.GetApprenticeship(firstPayment.ApprenticeshipId!.Value), Times.Once);
+    }
+
+    [Test]
+    public async Task Then_Fails_Metadata_Items_When_Roatp_Authentication_Fails()
+    {
+        var firstPayment = CreatePayment(Guid.NewGuid());
+        var secondPayment = CreatePayment(Guid.NewGuid());
+
+        _roatpApiClientMock
+            .Setup(client => client.GetProvider(firstPayment.Ukprn))
+            .ThrowsAsync(new Azure.Identity.AuthenticationFailedException("IMDS returned 400"));
+
+        var result = await _service.CreatePaymentMetadata(new CreatePaymentMetadataInput
+        {
+            AccountId = 12345,
+            CorrelationId = Guid.NewGuid().ToString(),
+            PaymentDetails = [firstPayment, secondPayment]
+        }, CancellationToken.None);
+
+        result.Status.Should().Be("Failed");
+        result.MetadataCreated.Should().Be(0);
+        result.Message.Should().Be("Created 0 payment metadata staging rows. Failed 2.");
+        _roatpApiClientMock.Verify(client => client.GetProvider(firstPayment.Ukprn), Times.Once);
+        _financeApiClientMock.Verify(
+            client => client.PutWithResponseCode<PaymentMetadataStagingResponse>(It.IsAny<PutPaymentMetadataToStagingRequest>()),
+            Times.Never);
     }
 
     private static Payment CreatePayment(Guid paymentId)
