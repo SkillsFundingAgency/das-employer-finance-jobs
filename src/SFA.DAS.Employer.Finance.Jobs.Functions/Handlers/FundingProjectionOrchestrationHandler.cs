@@ -1,34 +1,38 @@
 using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
+using SFA.DAS.Employer.Finance.Jobs.Functions.Models;
 using SFA.DAS.Employer.Finance.Jobs.Functions.Orchestrators;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.Handlers;
 
 public static class FundingProjectionOrchestrationHandler
 {
-    public const string InstanceId = "FundingProjectionOrchestrator-Singleton";
-
-    public static async Task<string?> StartAsync(
+    public static async Task<string> StartAsync(
         DurableTaskClient client,
+        ImportLearnersCostEvent input,
         ILogger logger,
         string correlationId)
     {
+        var instanceId = GetInstanceId(input.JobId);
+
         try
         {
-            var existingInstance = await client.GetInstanceAsync(InstanceId);
-            if (existingInstance != null && IsActive(existingInstance))
+            var existingInstance = await client.GetInstanceAsync(instanceId);
+            if (existingInstance != null)
             {
                 logger.LogWarning(
-                    "[CorrelationId: {CorrelationId}] FundingProjectionOrchestrator is already running. InstanceId: {InstanceId}",
+                    "[CorrelationId: {CorrelationId}] Funding projection job already has an orchestration. InstanceId: {InstanceId}, RuntimeStatus: {RuntimeStatus}",
                     correlationId,
-                    existingInstance.InstanceId);
-                return null;
+                    existingInstance.InstanceId,
+                    existingInstance.RuntimeStatus);
+                return existingInstance.InstanceId;
             }
 
             var newInstanceId = await client.ScheduleNewOrchestrationInstanceAsync(
                 nameof(FundingProjectionOrchestrator),
-                new StartOrchestrationOptions { InstanceId = InstanceId });
+                input,
+                new StartOrchestrationOptions { InstanceId = instanceId });
 
             logger.LogInformation(
                 "[CorrelationId: {CorrelationId}] Started FundingProjectionOrchestrator with InstanceId: {InstanceId}",
@@ -50,6 +54,5 @@ public static class FundingProjectionOrchestrationHandler
         }
     }
 
-    private static bool IsActive(OrchestrationMetadata instance) =>
-        instance.RuntimeStatus is OrchestrationRuntimeStatus.Running or OrchestrationRuntimeStatus.Pending;
+    public static string GetInstanceId(Guid jobId) => $"FundingProjection-{jobId:N}";
 }

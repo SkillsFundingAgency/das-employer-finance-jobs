@@ -1,4 +1,5 @@
 using Microsoft.Azure.Functions.Worker;
+using SFA.DAS.Employer.Finance.Jobs.Functions.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses.FundingProjection;
 
@@ -8,19 +9,13 @@ public class FundingProjectionActivities(IEmployerFinanceJobsOuterService employ
 {
     [Function(nameof(ImportCommittedLearnersActivity))]
     public Task<ImportCommittedLearnersResponse> ImportCommittedLearnersActivity(
-        [ActivityTrigger] object? input,
+        [ActivityTrigger] ImportLearnersCostEvent input,
         CancellationToken cancellationToken) =>
-        employerFinanceJobsOuterService.ImportCommittedLearnersAsync(cancellationToken);
+        employerFinanceJobsOuterService.ImportCommittedLearnersAsync(input.AccountId, cancellationToken);
 
-    [Function(nameof(UpdateCommittedLearnersCostActivity))]
-    public Task<UpdateCommittedLearnersCostResponse> UpdateCommittedLearnersCostActivity(
-        [ActivityTrigger] object? input,
+    [Function(nameof(PostJobActivity))]
+    public Task PostJobActivity(
+        [ActivityTrigger] PostJobActivityInput input,
         CancellationToken cancellationToken) =>
-        employerFinanceJobsOuterService.UpdateCommittedLearnersCostAsync(cancellationToken);
-
-    [Function(nameof(RecalculateFundingProjectionActivity))]
-    public Task<RecalculateFundingProjectionResponse> RecalculateFundingProjectionActivity(
-        [ActivityTrigger] object? input,
-        CancellationToken cancellationToken) =>
-        employerFinanceJobsOuterService.RecalculateFundingProjectionAsync(cancellationToken);
+        employerFinanceJobsOuterService.PostJobAsync(input.JobId, input.Payload, cancellationToken);
 }

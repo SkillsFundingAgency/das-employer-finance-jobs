@@ -2,7 +2,9 @@
 
 public sealed record ImportCommittedLearnersResponse
 {
-    public int TotalRecords { get; init; }
-    public int FailedRecords { get; init; }
-    public int BatchesProcessed { get; init; }
+    public bool IsSuccessful { get; set; }
+    public int TotalRecordsProcessed { get; set; }
+    public int FailedRecordsCount { get; set; }
+    public DateTime AttemptedDate { get; set; }
+    public DateTime? LastSuccessfulImportDate { get; set; }
 }

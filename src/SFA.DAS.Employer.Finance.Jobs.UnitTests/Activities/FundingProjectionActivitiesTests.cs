@@ -1,71 +1,56 @@
 using System.Threading;
-using AutoFixture.NUnit4;
 using SFA.DAS.Employer.Finance.Jobs.Functions.Activities;
+using SFA.DAS.Employer.Finance.Jobs.Functions.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
+using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests.FundingProjection;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses.FundingProjection;
-using SFA.DAS.Testing.AutoFixture;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Activities;
 
 [TestFixture]
 public class FundingProjectionActivitiesWhenCallingEmployerFinanceJobsService
 {
-    [Test, MoqAutoData]
-    public async Task ImportCommittedLearnersActivity_ShouldCallImportCommittedLearnersAsync(
-        ImportCommittedLearnersResponse response,
-        [Frozen] Mock<IEmployerFinanceJobsOuterService> service,
-        [Greedy] FundingProjectionActivities activities,
-        CancellationToken cancellationToken)
+    [Test]
+    public async Task ImportCommittedLearnersActivity_WhenCalled_ShouldPassAccountIdToService()
     {
         // Arrange
-        service
-            .Setup(x => x.ImportCommittedLearnersAsync(cancellationToken))
+        var service = new Mock<IEmployerFinanceJobsOuterService>();
+        var activities = new FundingProjectionActivities(service.Object);
+        var input = new ImportLearnersCostEvent(Guid.NewGuid(), 12345);
+        var response = new ImportCommittedLearnersResponse { IsSuccessful = true };
+        service.Setup(x => x.ImportCommittedLearnersAsync(input.AccountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(response);
 
         // Act
-        var result = await activities.ImportCommittedLearnersActivity(new object(), cancellationToken);
+        var result = await activities.ImportCommittedLearnersActivity(input, CancellationToken.None);
 
         // Assert
         result.Should().BeEquivalentTo(response);
-        service.Verify(x => x.ImportCommittedLearnersAsync(cancellationToken), Times.Once);
+        service.Verify(x => x.ImportCommittedLearnersAsync(input.AccountId, CancellationToken.None), Times.Once);
     }
 
-    [Test, MoqAutoData]
-    public async Task UpdateCommittedLearnersCostActivity_ShouldCallUpdateCommittedLearnersCostAsync(
-        UpdateCommittedLearnersCostResponse response,
-        [Frozen] Mock<IEmployerFinanceJobsOuterService> service,
-        [Greedy] FundingProjectionActivities activities,
-        CancellationToken cancellationToken)
+    [Test]
+    public async Task PostJobActivity_WhenCalled_ShouldPassJobAndPayloadToService()
     {
         // Arrange
-        service
-            .Setup(x => x.UpdateCommittedLearnersCostAsync(cancellationToken))
-            .ReturnsAsync(response);
+        var service = new Mock<IEmployerFinanceJobsOuterService>();
+        var activities = new FundingProjectionActivities(service.Object);
+        var input = new PostJobActivityInput(Guid.NewGuid(), new PostJobRequestData
+        {
+            AccountId = 12345,
+            JobName = "ImportLearnersCost",
+            JobState = "Completed",
+            LastSuccessfulImportDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            LastAttemptedDate = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+            LastAttemptSuccessful = true,
+            TotalRecordsLastRun = 10,
+            FailedRecordsLastRun = 0
+        });
 
         // Act
-        var result = await activities.UpdateCommittedLearnersCostActivity(new object(), cancellationToken);
+        await activities.PostJobActivity(input, CancellationToken.None);
 
         // Assert
-        result.Should().BeEquivalentTo(response);
-        service.Verify(x => x.UpdateCommittedLearnersCostAsync(cancellationToken), Times.Once);
-    }
-
-    [Test, MoqAutoData]
-    public async Task RecalculateFundingProjectionActivity_ShouldCallRecalculateFundingProjectionAsync(RecalculateFundingProjectionResponse response,
-        [Frozen] Mock<IEmployerFinanceJobsOuterService> service,
-        [Greedy] FundingProjectionActivities activities,
-        CancellationToken cancellationToken)
-    {
-        // Arrange
-        service 
-            .Setup(x => x.RecalculateFundingProjectionAsync(cancellationToken))
-            .ReturnsAsync(response);
-
-        // Act
-        var result = await activities.RecalculateFundingProjectionActivity(new object(), cancellationToken);
-
-        // Assert
-        result.Should().Be(response);
-        service.Verify(x => x.RecalculateFundingProjectionAsync(cancellationToken), Times.Once);
+        service.Verify(x => x.PostJobAsync(input.JobId, input.Payload, CancellationToken.None), Times.Once);
     }
 }

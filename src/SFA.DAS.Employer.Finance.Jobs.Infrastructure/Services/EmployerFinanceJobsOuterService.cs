@@ -9,13 +9,14 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 public class EmployerFinanceJobsOuterService(IEmployerFinanceJobsOuterApiClient apiClient,
     ILogger<EmployerFinanceJobsOuterService> logger) : IEmployerFinanceJobsOuterService
 {
-    public async Task<ImportCommittedLearnersResponse> ImportCommittedLearnersAsync(CancellationToken cancellationToken)
+    public async Task<ImportCommittedLearnersResponse> ImportCommittedLearnersAsync(long accountId, CancellationToken cancellationToken)
     {
         logger.LogInformation("Importing committed learners.");
 
         try
         {
-            return await apiClient.Post<ImportCommittedLearnersResponse>(new ImportCommittedLearnersRequest(), cancellationToken);
+            return await apiClient.Post<ImportCommittedLearnersResponse>(
+                new ImportCommittedLearnersRequest(new ImportCommittedLearnersRequestData(accountId)), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -24,30 +25,16 @@ public class EmployerFinanceJobsOuterService(IEmployerFinanceJobsOuterApiClient 
         }
     }
 
-    public async Task<UpdateCommittedLearnersCostResponse> UpdateCommittedLearnersCostAsync(CancellationToken cancellationToken)
+    public async Task PostJobAsync(Guid jobId, PostJobRequestData payload, CancellationToken cancellationToken)
     {
-        logger.LogInformation("Updating committed learners cost.");
+        logger.LogInformation("Updating job {JobId} with state {JobState}.", jobId, payload.JobState);
         try
         {
-            return await apiClient.Post<UpdateCommittedLearnersCostResponse>(new UpdateCommittedLearnersCostRequest(), cancellationToken);
+            await apiClient.Post(new PostJobRequest(jobId, payload), cancellationToken);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Unable to update committed learners cost from EmployerFinanceJobs API.");
-            throw;
-        }
-    }
-
-    public async Task<RecalculateFundingProjectionResponse> RecalculateFundingProjectionAsync(CancellationToken cancellationToken)
-    {
-        logger.LogInformation("Recalculating funding projection.");
-        try
-        {
-            return await apiClient.Post<RecalculateFundingProjectionResponse>(new RecalculateFundingProjectionRequest(), cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Unable to recalculate funding projection from EmployerFinanceJobs API.");
+            logger.LogWarning(ex, "Unable to update job {JobId} from EmployerFinanceJobs API.", jobId);
             throw;
         }
     }
