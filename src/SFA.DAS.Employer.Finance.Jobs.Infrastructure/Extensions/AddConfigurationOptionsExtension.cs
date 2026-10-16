@@ -37,6 +37,8 @@ public static class AddConfigurationOptionsExtension
         services.Configure<ImportPaymentsOptions>(configuration.GetSection(nameof(ImportPaymentsOptions)));
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<ImportPaymentsOptions>>().Value);
 
+        services.Configure<ExpireFundsOptions>(configuration.GetSection(nameof(ExpireFundsOptions)));
+
         services.Configure<EmployerFinanceJobsOuterApiConfiguration>(configuration.GetSection(nameof(EmployerFinanceJobsOuterApiConfiguration)));
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<EmployerFinanceJobsOuterApiConfiguration>>().Value);
 
