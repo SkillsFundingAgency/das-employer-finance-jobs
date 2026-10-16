@@ -294,6 +294,10 @@
                                     "value": "[parameters('sharedServiceBusFqdn')]"
                                 },
                                 {
+                                    "name": "ServiceBusConnection__fullyQualifiedNamespace",
+                                    "value": "[parameters('sharedServiceBusFqdn')]"
+                                },
+                                {
                                     "name": "LoggingRedisConnectionString",
                                     "value": "[parameters('loggingRedisConnectionString')]"
                                 },

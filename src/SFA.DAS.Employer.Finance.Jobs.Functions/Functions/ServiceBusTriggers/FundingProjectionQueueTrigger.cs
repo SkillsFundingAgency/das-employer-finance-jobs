@@ -3,14 +3,15 @@ using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.Employer.Finance.Jobs.Functions.Handlers;
 using SFA.DAS.Employer.Finance.Jobs.Functions.Models;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ServiceBus;
 
 namespace SFA.DAS.Employer.Finance.Jobs.Functions.Functions.ServiceBusTriggers;
 
-public sealed class ImportLearnersCostQueueTrigger(ILogger<ImportLearnersCostQueueTrigger> logger)
+public sealed class FundingProjectionQueueTrigger(ILogger<FundingProjectionQueueTrigger> logger)
 {
-    [Function(nameof(ImportLearnersCostQueueTrigger))]
+    [Function(nameof(FundingProjectionQueueTrigger))]
     public async Task Run(
-        [ServiceBusTrigger("import-learners-cost", Connection = "ServiceBusConnection")] ImportLearnersCostEvent message,
+        [ServiceBusTrigger(QueueConstants.FundingProjectionQueue, Connection = QueueConstants.ServiceBusConnection)] ImportLearnersCostEvent message,
         [DurableClient] DurableTaskClient client)
     {
         if (message.JobId == Guid.Empty || message.AccountId <= 0)

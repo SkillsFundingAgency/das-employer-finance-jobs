@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SFA.DAS.Employer.Finance.Jobs.Functions.ServiceBus;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Extensions;
 
 var host = new HostBuilder()
@@ -21,6 +22,7 @@ var host = new HostBuilder()
         services.AddDasDataProtection(configuration);
         services.AddConfigurationOptions(configuration);
         services.AddServiceRegistration(configuration, NServiceBusExtensions.PaymentsEndpointName);
+        services.AddServiceBusQueueInitialiser();
     })
     .Build();
 await host.RunAsync();
