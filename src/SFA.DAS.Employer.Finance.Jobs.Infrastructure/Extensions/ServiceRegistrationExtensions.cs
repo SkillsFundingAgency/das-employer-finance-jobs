@@ -49,7 +49,7 @@ public static class ServiceRegistrationExtensions
         services.AddTransient(typeof(IInternalApiClient<>), typeof(InternalApiClient<>));
         services.AddTransient<IProviderPaymentApiClient<ProviderEventsApiConfiguration>, ProviderPaymentApiClient>();
         services.AddTransient<IFinanceApiClient<FinanceApiConfiguration>, FinanceApiClient>();
-
+        
         services.AddScoped<IPeriodEndService, PeriodEndService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IEnglishFractionsService, EnglishFractionsService>();
@@ -69,6 +69,14 @@ public static class ServiceRegistrationExtensions
         services.AddScoped<IEncodingService, EncodingService>();
 
         services.AddLevyImportHmrcServices(configuration);
+    }
+
+    public static void AddFundingProjectionServiceRegistration(this IServiceCollection services)
+    {
+        services.AddHttpClient();
+
+        services.AddScoped<IEmployerFinanceJobsOuterService, EmployerFinanceJobsOuterService>();
+        services.AddOuterApiClient<IEmployerFinanceJobsOuterApiClient, EmployerFinanceJobsOuterApiClient, EmployerFinanceJobsOuterApiConfiguration>();
     }
 
     public static void AddExpireFundsServiceRegistration(this IServiceCollection services)
@@ -104,6 +112,29 @@ public static class ServiceRegistrationExtensions
                 resilience.MaxRequestsPerWindow,
                 TimeSpan.FromSeconds(resilience.WindowSeconds));
         });
+
+        return services;
+    }
+
+    public static IServiceCollection AddOuterApiClient<TClient, TClientImpl, TConfig>(this IServiceCollection services,
+        Action<HttpClient>? configureClient = null)
+        where TClient : class
+        where TClientImpl : class, TClient
+        where TConfig : class, IOuterApiConfiguration
+    {
+        services.AddOptions<TConfig>()
+            .BindConfiguration(typeof(TConfig).Name)
+            .ValidateDataAnnotations();
+
+        services.AddHttpClient<OuterApiClient<TConfig>>((sp, client) =>
+        {
+            var config = sp.GetRequiredService<IOptions<TConfig>>().Value;
+            client.BaseAddress = new Uri(config.BaseUrl);
+            client.Timeout = TimeSpan.FromHours(1); // Set a long timeout for long-running operations
+            configureClient?.Invoke(client);
+        });
+
+        services.AddScoped<TClient, TClientImpl>();
 
         return services;
     }

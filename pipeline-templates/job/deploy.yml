@@ -86,3 +86,8 @@ jobs:
             ServiceConnection: ${{ parameters.ServiceConnection }}
             FunctionAppName: $(ExpireFundsFunctionAppName)
             DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds/SFA.DAS.Employer.Finance.Jobs.Functions.ExpireFunds.zip
+        - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
+          parameters:
+            ServiceConnection: ${{ parameters.ServiceConnection }}
+            FunctionAppName: $(FundingProjectionFunctionAppName)
+            DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection/SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.zip
