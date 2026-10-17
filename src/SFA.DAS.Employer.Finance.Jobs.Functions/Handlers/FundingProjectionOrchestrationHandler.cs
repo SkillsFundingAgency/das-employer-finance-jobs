@@ -19,10 +19,10 @@ public static class FundingProjectionOrchestrationHandler
         try
         {
             var existingInstance = await client.GetInstanceAsync(instanceId);
-            if (existingInstance != null)
+            if (existingInstance != null && IsActive(existingInstance))
             {
                 logger.LogWarning(
-                    "[CorrelationId: {CorrelationId}] Funding projection job already has an orchestration. InstanceId: {InstanceId}, RuntimeStatus: {RuntimeStatus}",
+                    "[CorrelationId: {CorrelationId}] Funding projection job already has an active orchestration. InstanceId: {InstanceId}, RuntimeStatus: {RuntimeStatus}",
                     correlationId,
                     existingInstance.InstanceId,
                     existingInstance.RuntimeStatus);
@@ -55,4 +55,9 @@ public static class FundingProjectionOrchestrationHandler
     }
 
     public static string GetInstanceId(Guid jobId) => $"FundingProjection-{jobId:N}";
+
+    private static bool IsActive(OrchestrationMetadata instance) =>
+        instance.RuntimeStatus == OrchestrationRuntimeStatus.Running
+        || instance.RuntimeStatus == OrchestrationRuntimeStatus.Pending
+        || instance.RuntimeStatus == OrchestrationRuntimeStatus.Suspended;
 }
