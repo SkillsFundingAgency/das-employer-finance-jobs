@@ -4,7 +4,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests.FundingProjectio
 
 public sealed record ImportCommittedLearnersRequest(ImportCommittedLearnersRequestData Payload) : IApiRequest
 {
-    public string GetUrl => "/api/apprenticeship/import-learners";
+    public string GetUrl => "api/apprenticeship/import-learners";
     public object? Data { get; } = Payload;
 }
 

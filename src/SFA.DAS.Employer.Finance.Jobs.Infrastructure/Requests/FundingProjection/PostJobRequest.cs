@@ -4,7 +4,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests.FundingProjectio
 
 public sealed record PostJobRequest(Guid JobId, PostJobRequestData Payload) : IApiRequest
 {
-    public string GetUrl => $"/api/jobs/{JobId}";
+    public string GetUrl => $"api/jobs/{JobId}";
     public object? Data { get; } = Payload;
 }
 

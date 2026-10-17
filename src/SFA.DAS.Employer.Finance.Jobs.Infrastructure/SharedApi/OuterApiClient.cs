@@ -58,7 +58,10 @@ public class OuterApiClient<TConfig>(HttpClient httpClient, IOptions<TConfig> co
 
         if (response.IsSuccessStatusCode)
         {
-            var data = await response.Content.ReadFromJsonAsync<TResponse>(_jsonOptions, cancellationToken).ConfigureAwait(false);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var data = string.IsNullOrWhiteSpace(content)
+                ? default
+                : JsonSerializer.Deserialize<TResponse>(content, _jsonOptions);
             return new ApiResponse<TResponse>(data, response.StatusCode, string.Empty);
         }
 
