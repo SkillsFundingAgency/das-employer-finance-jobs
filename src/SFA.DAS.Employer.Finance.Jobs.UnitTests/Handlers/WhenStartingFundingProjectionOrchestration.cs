@@ -2,8 +2,8 @@ using System.Threading;
 using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Handlers;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Models;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Handlers;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Models;
 using SFA.DAS.Employer.Finance.Jobs.UnitTests.Helpers;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Handlers;

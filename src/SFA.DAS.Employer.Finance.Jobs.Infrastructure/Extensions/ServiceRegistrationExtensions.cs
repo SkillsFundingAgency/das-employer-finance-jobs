@@ -67,9 +67,15 @@ public static class ServiceRegistrationExtensions
         services.AddScoped<IRoatpApiClient, RoatpApiClient>();
         services.AddScoped<IPaymentMetadataService, PaymentMetadataService>();
         services.AddScoped<IEncodingService, EncodingService>();
-        services.AddScoped<IEmployerFinanceJobsOuterService, EmployerFinanceJobsOuterService>();
 
         services.AddLevyImportHmrcServices(configuration);
+    }
+
+    public static void AddFundingProjectionServiceRegistration(this IServiceCollection services)
+    {
+        services.AddHttpClient();
+
+        services.AddScoped<IEmployerFinanceJobsOuterService, EmployerFinanceJobsOuterService>();
         services.AddOuterApiClient<IEmployerFinanceJobsOuterApiClient, EmployerFinanceJobsOuterApiClient, EmployerFinanceJobsOuterApiConfiguration>();
     }
 

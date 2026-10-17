@@ -1,9 +1,9 @@
 using Microsoft.Azure.Functions.Worker;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Models;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses.FundingProjection;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.Activities;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Activities;
 
 public class FundingProjectionActivities(IEmployerFinanceJobsOuterService employerFinanceJobsOuterService)
 {

@@ -1,4 +1,4 @@
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.ServiceBus;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.ServiceBus;
 
 public static class QueueConstants
 {

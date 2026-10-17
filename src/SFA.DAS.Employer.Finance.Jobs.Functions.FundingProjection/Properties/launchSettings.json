@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7500",
+      "launchBrowser": false,
+      "environmentVariables": {
+        "ResourceEnvironmentName": "LOCAL"
+      }
+    }
+  }
+}

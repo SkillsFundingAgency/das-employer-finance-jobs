@@ -1,12 +1,12 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Microsoft.Extensions.Logging;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Activities;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Models;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Activities;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Models;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Requests.FundingProjection;
 using SFA.DAS.Employer.Finance.Jobs.Infrastructure.Responses.FundingProjection;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.Orchestrators;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Orchestrators;
 
 public class FundingProjectionOrchestrator(ILogger<FundingProjectionOrchestrator> logger)
 {

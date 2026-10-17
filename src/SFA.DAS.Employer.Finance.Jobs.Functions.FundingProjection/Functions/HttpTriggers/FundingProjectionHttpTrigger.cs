@@ -3,10 +3,10 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
 using System.Net;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Handlers;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Models;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Handlers;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Models;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.Functions.HttpTriggers;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Functions.HttpTriggers;
 
 public class FundingProjectionHttpTrigger(ILogger<FundingProjectionHttpTrigger> logger)
 {

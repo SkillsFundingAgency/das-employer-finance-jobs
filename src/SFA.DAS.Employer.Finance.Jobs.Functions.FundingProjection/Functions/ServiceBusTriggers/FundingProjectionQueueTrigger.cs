@@ -1,11 +1,11 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Handlers;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Models;
-using SFA.DAS.Employer.Finance.Jobs.Functions.ServiceBus;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Handlers;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Models;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.ServiceBus;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.Functions.ServiceBusTriggers;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Functions.ServiceBusTriggers;
 
 public sealed class FundingProjectionQueueTrigger(ILogger<FundingProjectionQueueTrigger> logger)
 {

@@ -4,7 +4,7 @@ using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.ServiceBus;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.ServiceBus;
 
 [ExcludeFromCodeCoverage]
 public static class ServiceBusExtensions

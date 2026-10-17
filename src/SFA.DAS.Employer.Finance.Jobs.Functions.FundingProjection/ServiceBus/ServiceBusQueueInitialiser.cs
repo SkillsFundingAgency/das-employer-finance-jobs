@@ -3,7 +3,7 @@ using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.ServiceBus;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.ServiceBus;
 
 public class ServiceBusQueueInitialiser(ServiceBusAdministrationClient adminClient, ILogger<ServiceBusQueueInitialiser> logger) : IHostedService
 {

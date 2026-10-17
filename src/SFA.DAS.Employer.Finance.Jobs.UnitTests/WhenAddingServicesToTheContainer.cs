@@ -40,6 +40,25 @@ public class WhenAddingServicesToTheContainer
         provider.GetService<IMessageSession>().Should().BeNull();
     }
 
+    [TestCase(typeof(IEmployerFinanceJobsOuterService))]
+    [TestCase(typeof(IEmployerFinanceJobsOuterApiClient))]
+    public void Then_The_Funding_Projection_App_Dependencies_Are_Correctly_Resolved(Type toResolve)
+    {
+        var services = new ServiceCollection();
+        var configuration = GenerateConfiguration();
+
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddLogging();
+        services.AddConfigurationOptions(configuration);
+        services.AddFundingProjectionServiceRegistration();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        scope.ServiceProvider.GetService(toResolve).Should().NotBeNull();
+        scope.ServiceProvider.GetService<IMessageSession>().Should().BeNull();
+    }
+
     [TestCase(typeof(IAzureClientCredentialHelper))]
     [TestCase(typeof(IInternalApiClient<FinanceApiConfiguration>))]
     [TestCase(typeof(IProviderPaymentApiClient<ProviderEventsApiConfiguration>))]

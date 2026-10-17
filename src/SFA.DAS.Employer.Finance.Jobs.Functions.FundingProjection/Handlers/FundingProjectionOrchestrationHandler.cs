@@ -1,10 +1,10 @@
 using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Models;
-using SFA.DAS.Employer.Finance.Jobs.Functions.Orchestrators;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Models;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Orchestrators;
 
-namespace SFA.DAS.Employer.Finance.Jobs.Functions.Handlers;
+namespace SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.Handlers;
 
 public static class FundingProjectionOrchestrationHandler
 {

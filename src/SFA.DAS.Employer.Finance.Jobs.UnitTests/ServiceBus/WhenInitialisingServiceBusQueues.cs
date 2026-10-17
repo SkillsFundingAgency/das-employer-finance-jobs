@@ -2,7 +2,7 @@ using System.Threading;
 using Azure;
 using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.Logging;
-using SFA.DAS.Employer.Finance.Jobs.Functions.ServiceBus;
+using SFA.DAS.Employer.Finance.Jobs.Functions.FundingProjection.ServiceBus;
 
 namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.ServiceBus;
 
