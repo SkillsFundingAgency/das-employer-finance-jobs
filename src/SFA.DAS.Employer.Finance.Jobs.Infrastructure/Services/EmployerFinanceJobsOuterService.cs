@@ -10,14 +10,14 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Services;
 public class EmployerFinanceJobsOuterService(IEmployerFinanceJobsOuterApiClient apiClient,
     ILogger<EmployerFinanceJobsOuterService> logger) : IEmployerFinanceJobsOuterService
 {
-    public async Task<ImportCommittedLearnersResponse> ImportCommittedLearnersAsync(long accountId, CancellationToken cancellationToken)
+    public async Task<ImportCommittedLearnersResponse> ImportCommittedLearnersAsync(long accountId, DateTime lastSuccessfulImportDate, CancellationToken cancellationToken)
     {
         logger.LogInformation("Importing committed learners.");
 
         try
         {
             var response = await apiClient.PostWithResponseCodeAsync<ImportCommittedLearnersResponse>(
-                new ImportCommittedLearnersRequest(new ImportCommittedLearnersRequestData(accountId)), cancellationToken);
+                new ImportCommittedLearnersRequest(new ImportCommittedLearnersRequestData(accountId, lastSuccessfulImportDate)), cancellationToken);
 
             EnsureSuccess(response, "import committed learners");
 

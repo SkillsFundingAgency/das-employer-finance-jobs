@@ -16,9 +16,9 @@ public class FundingProjectionActivitiesWhenCallingEmployerFinanceJobsService
         // Arrange
         var service = new Mock<IEmployerFinanceJobsOuterService>();
         var activities = new FundingProjectionActivities(service.Object);
-        var input = new ImportLearnersCostEvent(Guid.NewGuid(), 12345);
+        var input = new ImportLearnersCostEvent(Guid.NewGuid(), 12345, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         var response = new ImportCommittedLearnersResponse { IsSuccessful = true };
-        service.Setup(x => x.ImportCommittedLearnersAsync(input.AccountId, It.IsAny<CancellationToken>()))
+        service.Setup(x => x.ImportCommittedLearnersAsync(input.AccountId, input.LastSuccessfulImportDate, It.IsAny<CancellationToken>()))
             .ReturnsAsync(response);
 
         // Act
@@ -26,7 +26,7 @@ public class FundingProjectionActivitiesWhenCallingEmployerFinanceJobsService
 
         // Assert
         result.Should().BeEquivalentTo(response);
-        service.Verify(x => x.ImportCommittedLearnersAsync(input.AccountId, CancellationToken.None), Times.Once);
+        service.Verify(x => x.ImportCommittedLearnersAsync(input.AccountId, input.LastSuccessfulImportDate, CancellationToken.None), Times.Once);
     }
 
     [Test]

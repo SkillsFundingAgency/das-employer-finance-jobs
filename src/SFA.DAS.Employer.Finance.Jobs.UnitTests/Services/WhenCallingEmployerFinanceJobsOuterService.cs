@@ -31,7 +31,7 @@ public class WhenCallingEmployerFinanceJobsOuterService
         SetupImport(new ApiResponse<ImportCommittedLearnersResponse>(response, HttpStatusCode.OK, string.Empty));
 
         // Act
-        var result = await _service.ImportCommittedLearnersAsync(12345, CancellationToken.None);
+        var result = await _service.ImportCommittedLearnersAsync(12345, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), CancellationToken.None);
 
         // Assert
         result.Should().BeEquivalentTo(response);
@@ -48,7 +48,7 @@ public class WhenCallingEmployerFinanceJobsOuterService
         SetupImport(new ApiResponse<ImportCommittedLearnersResponse>(null, statusCode, "error"));
 
         // Act
-        var act = () => _service.ImportCommittedLearnersAsync(12345, CancellationToken.None);
+        var act = () => _service.ImportCommittedLearnersAsync(12345, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), CancellationToken.None);
 
         // Assert
         (await act.Should().ThrowAsync<HttpRequestException>()).Which.StatusCode.Should().Be(statusCode);
@@ -61,7 +61,7 @@ public class WhenCallingEmployerFinanceJobsOuterService
         SetupImport(new ApiResponse<ImportCommittedLearnersResponse>(null, HttpStatusCode.OK, string.Empty));
 
         // Act
-        var act = () => _service.ImportCommittedLearnersAsync(12345, CancellationToken.None);
+        var act = () => _service.ImportCommittedLearnersAsync(12345, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();

@@ -10,7 +10,7 @@ namespace SFA.DAS.Employer.Finance.Jobs.UnitTests.Handlers;
 
 public class WhenStartingFundingProjectionOrchestration
 {
-    private readonly ImportLearnersCostEvent _input = new(Guid.NewGuid(), 12345);
+    private readonly ImportLearnersCostEvent _input = new(Guid.NewGuid(), 12345, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
     private string _instanceId;
     private Mock<FakeDurableTaskClient> _client;
 

@@ -15,7 +15,7 @@ public class FundingProjectionOrchestratorWhenRunning
     {
         // Arrange
         var context = new Mock<TaskOrchestrationContext>();
-        var input = new ImportLearnersCostEvent(Guid.NewGuid(), 12345);
+        var input = new ImportLearnersCostEvent(Guid.NewGuid(), 12345, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         var response = new ImportCommittedLearnersResponse
         {
             IsSuccessful = true,
@@ -50,7 +50,7 @@ public class FundingProjectionOrchestratorWhenRunning
     {
         // Arrange
         var context = new Mock<TaskOrchestrationContext>();
-        var input = new ImportLearnersCostEvent(Guid.NewGuid(), 12345);
+        var input = new ImportLearnersCostEvent(Guid.NewGuid(), 12345, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         context.Setup(x => x.GetInput<ImportLearnersCostEvent>()).Returns(input);
         context.Setup(x => x.CallActivityAsync<ImportCommittedLearnersResponse>(
                 nameof(FundingProjectionActivities.ImportCommittedLearnersActivity), input, It.IsAny<TaskOptions>()))
