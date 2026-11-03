@@ -66,7 +66,7 @@ public class ImportLevyDeclarationsActivityTests
 
         _hmrcService
             .Setup(x => x.GetLevyDeclarations(request.EmpRef, request.FromDate, request.CorrelationId, cancellationToken))
-            .ReturnsAsync((LevyDeclarations?)null);
+            .ReturnsAsync((LevyDeclarations?)null!);
 
         var result = await _activity.Run(request, _functionContext.Object);
 
