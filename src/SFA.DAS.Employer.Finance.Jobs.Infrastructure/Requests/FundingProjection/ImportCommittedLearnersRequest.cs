@@ -8,4 +8,4 @@ public sealed record ImportCommittedLearnersRequest(ImportCommittedLearnersReque
     public object? Data { get; } = Payload;
 }
 
-public sealed record ImportCommittedLearnersRequestData(long AccountId);
+public sealed record ImportCommittedLearnersRequestData(long AccountId, DateTime LastSuccessfulImportDate);

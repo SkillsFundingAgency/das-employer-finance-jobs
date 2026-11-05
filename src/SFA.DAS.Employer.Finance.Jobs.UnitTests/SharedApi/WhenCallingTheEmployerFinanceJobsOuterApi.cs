@@ -21,7 +21,7 @@ public class WhenCallingTheEmployerFinanceJobsOuterApi
     {
         var jobId = Guid.NewGuid();
         yield return new TestCaseData(
-                new ImportCommittedLearnersRequest(new ImportCommittedLearnersRequestData(12345)),
+                new ImportCommittedLearnersRequest(new ImportCommittedLearnersRequestData(12345, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc))),
                 $"{BaseUrl}api/apprenticeship/import-learners")
             .SetName("ImportCommittedLearnersRequest");
         yield return new TestCaseData(
@@ -29,8 +29,8 @@ public class WhenCallingTheEmployerFinanceJobsOuterApi
                 {
                     AccountId = 12345,
                     JobState = "Completed",
-                    LastSuccessfulImportDate = DateTime.UtcNow,
-                    LastAttemptedDate = DateTime.UtcNow,
+                    LastSuccessfulImportDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    LastAttemptedDate = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
                     LastAttemptSuccessful = true,
                     TotalRecordsLastRun = 1,
                     FailedRecordsLastRun = 0
@@ -55,7 +55,7 @@ public class WhenCallingTheEmployerFinanceJobsOuterApi
         var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
 
         var response = await CreateClient(handler).PostWithResponseCodeAsync<ImportCommittedLearnersResponse>(
-            new ImportCommittedLearnersRequest(new ImportCommittedLearnersRequestData(12345)));
+            new ImportCommittedLearnersRequest(new ImportCommittedLearnersRequestData(12345, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc))));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Body.Should().BeNull();

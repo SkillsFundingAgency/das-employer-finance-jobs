@@ -11,7 +11,7 @@ public class FundingProjectionActivities(IEmployerFinanceJobsOuterService employ
     public Task<ImportCommittedLearnersResponse> ImportCommittedLearnersActivity(
         [ActivityTrigger] ImportLearnersCostEvent input,
         CancellationToken cancellationToken) =>
-        employerFinanceJobsOuterService.ImportCommittedLearnersAsync(input.AccountId, cancellationToken);
+        employerFinanceJobsOuterService.ImportCommittedLearnersAsync(input.AccountId, input.LastSuccessfulImportDate, cancellationToken);
 
     [Function(nameof(PostJobActivity))]
     public Task PostJobActivity(
