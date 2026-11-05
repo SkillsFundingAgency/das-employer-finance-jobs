@@ -40,6 +40,24 @@ public class WhenCallingEmployerFinanceJobsOuterService
             CancellationToken.None), Times.Once);
     }
 
+    [Test]
+    public async Task ImportCommittedLearnersAsync_WhenAccountHasNeverBeenImported_ShouldPostNullLastSuccessfulImportDate()
+    {
+        // Arrange
+        var response = new ImportCommittedLearnersResponse { IsSuccessful = true };
+        SetupImport(new ApiResponse<ImportCommittedLearnersResponse>(response, HttpStatusCode.OK, string.Empty));
+
+        // Act
+        await _service.ImportCommittedLearnersAsync(12345, null, CancellationToken.None);
+
+        // Assert
+        _apiClient.Verify(client => client.PostWithResponseCodeAsync<ImportCommittedLearnersResponse>(
+            It.Is<ImportCommittedLearnersRequest>(request =>
+                request.Payload.AccountId == 12345 &&
+                request.Payload.LastSuccessfulImportDate == null),
+            CancellationToken.None), Times.Once);
+    }
+
     [TestCase(HttpStatusCode.NotFound)]
     [TestCase(HttpStatusCode.InternalServerError)]
     public async Task ImportCommittedLearnersAsync_WhenApiFails_ShouldThrow(HttpStatusCode statusCode)

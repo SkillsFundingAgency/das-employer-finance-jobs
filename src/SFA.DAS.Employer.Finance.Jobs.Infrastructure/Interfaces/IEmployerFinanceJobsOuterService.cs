@@ -5,6 +5,6 @@ namespace SFA.DAS.Employer.Finance.Jobs.Infrastructure.Interfaces;
 
 public interface IEmployerFinanceJobsOuterService
 {
-    Task<ImportCommittedLearnersResponse> ImportCommittedLearnersAsync(long accountId, DateTime lastSuccessfulImportDate, CancellationToken cancellationToken);
+    Task<ImportCommittedLearnersResponse> ImportCommittedLearnersAsync(long accountId, DateTime? lastSuccessfulImportDate, CancellationToken cancellationToken);
     Task PostJobAsync(Guid jobId, PostJobRequestData payload, CancellationToken cancellationToken);
 }
